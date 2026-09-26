@@ -16,6 +16,12 @@
     "typecheck": {
       "dependsOn": ["^typecheck"]
     },
+    "test": {
+      "outputs": ["coverage/**"]
+    },
+    "lint:boundaries": {
+      "inputs": ["$TURBO_DEFAULT$", "../../.dependency-cruiser.cjs"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

@@ -6,7 +6,15 @@
   "scripts": {
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint:boundaries": "bunx --bun depcruise --config ../../.dependency-cruiser.cjs ."
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": [
+      "prettier --write",
+      "eslint --fix --max-warnings 0"
+    ]
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
