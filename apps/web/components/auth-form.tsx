@@ -56,7 +56,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const text = textByMode[mode]
-  const { data: session, refetch } = authClient.useSession()
+  const { data: session } = authClient.useSession()
 
   useEffect(() => {
     if (session) router.replace(next)
@@ -78,9 +78,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     if (result.error) {
       setError(describeAuthError(result.error))
       setPending(false)
-      return
     }
-    await refetch()
   }
 
   const switchHref =
