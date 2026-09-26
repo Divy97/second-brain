@@ -11,7 +11,8 @@
     "test": "turbo test",
     "lint:boundaries": "turbo lint:boundaries",
     "check": "turbo lint typecheck lint:boundaries test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:migrate": "bun run --cwd packages/db migrate"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,json,md,yml,yaml,css}": "prettier --write"

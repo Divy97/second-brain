@@ -17,7 +17,11 @@
       "dependsOn": ["^typecheck"]
     },
     "test": {
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "env": [
+        "DATABASE_ADMIN_URL",
+        "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE"
+      ]
     },
     "lint:boundaries": {
       "inputs": ["$TURBO_DEFAULT$", "../../.dependency-cruiser.cjs"]
@@ -26,5 +30,7 @@
       "cache": false,
       "persistent": true
     }
-  }
+  },
+  "globalEnv": ["NEXT_PUBLIC_API_URL"],
+  "globalPassThroughEnv": ["DATABASE_URL"]
 }

@@ -1,0 +1,2 @@
+BETTER_AUTH_SECRET=replace-with-32-random-bytes
+KEY_ENCRYPTION_SECRET=replace-with-32-random-bytes

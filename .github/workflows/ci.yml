@@ -8,6 +8,24 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ github.run_id }}
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:${{ github.run_id }}@localhost:5432/second_brain
+      DATABASE_ADMIN_URL: postgres://postgres:${{ github.run_id }}@localhost:5432/postgres
+      CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://postgres:${{ github.run_id }}@localhost:5432/second_brain
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

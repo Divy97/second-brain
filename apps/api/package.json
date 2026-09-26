@@ -1,16 +1,16 @@
 {
-  "name": "web",
+  "name": "api",
   "version": "0.0.1",
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "bun --env-file=../../.env run wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "bun --env-file=../../.env run vitest run",
     "lint:boundaries": "bunx --bun depcruise --config ../../.dependency-cruiser.cjs ."
   },
   "lint-staged": {
@@ -20,21 +20,18 @@
     ]
   },
   "dependencies": {
-    "@phosphor-icons/react": "^2.1.10",
-    "@workspace/ui": "workspace:*",
-    "next": "16.3.3",
-    "next-themes": "^0.4.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "@workspace/ai": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "hono": "^4.13.9"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@workspace/eslint-config": "workspace:^",
+    "@cloudflare/vitest-plugin": "^1.2.8",
+    "@types/node": "^26.6.3",
+    "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
     "eslint": "^9",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.141.0"
   }
 }

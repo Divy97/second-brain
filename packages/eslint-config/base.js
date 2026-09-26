@@ -17,6 +17,7 @@ export const config = tseslint.config(
       "**/.turbo/**",
       "**/coverage/**",
       "**/node_modules/**",
+      "**/.wrangler/**",
     ],
   },
   js.configs.recommended,

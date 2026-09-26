@@ -76,12 +76,13 @@ module.exports = {
     ...(layering[workspace] ?? []),
   ],
   options: {
-    doNotFollow: { path: ["node_modules"] },
+    doNotFollow: { path: ["node_modules", "^\\.\\./"] },
     exclude: {
       path: [
         "node_modules",
         "\\.next",
         "\\.turbo",
+        "\\.wrangler",
         "/dist/",
         "/coverage/",
         "\\.config\\.(ts|js|mjs|cjs)$",

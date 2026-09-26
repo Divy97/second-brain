@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "second-brain-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "API_VERSION": "0.0.1"
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+  "queues": {
+    "producers": [{ "binding": "ITEMS_QUEUE", "queue": "second-brain-items" }],
+    "consumers": [
+      {
+        "queue": "second-brain-items",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3
+      }
+    ]
+  },
+  "workflows": [
+    {
+      "name": "second-brain-process-item",
+      "binding": "PROCESS_ITEM_WORKFLOW",
+      "class_name": "ProcessItemWorkflow"
+    }
+  ]
+}
