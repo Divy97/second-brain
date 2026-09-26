@@ -1,9 +1,11 @@
-import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js"
+import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 
 import * as schema from "./schema.js"
 
-export type Database = PostgresJsDatabase<typeof schema>
+import type { Database } from "./database.js"
+
+export type { Database }
 
 export interface DatabaseConnection {
   db: Database
@@ -54,3 +56,12 @@ export async function checkDatabaseHealth(
 }
 
 export { schema }
+export { generateId } from "./schema.js"
+export {
+  deleteUserKey,
+  findUserKey,
+  saveUserKey,
+  type KeyProvider,
+  type StoredUserKey,
+  type UserKeyRef,
+} from "./queries/user-keys.js"

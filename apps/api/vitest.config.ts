@@ -7,6 +7,11 @@ export default defineConfig({
       wrangler: { configPath: "./wrangler.jsonc" },
       miniflare: {
         hyperdrives: { HYPERDRIVE: inject("databaseUrl") },
+        bindings: {
+          BETTER_AUTH_SECRET: inject("betterAuthSecret"),
+          KEY_ENCRYPTION_SECRET: inject("keyEncryptionSecret"),
+          AUTH_RATE_LIMIT: "off",
+        },
       },
     })),
   ],
