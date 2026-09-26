@@ -11,9 +11,15 @@ import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 
 const navigation = [
-  { href: "/", label: "Home" },
-  { href: "/settings", label: "Settings" },
+  { href: "/", label: "Home", matches: ["/", "/items"] },
+  { href: "/settings", label: "Settings", matches: ["/settings"] },
 ]
+
+function isCurrent(pathname: string, matches: string[]): boolean {
+  return matches.some((prefix) =>
+    prefix === "/" ? pathname === "/" : pathname.startsWith(prefix)
+  )
+}
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
@@ -64,7 +70,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                aria-current={pathname === item.href ? "page" : undefined}
+                aria-current={
+                  isCurrent(pathname, item.matches) ? "page" : undefined
+                }
                 className={cn(
                   "px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground",
                   "aria-[current=page]:text-foreground"

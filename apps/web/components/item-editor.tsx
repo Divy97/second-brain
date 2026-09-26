@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type SubmitEvent } from "react"
+import { useRef, useState, type KeyboardEvent, type SubmitEvent } from "react"
 
 import { Button } from "@workspace/ui/components/button"
 import { Textarea } from "@workspace/ui/components/textarea"
@@ -17,8 +17,18 @@ export function ItemEditor({
   onCancel: () => void
 }) {
   const [draft, setDraft] = useState(initialText)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault()
+      formRef.current?.requestSubmit()
+    }
+  }
+
   return (
     <form
+      ref={formRef}
       onSubmit={(event: SubmitEvent<HTMLFormElement>) => {
         event.preventDefault()
         onSave(draft)
@@ -34,6 +44,7 @@ export function ItemEditor({
         onChange={(event) => {
           setDraft(event.target.value)
         }}
+        onKeyDown={onKeyDown}
         autoFocus
         className="max-h-[60dvh] min-h-40 text-base leading-relaxed md:text-sm"
       />
