@@ -42,7 +42,7 @@ export function OpenRouterKeySettings() {
   const [pending, setPending] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  async function run(action: () => Promise<KeySettings>) {
+  async function applyKeyChange(action: () => Promise<KeySettings>) {
     setPending(true)
     setActionError(null)
     try {
@@ -64,7 +64,7 @@ export function OpenRouterKeySettings() {
       setActionError("Paste your OpenRouter API key first.")
       return
     }
-    if (await run(() => saveOpenRouterKey(key))) form.reset()
+    if (await applyKeyChange(() => saveOpenRouterKey(key))) form.reset()
   }
 
   const status = data?.openrouter
@@ -164,7 +164,7 @@ export function OpenRouterKeySettings() {
                   variant="destructive"
                   disabled={pending}
                   onClick={() => {
-                    void run(removeOpenRouterKey)
+                    void applyKeyChange(removeOpenRouterKey)
                   }}
                 >
                   {pending ? "Removing" : "Remove key"}

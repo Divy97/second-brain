@@ -1,6 +1,7 @@
 import { findUserKey, type Database } from "@workspace/db"
 
 import { decryptApiKey } from "./encryption.js"
+import { openRouterKeyRef } from "./routes.js"
 
 export type ResolvedKey =
   { ok: true; apiKey: string } | { ok: false; reason: "missing_key" }
@@ -10,7 +11,7 @@ export async function resolveOpenRouterKey(
   env: Env,
   userId: string
 ): Promise<ResolvedKey> {
-  const stored = await findUserKey(db, { userId, provider: "openrouter" })
+  const stored = await findUserKey(db, openRouterKeyRef(userId))
   if (!stored) return { ok: false, reason: "missing_key" }
   return {
     ok: true,

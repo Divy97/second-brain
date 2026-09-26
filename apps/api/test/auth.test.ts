@@ -84,6 +84,13 @@ describe("auth", () => {
     expect(body.error.message).not.toBe("")
   })
 
+  it("protects unknown routes too, and answers 404 once signed in", async () => {
+    expect((await request("/nope")).status).toBe(401)
+
+    const session = await signUp()
+    expect((await request("/nope", { session })).status).toBe(404)
+  })
+
   it("allows the web origin to call the API with credentials", async () => {
     const response = await request("/keys", {
       method: "OPTIONS",

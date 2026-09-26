@@ -6,7 +6,7 @@ export const authClient = createAuthClient({ baseURL: apiBaseUrl })
 
 const messagesByCode: Record<string, string> = {
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL:
-    "An account with this email already exists. Sign in instead.",
+    "An account with this email already exists.",
   INVALID_EMAIL_OR_PASSWORD: "That email and password do not match.",
   INVALID_EMAIL: "Enter a valid email address.",
   PASSWORD_TOO_SHORT: "Use at least 8 characters for your password.",

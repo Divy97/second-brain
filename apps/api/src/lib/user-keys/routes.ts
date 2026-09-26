@@ -1,32 +1,42 @@
-import { Hono } from "hono"
+import { Hono, type Context } from "hono"
 import { z } from "zod"
 
 import { createOpenRouter, OpenRouterError } from "@workspace/ai"
-import { deleteUserKey, findUserKey, saveUserKey } from "@workspace/db"
+import {
+  deleteUserKey,
+  findUserKey,
+  saveUserKey,
+  type UserKeyRef,
+} from "@workspace/db"
 
 import { apiError } from "../api-error.js"
-import { requireUser } from "../request-context.js"
 import { encryptApiKey } from "./encryption.js"
 
 import type { AppEnv } from "../app-env.js"
 
+export type KeyStatus = { set: false } | { set: true; last4: string }
+
+export interface KeySettings {
+  openrouter: KeyStatus
+}
+
+export const openRouterKeyRef = (userId: string): UserKeyRef => ({
+  userId,
+  provider: "openrouter",
+})
+
 const saveKeyBody = z.object({ key: z.string().trim().min(1).max(512) })
 
-export const userKeyRoutes = new Hono<AppEnv>()
-
-userKeyRoutes.use(requireUser)
-
-async function keyStatus(c: { var: AppEnv["Variables"] }) {
-  const stored = await findUserKey(c.var.db, {
-    userId: c.var.userId,
-    provider: "openrouter",
-  })
+async function keySettings(c: Context<AppEnv>): Promise<KeySettings> {
+  const stored = await findUserKey(c.var.db, openRouterKeyRef(c.var.userId))
   return {
     openrouter: stored ? { set: true, last4: stored.last4 } : { set: false },
   }
 }
 
-userKeyRoutes.get("/", async (c) => c.json(await keyStatus(c)))
+export const userKeyRoutes = new Hono<AppEnv>()
+
+userKeyRoutes.get("/", async (c) => c.json(await keySettings(c)))
 
 userKeyRoutes.put("/openrouter", async (c) => {
   const parsed = saveKeyBody.safeParse(await c.req.json().catch(() => null))
@@ -57,25 +67,18 @@ userKeyRoutes.put("/openrouter", async (c) => {
     throw error
   }
 
-  await saveUserKey(
-    c.var.db,
-    { userId: c.var.userId, provider: "openrouter" },
-    {
-      encryptedKey: await encryptApiKey(
-        c.env.KEY_ENCRYPTION_SECRET,
-        apiKey,
-        c.var.userId
-      ),
-      last4: apiKey.slice(-4),
-    }
-  )
-  return c.json(await keyStatus(c))
+  await saveUserKey(c.var.db, openRouterKeyRef(c.var.userId), {
+    encryptedKey: await encryptApiKey(
+      c.env.KEY_ENCRYPTION_SECRET,
+      apiKey,
+      c.var.userId
+    ),
+    last4: apiKey.slice(-4),
+  })
+  return c.json(await keySettings(c))
 })
 
 userKeyRoutes.delete("/openrouter", async (c) => {
-  await deleteUserKey(c.var.db, {
-    userId: c.var.userId,
-    provider: "openrouter",
-  })
-  return c.json(await keyStatus(c))
+  await deleteUserKey(c.var.db, openRouterKeyRef(c.var.userId))
+  return c.json(await keySettings(c))
 })

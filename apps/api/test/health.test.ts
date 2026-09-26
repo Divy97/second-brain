@@ -25,8 +25,8 @@ describe("GET /health", () => {
     expect(body.database.pgvectorVersion).toMatch(/^\d+\.\d+/)
   })
 
-  it("returns 404 for unknown routes", async () => {
-    const response = await exports.default.fetch("http://api/nope")
-    expect(response.status).toBe(404)
+  it("is reachable without a session", async () => {
+    const response = await exports.default.fetch("http://api/health")
+    expect(response.status).toBe(200)
   })
 })

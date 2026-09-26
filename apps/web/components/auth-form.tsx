@@ -3,7 +3,7 @@
 import { WarningCircleIcon } from "@phosphor-icons/react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useState, type SubmitEvent } from "react"
+import { useEffect, useState, type SubmitEvent } from "react"
 
 import { authClient, describeAuthError } from "@/lib/auth-client"
 import { formText } from "@/lib/form-text"
@@ -20,7 +20,7 @@ import { Input } from "@workspace/ui/components/input"
 
 type Mode = "sign-in" | "sign-up"
 
-const copy: Record<
+const textByMode: Record<
   Mode,
   {
     title: string
@@ -55,7 +55,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const next = safeNextPath(searchParams.get("next"))
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
-  const text = copy[mode]
+  const text = textByMode[mode]
+  const { data: session, refetch } = authClient.useSession()
+
+  useEffect(() => {
+    if (session) router.replace(next)
+  }, [session, next, router])
 
   async function submit(form: HTMLFormElement) {
     const email = formText(form, "email").trim()
@@ -75,7 +80,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       setPending(false)
       return
     }
-    router.replace(next)
+    await refetch()
   }
 
   const switchHref =

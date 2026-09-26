@@ -6,7 +6,6 @@ export type ApiErrorCode =
   | "invalid_request"
   | "invalid_key"
   | "missing_key"
-  | "not_found"
   | "upstream_unavailable"
 
 export function apiError(

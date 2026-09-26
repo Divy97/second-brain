@@ -4,7 +4,7 @@ import { MoonIcon, SignOutIcon, SunIcon } from "@phosphor-icons/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { useEffect, type ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@workspace/ui/components/button"
@@ -17,14 +17,13 @@ const navigation = [
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
   return (
     <Button
       variant="ghost"
       size="icon"
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label="Toggle dark theme"
       onClick={() => {
-        setTheme(isDark ? "light" : "dark")
+        setTheme(resolvedTheme === "dark" ? "light" : "dark")
       }}
     >
       <SunIcon className="hidden dark:block" aria-hidden />
@@ -37,16 +36,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { data: session, isPending } = authClient.useSession()
+  const signingOut = useRef(false)
 
   useEffect(() => {
-    if (!isPending && !session) {
-      router.replace(`/sign-in?next=${encodeURIComponent(pathname)}`)
-    }
+    if (isPending || session) return
+    router.replace(
+      signingOut.current
+        ? "/sign-in"
+        : `/sign-in?next=${encodeURIComponent(pathname)}`
+    )
   }, [isPending, session, pathname, router])
 
   async function signOut() {
+    signingOut.current = true
     await authClient.signOut()
-    router.replace("/sign-in")
   }
 
   return (

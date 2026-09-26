@@ -13,7 +13,7 @@ export function createAuth(env: Env, db: Database) {
     trustedOrigins: [env.WEB_ORIGIN],
     database: drizzleAdapter(db, { provider: "pg", schema, usePlural: true }),
     emailAndPassword: { enabled: true },
-    rateLimit: { enabled: env.AUTH_RATE_LIMIT === "on", window: 60, max: 100 },
+    rateLimit: { enabled: env.AUTH_RATE_LIMIT === "on", window: 10, max: 100 },
     advanced: {
       database: { generateId: () => generateId() },
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
