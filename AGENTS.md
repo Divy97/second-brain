@@ -1,6 +1,6 @@
 # Workflow
 
-Every piece of work moves through this loop. Skills live in `.claude/skills/`; invoke them with the Skill tool.
+Every piece of work moves through this loop. Skills live in `.claude/skills/`; invoke them with the Skill tool. They are pinned in `skills-lock.json` and not committed — restore them with `bunx skills experimental_install`.
 
 | When                                                     | Do                                                                                                                                  |
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
