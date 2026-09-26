@@ -10,8 +10,7 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "00000000000000000000000000000000",
-      "localConnectionString": "postgres://postgres:postgres@localhost:5432/second_brain"
+      "id": "00000000000000000000000000000000"
     }
   ],
   "queues": {

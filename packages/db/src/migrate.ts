@@ -12,8 +12,17 @@ const migrationsFolder = fileURLToPath(
   new URL("../drizzle", import.meta.url).href
 )
 
-export const defaultAdminUrl =
-  "postgres://postgres:postgres@localhost:5432/postgres"
+export function requireEnv(
+  name: "DATABASE_URL" | "DATABASE_ADMIN_URL"
+): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(
+      `${name} is not set; copy .env.example to .env and fill it in`
+    )
+  }
+  return value
+}
 
 export async function runMigrations(connectionString: string): Promise<void> {
   const client = postgres(connectionString, { max: 1 })
@@ -26,7 +35,7 @@ export async function runMigrations(connectionString: string): Promise<void> {
 
 export async function createFreshDatabase(
   name: string,
-  adminUrl: string = process.env.DATABASE_ADMIN_URL ?? defaultAdminUrl
+  adminUrl: string = requireEnv("DATABASE_ADMIN_URL")
 ): Promise<string> {
   if (!/^[a-z_][a-z0-9_]*$/.test(name)) {
     throw new Error(`invalid database name: ${name}`)

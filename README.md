@@ -20,12 +20,15 @@ Prerequisites: Bun 1.3, Docker.
 
 ```bash
 bun install
-docker compose up -d --wait                 # Postgres 17 + pgvector on :5432
+cp .env.example .env                        # set POSTGRES_PASSWORD; the URLs derive from it
 cp apps/web/.env.example apps/web/.env      # NEXT_PUBLIC_API_URL
 cp apps/api/.dev.vars.example apps/api/.dev.vars   # Worker secrets for local dev
+docker compose up -d --wait                 # Postgres 17 + pgvector on :5432
 bun run db:migrate                          # apply migrations to the local database
 bun run dev                                 # web on :3000, api on :8787
 ```
+
+Database credentials live only in the root `.env` (gitignored). Docker Compose reads it directly; the db and api scripts load it through `bun --env-file`.
 
 Open http://localhost:3000/status to confirm the API and database are reachable.
 
