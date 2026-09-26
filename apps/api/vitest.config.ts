@@ -18,5 +18,7 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
     globalSetup: ["./test/global-setup.ts"],
+    // Sign-up and sign-in run real scrypt password hashing; CI runners need the headroom.
+    testTimeout: 30_000,
   },
 })
