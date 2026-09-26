@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono"
 import { cors } from "hono/cors"
 
 import { healthRoutes } from "./lib/health.js"
+import { itemRoutes } from "./lib/items/index.js"
 import { itemsQueueConsumer } from "./lib/items-queue.js"
 import { type ProcessItemParams } from "./lib/process-item-workflow.js"
 import { requestContext, requireUser } from "./lib/request-context.js"
@@ -27,6 +28,7 @@ app.use("*", requestContext)
 app.on(["GET", "POST"], "/api/auth/*", (c) => c.var.auth.handler(c.req.raw))
 app.use("*", requireUser)
 app.route("/keys", userKeyRoutes)
+app.route("/items", itemRoutes)
 
 export default {
   fetch: app.fetch,

@@ -70,7 +70,8 @@ export async function apiRequest<T>(
     headers: mergedHeaders,
     body: json === undefined ? undefined : JSON.stringify(json),
   })
-  const body: unknown = await response.json().catch(() => null)
+  const body: unknown =
+    response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
     if (isApiErrorBody(body)) {
       throw new ApiError(response.status, body.error.code, body.error.message)
@@ -84,18 +85,4 @@ export async function apiRequest<T>(
   return body as T
 }
 
-export type KeyStatus = { set: false } | { set: true; last4: string }
-
-export interface KeySettings {
-  openrouter: KeyStatus
-}
-
-export const keySettingsPath = "/keys"
-
-export const fetchKeySettings = () => apiRequest<KeySettings>(keySettingsPath)
-
-export const saveOpenRouterKey = (key: string) =>
-  apiRequest<KeySettings>("/keys/openrouter", { method: "PUT", json: { key } })
-
-export const removeOpenRouterKey = () =>
-  apiRequest<KeySettings>("/keys/openrouter", { method: "DELETE" })
+export const fetchJson = <T>(path: string) => apiRequest<T>(path)

@@ -6,7 +6,10 @@ export type ApiErrorCode =
   | "invalid_request"
   | "invalid_key"
   | "missing_key"
+  | "not_found"
+  | "duplicate"
   | "upstream_unavailable"
+  | "queue_unavailable"
 
 export function apiError(
   c: Context,

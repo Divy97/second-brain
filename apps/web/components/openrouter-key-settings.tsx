@@ -8,15 +8,15 @@ import {
 import { useState, type SubmitEvent } from "react"
 import useSWR from "swr"
 
+import { describeApiError } from "@/lib/describe-api-error"
+import { formText } from "@/lib/form-text"
 import {
-  ApiError,
   fetchKeySettings,
   keySettingsPath,
   removeOpenRouterKey,
   saveOpenRouterKey,
   type KeySettings,
-} from "@/lib/api"
-import { formText } from "@/lib/form-text"
+} from "@/lib/keys-api"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -25,12 +25,6 @@ import {
   FieldLabel,
 } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
-
-function errorMessage(error: unknown): string {
-  return error instanceof ApiError
-    ? error.message
-    : "The API could not be reached. Check your connection and try again."
-}
 
 export function OpenRouterKeySettings() {
   const { data, error, isLoading, mutate } = useSWR<KeySettings, Error>(
@@ -51,7 +45,7 @@ export function OpenRouterKeySettings() {
       setConfirmingRemove(false)
       return true
     } catch (caught) {
-      setActionError(errorMessage(caught))
+      setActionError(describeApiError(caught))
       return false
     } finally {
       setPending(false)
@@ -101,7 +95,7 @@ export function OpenRouterKeySettings() {
       {error && (
         <Alert variant="destructive">
           <WarningCircleIcon aria-hidden />
-          <AlertDescription>{errorMessage(error)}</AlertDescription>
+          <AlertDescription>{describeApiError(error)}</AlertDescription>
         </Alert>
       )}
 
