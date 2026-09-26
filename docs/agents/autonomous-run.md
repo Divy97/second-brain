@@ -14,7 +14,7 @@ Before starting, `.env` must contain `OPENROUTER_API_KEY` with a real key; the b
 ## Prompt
 
 ```text
-/implement Work through the frontier of GitHub issues labelled ready-for-agent under parent #5, in dependency order (#6, #7, #8, #9, #10), one ticket at a time, without stopping for input. Run until every ticket is merged or you are genuinely blocked on something only a human can do.
+/implement This message is the go-ahead: start immediately, do not ask for confirmation, do not summarise the plan back, do not wait for a reply at any point. Work through the frontier of GitHub issues labelled ready-for-agent under parent #5, in dependency order (#6, #7, #8, #9, #10), one ticket at a time. Run until every ticket is merged or you are genuinely blocked on something only a human can do. You are authorised to squash-merge each PR yourself once its CI is green; no human review happens between tickets.
 
 For EACH ticket, in this order, nothing skipped:
 
