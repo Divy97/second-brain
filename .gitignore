@@ -43,3 +43,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent skills: vendored from skills-lock.json (restore with `bunx skills experimental_install`)
+.agents/
+.claude/skills/
