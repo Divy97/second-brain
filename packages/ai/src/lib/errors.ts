@@ -8,9 +8,9 @@ export type OpenRouterErrorKind =
 
 export class OpenRouterError extends Error {
   readonly kind: OpenRouterErrorKind
-  readonly status: number
+  readonly status?: number
 
-  constructor(kind: OpenRouterErrorKind, message: string, status: number) {
+  constructor(kind: OpenRouterErrorKind, message: string, status?: number) {
     super(message)
     this.name = "OpenRouterError"
     this.kind = kind

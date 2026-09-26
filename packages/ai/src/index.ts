@@ -7,9 +7,6 @@ export { OpenRouterError, type OpenRouterErrorKind } from "./lib/errors.js"
 export interface OpenRouterOptions {
   apiKey: string
   fetch?: typeof fetch
-  baseUrl?: string
-  appName?: string
-  appUrl?: string
 }
 
 export interface ChatMessage {
@@ -27,8 +24,6 @@ export interface ChatRequest<T> {
   model: string
   messages: ChatMessage[]
   output: StructuredOutput<T>
-  temperature?: number
-  maxTokens?: number
 }
 
 export interface Usage {
@@ -64,6 +59,8 @@ export interface OpenRouter {
   embed: (request: EmbedRequest) => Promise<EmbedResult>
   verifyKey: () => Promise<KeyVerification>
 }
+
+const BASE_URL = "https://openrouter.ai/api/v1"
 
 const usageSchema = z.object({
   prompt_tokens: z.number(),
@@ -108,52 +105,45 @@ function toUsage(usage: z.infer<typeof usageSchema> | undefined): Usage {
 
 export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
   const fetchImpl = options.fetch ?? globalThis.fetch
-  const baseUrl = options.baseUrl ?? "https://openrouter.ai/api/v1"
 
-  const headers: Record<string, string> = {
-    authorization: `Bearer ${options.apiKey}`,
-    "content-type": "application/json",
-  }
-  if (options.appUrl) headers["http-referer"] = options.appUrl
-  if (options.appName) headers["x-openrouter-title"] = options.appName
-
-  async function call(path: string, init: RequestInit): Promise<unknown> {
-    const response = await fetchImpl(`${baseUrl}${path}`, {
-      ...init,
+  async function requestJson(
+    path: string,
+    method: "GET" | "POST",
+    body?: unknown
+  ): Promise<unknown> {
+    const response = await fetchImpl(`${BASE_URL}${path}`, {
+      method,
       headers: {
-        ...headers,
-        ...(init.headers as Record<string, string> | undefined),
+        authorization: `Bearer ${options.apiKey}`,
+        "content-type": "application/json",
       },
+      body: body === undefined ? undefined : JSON.stringify(body),
     })
-    const body: unknown = await response.json().catch(() => null)
+    const payload: unknown = await response.json().catch(() => null)
     if (!response.ok) {
-      throw toOpenRouterError(response.status, body)
+      throw toOpenRouterError(response.status, payload)
     }
-    return body
+    return payload
   }
 
   return {
     async chat<T>(request: ChatRequest<T>): Promise<ChatResult<T>> {
-      const body = await call("/chat/completions", {
-        method: "POST",
-        body: JSON.stringify({
-          model: request.model,
-          messages: request.messages,
-          temperature: request.temperature ?? 0,
-          max_tokens: request.maxTokens,
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: request.output.name,
-              strict: true,
-              description: request.output.description,
-              schema: z.toJSONSchema(request.output.schema),
-            },
+      const payload = await requestJson("/chat/completions", "POST", {
+        model: request.model,
+        messages: request.messages,
+        temperature: 0,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: request.output.name,
+            strict: true,
+            description: request.output.description,
+            schema: z.toJSONSchema(request.output.schema),
           },
-          provider: { require_parameters: true },
-        }),
+        },
+        provider: { require_parameters: true },
       })
-      const parsed = chatResponseSchema.parse(body)
+      const parsed = chatResponseSchema.parse(payload)
       const choice = parsed.choices[0]
       if (
         !choice ||
@@ -162,26 +152,23 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
       ) {
         throw new OpenRouterError(
           "invalid_output",
-          "model returned no complete content",
-          200
+          "model returned no complete content"
         )
       }
-      let json: unknown
+      let rawContent: unknown
       try {
-        json = JSON.parse(choice.message.content)
+        rawContent = JSON.parse(choice.message.content)
       } catch {
         throw new OpenRouterError(
           "invalid_output",
-          "model returned malformed JSON",
-          200
+          "model returned malformed JSON"
         )
       }
-      const validated = request.output.schema.safeParse(json)
+      const validated = request.output.schema.safeParse(rawContent)
       if (!validated.success) {
         throw new OpenRouterError(
           "invalid_output",
-          `model output did not match schema: ${validated.error.message}`,
-          200
+          `model output did not match schema: ${validated.error.message}`
         )
       }
       return {
@@ -192,32 +179,32 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
     },
 
     async embed(request: EmbedRequest): Promise<EmbedResult> {
-      const body = await call("/embeddings", {
-        method: "POST",
-        body: JSON.stringify({
-          model: request.model,
-          input: request.input,
-          encoding_format: "float",
-        }),
+      const payload = await requestJson("/embeddings", "POST", {
+        model: request.model,
+        input: request.input,
+        encoding_format: "float",
       })
-      const parsed = embedResponseSchema.parse(body)
+      const parsed = embedResponseSchema.parse(payload)
       const embeddings = [...parsed.data]
         .sort((a, b) => a.index - b.index)
         .map((row) => row.embedding)
       if (embeddings.length !== request.input.length) {
         throw new OpenRouterError(
           "invalid_output",
-          `expected ${request.input.length} embeddings, received ${embeddings.length}`,
-          200
+          `expected ${request.input.length} embeddings, received ${embeddings.length}`
         )
       }
-      return { embeddings, model: parsed.model, usage: toUsage(parsed.usage) }
+      return {
+        embeddings,
+        model: parsed.model,
+        usage: toUsage(parsed.usage),
+      }
     },
 
     async verifyKey(): Promise<KeyVerification> {
       try {
-        const body = await call("/key", { method: "GET" })
-        const parsed = keyResponseSchema.parse(body)
+        const payload = await requestJson("/key", "GET")
+        const parsed = keyResponseSchema.parse(payload)
         return { valid: true, limitRemaining: parsed.data.limit_remaining }
       } catch (error) {
         if (error instanceof OpenRouterError && error.kind === "invalid_key") {

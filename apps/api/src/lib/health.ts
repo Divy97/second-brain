@@ -2,11 +2,11 @@ import { Hono } from "hono"
 
 import { checkDatabaseHealth, connect } from "@workspace/db"
 
-export const health = new Hono<{ Bindings: Env }>()
+export const healthRoutes = new Hono<{ Bindings: Env }>()
 
 // Hyperdrive owns the connection pool; per-request clients are cheap and are not
 // closed explicitly (postgres.js's end() rejects inside workerd; Cloudflare's examples omit it).
-health.get("/", async (c) => {
+healthRoutes.get("/", async (c) => {
   const { db } = connect(c.env.HYPERDRIVE.connectionString)
   try {
     const database = await checkDatabaseHealth(db)

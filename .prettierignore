@@ -3,6 +3,5 @@ node_modules/
 .next/
 .turbo/
 coverage/
-pnpm-lock.yaml
-.pnpm-store/worker-configuration.d.ts
 .wrangler/
+worker-configuration.d.ts

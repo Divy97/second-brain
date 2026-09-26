@@ -1,6 +1,6 @@
 {
-  "id": "6e15d513-db08-4895-a0ba-e7ba1c1b036a",
-  "prevId": "33bd9b08-cd47-4a9e-8a36-b65e97a90c7b",
+  "id": "e4e95c3e-9705-4628-8a36-6a42426da265",
+  "prevId": "fc9abd61-2d26-46ff-a76a-de7847a5767a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -42,19 +42,19 @@
           "name": "embedding",
           "type": "vector(1024)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "embedding_model": {
           "name": "embedding_model",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "embedding_dimensions": {
           "name": "embedding_dimensions",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "tsv": {
           "name": "tsv",
@@ -232,171 +232,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.facts": {
-      "name": "facts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "text": {
-          "name": "text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "embedding": {
-          "name": "embedding",
-          "type": "vector(1024)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "embedding_model": {
-          "name": "embedding_model",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "embedding_dimensions": {
-          "name": "embedding_dimensions",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tsv": {
-          "name": "tsv",
-          "type": "tsvector",
-          "primaryKey": false,
-          "notNull": false,
-          "generated": {
-            "as": "to_tsvector('simple', \"facts\".\"text\")",
-            "type": "stored"
-          }
-        },
-        "source_item_id": {
-          "name": "source_item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "valid_from": {
-          "name": "valid_from",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "valid_to": {
-          "name": "valid_to",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "facts_user_valid_idx": {
-          "name": "facts_user_valid_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "valid_to",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "facts_embedding_idx": {
-          "name": "facts_embedding_idx",
-          "columns": [
-            {
-              "expression": "embedding",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "vector_cosine_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "hnsw",
-          "with": {}
-        },
-        "facts_tsv_idx": {
-          "name": "facts_tsv_idx",
-          "columns": [
-            {
-              "expression": "tsv",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "facts_user_id_users_id_fk": {
-          "name": "facts_user_id_users_id_fk",
-          "tableFrom": "facts",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "facts_source_item_id_items_id_fk": {
-          "name": "facts_source_item_id_items_id_fk",
-          "tableFrom": "facts",
-          "tableTo": "items",
-          "columnsFrom": [
-            "source_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -584,8 +419,7 @@
         },
         "failure_reason": {
           "name": "failure_reason",
-          "type": "item_failure_reason",
-          "typeSchema": "public",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -1070,15 +904,6 @@
     }
   },
   "enums": {
-    "public.item_failure_reason": {
-      "name": "item_failure_reason",
-      "schema": "public",
-      "values": [
-        "missing_key",
-        "model_error",
-        "extraction_error"
-      ]
-    },
     "public.item_kind": {
       "name": "item_kind",
       "schema": "public",

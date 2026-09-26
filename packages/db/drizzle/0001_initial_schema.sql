@@ -1,4 +1,3 @@
-CREATE TYPE "public"."item_failure_reason" AS ENUM('missing_key', 'model_error', 'extraction_error');--> statement-breakpoint
 CREATE TYPE "public"."item_kind" AS ENUM('quote', 'fact', 'thought', 'meeting', 'link', 'video', 'article', 'image', 'pdf', 'other');--> statement-breakpoint
 CREATE TYPE "public"."item_status" AS ENUM('pending', 'processing', 'ready', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."item_type" AS ENUM('text', 'voice', 'image', 'pdf', 'url');--> statement-breakpoint
@@ -10,9 +9,9 @@ CREATE TABLE "chunks" (
 	"idx" integer NOT NULL,
 	"text" text NOT NULL,
 	"search_text" text NOT NULL,
-	"embedding" vector(1024),
-	"embedding_model" text,
-	"embedding_dimensions" integer,
+	"embedding" vector(1024) NOT NULL,
+	"embedding_model" text NOT NULL,
+	"embedding_dimensions" integer NOT NULL,
 	"tsv" "tsvector" GENERATED ALWAYS AS (to_tsvector('simple', "chunks"."search_text")) STORED,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -23,20 +22,6 @@ CREATE TABLE "entities" (
 	"name" text NOT NULL,
 	"normalized_name" text NOT NULL,
 	"type" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "facts" (
-	"id" uuid PRIMARY KEY NOT NULL,
-	"user_id" uuid NOT NULL,
-	"text" text NOT NULL,
-	"embedding" vector(1024),
-	"embedding_model" text,
-	"embedding_dimensions" integer,
-	"tsv" "tsvector" GENERATED ALWAYS AS (to_tsvector('simple', "facts"."text")) STORED,
-	"source_item_id" uuid,
-	"valid_from" timestamp with time zone DEFAULT now() NOT NULL,
-	"valid_to" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -58,7 +43,7 @@ CREATE TABLE "items" (
 	"type" "item_type" NOT NULL,
 	"kind" "item_kind",
 	"status" "item_status" DEFAULT 'pending' NOT NULL,
-	"failure_reason" "item_failure_reason",
+	"failure_reason" text,
 	"error" text,
 	"content_hash" text NOT NULL,
 	"raw_text" text NOT NULL,
@@ -111,8 +96,6 @@ CREATE TABLE "users" (
 --> statement-breakpoint
 ALTER TABLE "chunks" ADD CONSTRAINT "chunks_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "entities" ADD CONSTRAINT "entities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "facts" ADD CONSTRAINT "facts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "facts" ADD CONSTRAINT "facts_source_item_id_items_id_fk" FOREIGN KEY ("source_item_id") REFERENCES "public"."items"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "item_captures" ADD CONSTRAINT "item_captures_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "item_entities" ADD CONSTRAINT "item_entities_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "item_entities" ADD CONSTRAINT "item_entities_entity_id_entities_id_fk" FOREIGN KEY ("entity_id") REFERENCES "public"."entities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -124,9 +107,6 @@ CREATE UNIQUE INDEX "chunks_item_idx_idx" ON "chunks" USING btree ("item_id","id
 CREATE INDEX "chunks_embedding_idx" ON "chunks" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
 CREATE INDEX "chunks_tsv_idx" ON "chunks" USING gin ("tsv");--> statement-breakpoint
 CREATE UNIQUE INDEX "entities_user_normalized_name_type_idx" ON "entities" USING btree ("user_id","normalized_name","type");--> statement-breakpoint
-CREATE INDEX "facts_user_valid_idx" ON "facts" USING btree ("user_id","valid_to");--> statement-breakpoint
-CREATE INDEX "facts_embedding_idx" ON "facts" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
-CREATE INDEX "facts_tsv_idx" ON "facts" USING gin ("tsv");--> statement-breakpoint
 CREATE INDEX "item_captures_item_id_idx" ON "item_captures" USING btree ("item_id");--> statement-breakpoint
 CREATE INDEX "item_entities_entity_id_idx" ON "item_entities" USING btree ("entity_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "items_user_content_hash_idx" ON "items" USING btree ("user_id","content_hash");--> statement-breakpoint

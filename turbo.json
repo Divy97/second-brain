@@ -18,7 +18,7 @@
     },
     "test": {
       "outputs": ["coverage/**"],
-      "env": ["DATABASE_URL", "DATABASE_ADMIN_URL"]
+      "env": ["DATABASE_ADMIN_URL"]
     },
     "lint:boundaries": {
       "inputs": ["$TURBO_DEFAULT$", "../../.dependency-cruiser.cjs"]
@@ -28,5 +28,6 @@
       "persistent": true
     }
   },
-  "globalEnv": ["NEXT_PUBLIC_API_URL"]
+  "globalEnv": ["NEXT_PUBLIC_API_URL"],
+  "globalPassThroughEnv": ["DATABASE_URL"]
 }

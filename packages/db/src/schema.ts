@@ -28,16 +28,21 @@ const id = () =>
     .primaryKey()
     .$defaultFn(() => uuidv7())
 
-const createdAt = () =>
-  timestamp("created_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow()
+const timestampTz = (name: string) =>
+  timestamp(name, { withTimezone: true, mode: "date" })
+
+const createdAt = () => timestampTz("created_at").notNull().defaultNow()
 
 const updatedAt = () =>
-  timestamp("updated_at", { withTimezone: true, mode: "date" })
+  timestampTz("updated_at")
     .notNull()
     .defaultNow()
     .$onUpdateFn(() => new Date())
+
+// Postgres arrays need postgres.js type fetching, which is disabled for Hyperdrive;
+// string lists are stored as jsonb instead.
+const stringList = (name: string) =>
+  jsonb(name).$type<string[]>().notNull().default([])
 
 export const itemTypeEnum = pgEnum("item_type", [
   "text",
@@ -65,12 +70,6 @@ export const itemStatusEnum = pgEnum("item_status", [
   "processing",
   "ready",
   "failed",
-])
-
-export const itemFailureReasonEnum = pgEnum("item_failure_reason", [
-  "missing_key",
-  "model_error",
-  "extraction_error",
 ])
 
 export const keyProviderEnum = pgEnum("key_provider", [
@@ -114,7 +113,7 @@ export const items = pgTable(
     type: itemTypeEnum("type").notNull(),
     kind: itemKindEnum("kind"),
     status: itemStatusEnum("status").notNull().default("pending"),
-    failureReason: itemFailureReasonEnum("failure_reason"),
+    failureReason: text("failure_reason"),
     error: text("error"),
     contentHash: text("content_hash").notNull(),
     rawText: text("raw_text").notNull(),
@@ -122,11 +121,9 @@ export const items = pgTable(
     title: text("title"),
     summary: text("summary"),
     language: text("language"),
-    tags: jsonb("tags").$type<string[]>().notNull().default([]),
-    capturedAt: timestamp("captured_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
-    deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+    tags: stringList("tags"),
+    capturedAt: timestampTz("captured_at").notNull().defaultNow(),
+    deletedAt: timestampTz("deleted_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -145,13 +142,13 @@ export const itemCaptures = pgTable(
     itemId: uuid("item_id")
       .notNull()
       .references(() => items.id, { onDelete: "cascade" }),
-    capturedAt: timestamp("captured_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    capturedAt: timestampTz("captured_at").notNull().defaultNow(),
   },
   (t) => [index("item_captures_item_id_idx").on(t.itemId)]
 )
 
+// search_text is denormalised by the pipeline (chunk text + title + entities + tags):
+// a generated column cannot read other tables.
 export const chunks = pgTable(
   "chunks",
   {
@@ -162,9 +159,11 @@ export const chunks = pgTable(
     idx: integer("idx").notNull(),
     text: text("text").notNull(),
     searchText: text("search_text").notNull(),
-    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
-    embeddingModel: text("embedding_model"),
-    embeddingDimensions: integer("embedding_dimensions"),
+    embedding: vector("embedding", {
+      dimensions: EMBEDDING_DIMENSIONS,
+    }).notNull(),
+    embeddingModel: text("embedding_model").notNull(),
+    embeddingDimensions: integer("embedding_dimensions").notNull(),
     tsv: tsvector("tsv").generatedAlwaysAs(
       (): SQL => sql`to_tsvector('simple', ${chunks.searchText})`
     ),
@@ -217,39 +216,6 @@ export const itemEntities = pgTable(
   ]
 )
 
-export const facts = pgTable(
-  "facts",
-  {
-    id: id(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    text: text("text").notNull(),
-    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
-    embeddingModel: text("embedding_model"),
-    embeddingDimensions: integer("embedding_dimensions"),
-    tsv: tsvector("tsv").generatedAlwaysAs(
-      (): SQL => sql`to_tsvector('simple', ${facts.text})`
-    ),
-    sourceItemId: uuid("source_item_id").references(() => items.id, {
-      onDelete: "set null",
-    }),
-    validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
-    validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
-    createdAt: createdAt(),
-  },
-  (t) => [
-    index("facts_user_valid_idx").on(t.userId, t.validTo),
-    index("facts_embedding_idx").using(
-      "hnsw",
-      t.embedding.op("vector_cosine_ops")
-    ),
-    index("facts_tsv_idx").using("gin", t.tsv),
-  ]
-)
-
 export const threads = pgTable(
   "threads",
   {
@@ -259,7 +225,7 @@ export const threads = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     createdAt: createdAt(),
-    deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+    deletedAt: timestampTz("deleted_at"),
   },
   (t) => [index("threads_user_created_at_idx").on(t.userId, t.createdAt)]
 )
@@ -273,10 +239,7 @@ export const messages = pgTable(
       .references(() => threads.id, { onDelete: "cascade" }),
     role: messageRoleEnum("role").notNull(),
     text: text("text").notNull(),
-    citedItemIds: jsonb("cited_item_ids")
-      .$type<string[]>()
-      .notNull()
-      .default([]),
+    citedItemIds: stringList("cited_item_ids"),
     createdAt: createdAt(),
   },
   (t) => [index("messages_thread_created_at_idx").on(t.threadId, t.createdAt)]

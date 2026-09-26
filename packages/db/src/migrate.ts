@@ -1,11 +1,19 @@
+import { fileURLToPath } from "node:url"
+
 import { drizzle } from "drizzle-orm/postgres-js"
 import { migrate } from "drizzle-orm/postgres-js/migrator"
 import postgres from "postgres"
 
-import { migrationsFolder } from "./lib/migrations-folder.js"
 import * as schema from "./schema.js"
 
 // Node-only entry point: migrations read files from disk and never run inside a Worker.
+
+const migrationsFolder = fileURLToPath(
+  new URL("../drizzle", import.meta.url).href
+)
+
+export const defaultAdminUrl =
+  "postgres://postgres:postgres@localhost:5432/postgres"
 
 export async function runMigrations(connectionString: string): Promise<void> {
   const client = postgres(connectionString, { max: 1 })
@@ -16,10 +24,9 @@ export async function runMigrations(connectionString: string): Promise<void> {
   }
 }
 
-// Drops and recreates `name` on the server `adminUrl` points at, migrates it, and returns its URL.
 export async function createFreshDatabase(
-  adminUrl: string,
-  name: string
+  name: string,
+  adminUrl: string = process.env.DATABASE_ADMIN_URL ?? defaultAdminUrl
 ): Promise<string> {
   if (!/^[a-z_][a-z0-9_]*$/.test(name)) {
     throw new Error(`invalid database name: ${name}`)

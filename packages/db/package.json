@@ -5,18 +5,21 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
-    "./migrate": "./src/migrate.ts",
-    "./schema": "./src/schema.ts"
+    "./migrate": "./src/migrate.ts"
   },
   "scripts": {
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint:boundaries": "bunx --bun depcruise --config ../../.dependency-cruiser.cjs ."
+    "lint:boundaries": "bunx --bun depcruise --config ../../.dependency-cruiser.cjs .",
+    "migrate": "bun run src/bin/migrate.ts"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,mjs}": ["prettier --write", "eslint --fix --max-warnings 0 --no-warn-ignored"]
+    "*.{ts,tsx,js,mjs}": [
+      "prettier --write",
+      "eslint --fix --max-warnings 0 --no-warn-ignored"
+    ]
   },
   "devDependencies": {
     "@types/node": "^20",

@@ -22,6 +22,8 @@ Prerequisites: Bun 1.3, Docker.
 bun install
 docker compose up -d --wait                 # Postgres 17 + pgvector on :5432
 cp apps/web/.env.example apps/web/.env      # NEXT_PUBLIC_API_URL
+cp apps/api/.dev.vars.example apps/api/.dev.vars   # Worker secrets for local dev
+bun run db:migrate                          # apply migrations to the local database
 bun run dev                                 # web on :3000, api on :8787
 ```
 

@@ -1,39 +1,17 @@
-import {
-  WorkflowEntrypoint,
-  type WorkflowEvent,
-  type WorkflowStep,
-} from "cloudflare:workers"
 import { Hono } from "hono"
 
-import { health } from "./lib/health.js"
+import { healthRoutes } from "./lib/health.js"
+import { itemsQueueConsumer } from "./lib/items-queue.js"
+import { type ProcessItemParams } from "./lib/process-item-workflow.js"
 
-export interface ProcessItemParams {
-  itemId: string
-}
+export { ProcessItemWorkflow } from "./lib/process-item-workflow.js"
+export type { ProcessItemParams }
 
 const app = new Hono<{ Bindings: Env }>()
 
-app.route("/health", health)
-
-export class ProcessItemWorkflow extends WorkflowEntrypoint<
-  Env,
-  ProcessItemParams
-> {
-  run(
-    _event: WorkflowEvent<ProcessItemParams>,
-    _step: WorkflowStep
-  ): Promise<void> {
-    return Promise.reject(
-      new Error("processItem is implemented in a later ticket")
-    )
-  }
-}
+app.route("/health", healthRoutes)
 
 export default {
   fetch: app.fetch,
-  queue(batch) {
-    for (const message of batch.messages) {
-      message.retry()
-    }
-  },
+  queue: itemsQueueConsumer,
 } satisfies ExportedHandler<Env, ProcessItemParams>
