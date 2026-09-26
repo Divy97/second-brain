@@ -29,6 +29,12 @@ For EACH ticket, in this order, nothing skipped:
 8. Run the code-review skill against master with the ticket as spec. Fix every hard finding and every judgement call you agree with; write the ones you reject, with reasons, into the PR body.
 9. Commit through the hooks with Conventional Commits, push, open the PR with `gh pr create` (body: summary, decisions, deviations, verification incl. what was screenshotted; `Closes #<n>`). Wait for the `check` workflow with `gh pr checks <n> --watch`. If it fails, fix and push until it passes. Then `gh pr merge <n> --squash --delete-branch`, pull master, and move to the next ticket.
 
+Delegation:
+- Research goes to background subagents that read primary sources and write docs/research/<n>-<topic>.md; you read their summary, not the sources.
+- Browser verification is done by a fresh subagent that receives only the ticket's acceptance criteria, how to start the app, and the .env location. It reports pass/fail per criterion with screenshot paths. You fix what it fails and re-run it; you do not verify your own work.
+- code-review already runs its two reviewers as subagents.
+- Implementation is never delegated or parallelised: one branch, one editor, tests first. Never have two agents editing the same worktree.
+
 Rules that override everything else:
 - Never commit or push to master directly. Never force-push master. Never rewrite history on a pushed branch except your own feature branch before the PR exists.
 - No AI attribution lines anywhere. Comments only when extremely important.
