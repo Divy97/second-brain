@@ -65,3 +65,18 @@ export {
   type StoredUserKey,
   type UserKeyRef,
 } from "./queries/user-keys.js"
+export {
+  captureTextItem,
+  findItem,
+  listItems,
+  replaceItemText,
+  softDeleteItem,
+  type CapturedItem,
+  type ItemDetail,
+  type ItemKind,
+  type ItemPage,
+  type ItemRef,
+  type ItemStatus,
+  type ItemSummary,
+  type ReplaceTextResult,
+} from "./queries/items.js"

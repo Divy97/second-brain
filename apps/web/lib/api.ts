@@ -70,7 +70,8 @@ export async function apiRequest<T>(
     headers: mergedHeaders,
     body: json === undefined ? undefined : JSON.stringify(json),
   })
-  const body: unknown = await response.json().catch(() => null)
+  const body: unknown =
+    response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
     if (isApiErrorBody(body)) {
       throw new ApiError(response.status, body.error.code, body.error.message)
@@ -99,3 +100,46 @@ export const saveOpenRouterKey = (key: string) =>
 
 export const removeOpenRouterKey = () =>
   apiRequest<KeySettings>("/keys/openrouter", { method: "DELETE" })
+
+export type ItemStatus = "pending" | "processing" | "ready" | "failed"
+
+export interface ItemSummary {
+  id: string
+  status: ItemStatus
+  kind: string | null
+  title: string | null
+  excerpt: string
+  capturedAt: string
+}
+
+export interface ItemDetail extends ItemSummary {
+  rawText: string
+  cleanText: string | null
+  summary: string | null
+  language: string | null
+  tags: string[]
+  failureReason: string | null
+  error: string | null
+  captures: string[]
+}
+
+export interface ItemPage {
+  items: ItemSummary[]
+  nextCursor: string | null
+}
+
+export const itemPagePath = (cursor: string | null) =>
+  cursor ? `/items?cursor=${encodeURIComponent(cursor)}` : "/items"
+
+export const itemPath = (id: string) => `/items/${id}`
+
+export const fetchJson = <T>(path: string) => apiRequest<T>(path)
+
+export const saveItem = (text: string) =>
+  apiRequest<ItemSummary>("/items", { method: "POST", json: { text } })
+
+export const editItem = (id: string, text: string) =>
+  apiRequest<ItemDetail>(itemPath(id), { method: "PATCH", json: { text } })
+
+export const deleteItem = (id: string) =>
+  apiRequest<null>(itemPath(id), { method: "DELETE" })
