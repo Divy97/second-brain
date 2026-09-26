@@ -1,0 +1,6 @@
+while read -r _ _ remote_ref _; do
+  if [ "$remote_ref" = "refs/heads/master" ]; then
+    echo "pre-push: direct pushes to master are blocked — open a PR." >&2
+    exit 1
+  fi
+done
