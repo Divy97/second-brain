@@ -1,21 +1,46 @@
-# shadcn/ui monorepo template
+# Second Brain
 
-This is a Next.js monorepo template with shadcn/ui.
+Capture anything, ask for it later, get the thing you saved back verbatim with its source. Product spec: `docs/spec.md`. Research behind the decisions: `docs/research/`.
 
-## Adding components
+## Layout
 
-To add components to your app, run the following command at the root of your `web` app:
+```
+apps/web         Next.js UI (Vercel)
+apps/api         Hono on Cloudflare Workers: HTTP API, queue consumer, workflows
+packages/db      Drizzle schema, migrations, database access (Neon Postgres + pgvector via Hyperdrive)
+packages/ai      OpenRouter client (chat with structured output, embeddings) on a caller-supplied key
+packages/ui      shadcn/ui components
+```
+
+Each package is a deep module: import only from the root of its `src/` (or the entry points its `package.json` exports). `bun run lint:boundaries` enforces this.
+
+## Local development
+
+Prerequisites: Bun 1.3, Docker.
 
 ```bash
-pnpm dlx shadcn@latest add button -c apps/web
+bun install
+docker compose up -d --wait                 # Postgres 17 + pgvector on :5432
+cp apps/web/.env.example apps/web/.env      # NEXT_PUBLIC_API_URL
+bun run dev                                 # web on :3000, api on :8787
 ```
 
-This will place the ui components in the `packages/ui/src/components` directory.
+Open http://localhost:3000/status to confirm the API and database are reachable.
 
-## Using components
+Migrations live in `packages/db/drizzle`. After changing `packages/db/src/schema.ts`:
 
-To use the components in your app, import them from the `ui` package.
-
-```tsx
-import { Button } from "@workspace/ui/components/button";
+```bash
+cd packages/db && bunx drizzle-kit generate --name=<change>
 ```
+
+Migrations are applied programmatically (`@workspace/db/migrate`); `drizzle-kit push` is never used because it drops HNSW operator classes.
+
+## Checks
+
+```bash
+bun run check    # lint, typecheck, boundaries, tests across every workspace
+```
+
+Tests run against a real Postgres: each suite provisions its own database on the local server. `apps/api` tests run inside the Workers runtime through `@cloudflare/vitest-plugin` (pinned to Vitest 4 until the plugin supports Vitest 5).
+
+The pre-commit hook runs Prettier, ESLint and typecheck; commit messages follow Conventional Commits. Every change goes through a branch and a squash-merged PR; see `AGENTS.md`.

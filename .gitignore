@@ -36,6 +36,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -47,3 +48,7 @@ next-env.d.ts
 # agent skills: vendored from skills-lock.json (restore with `bunx skills experimental_install`)
 .agents/
 .claude/skills/
+
+# cloudflare
+.wrangler/
+.dev.vars*

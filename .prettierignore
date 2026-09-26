@@ -4,4 +4,5 @@ node_modules/
 .turbo/
 coverage/
 pnpm-lock.yaml
-.pnpm-store/
+.pnpm-store/worker-configuration.d.ts
+.wrangler/

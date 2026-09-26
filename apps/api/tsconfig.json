@@ -1,0 +1,12 @@
+{
+  "extends": "@workspace/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": ["./worker-configuration.d.ts", "node"],
+    "noEmit": true
+  },
+  "include": ["src", "test", "*.ts", "worker-configuration.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

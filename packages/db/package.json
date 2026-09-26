@@ -1,0 +1,35 @@
+{
+  "name": "@workspace/db",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./migrate": "./src/migrate.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "lint": "eslint",
+    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint:boundaries": "bunx --bun depcruise --config ../../.dependency-cruiser.cjs ."
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": ["prettier --write", "eslint --fix --max-warnings 0 --no-warn-ignored"]
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/uuid": "^11.0.0",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.3",
+    "postgres": "^3.4.9",
+    "uuid": "^14.0.2"
+  }
+}
