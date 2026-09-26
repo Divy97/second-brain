@@ -14,10 +14,7 @@
     "lint:boundaries": "bunx --bun depcruise --config ../../.dependency-cruiser.cjs ."
   },
   "lint-staged": {
-    "*.{ts,tsx,js,mjs}": [
-      "prettier --write",
-      "eslint --fix --max-warnings 0 --no-warn-ignored"
-    ]
+    "*.{ts,tsx,js,mjs}": ["prettier --write", "eslint --fix --max-warnings 0 --no-warn-ignored"]
   },
   "devDependencies": {
     "@types/node": "^20",
