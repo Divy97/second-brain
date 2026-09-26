@@ -186,8 +186,12 @@ export const items = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    uniqueIndex("items_user_content_hash_idx").on(t.userId, t.contentHash),
-    index("items_user_captured_at_idx").on(t.userId, t.capturedAt),
+    uniqueIndex("items_user_content_hash_idx")
+      .on(t.userId, t.contentHash)
+      .where(sql`${t.deletedAt} is null`),
+    index("items_user_captured_at_idx")
+      .on(t.userId, t.capturedAt.desc(), t.id.desc())
+      .where(sql`${t.deletedAt} is null`),
     index("items_user_kind_idx").on(t.userId, t.kind),
     index("items_user_status_idx").on(t.userId, t.status),
   ]

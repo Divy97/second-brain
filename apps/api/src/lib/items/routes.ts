@@ -4,6 +4,7 @@ import { z } from "zod"
 import {
   captureTextItem,
   findItem,
+  InvalidCursorError,
   listItems,
   replaceItemText,
   softDeleteItem,
@@ -18,27 +19,35 @@ import type { ProcessItemParams } from "../process-item-workflow.js"
 
 const MAX_TEXT_LENGTH = 100_000
 const PAGE_SIZE = 50
-const uuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const itemId = z.uuid()
 
 const textBody = z.object({
-  text: z.string().max(MAX_TEXT_LENGTH).trim().min(1),
+  text: z
+    .string('Send the note as JSON: { "text": "..." }.')
+    .max(MAX_TEXT_LENGTH, "Notes can be at most 100,000 characters.")
+    .trim()
+    .min(1, "Write something before saving."),
 })
 
-async function parseText(c: Context<AppEnv>): Promise<string | null> {
-  const parsed = textBody.safeParse(await c.req.json().catch(() => null))
-  return parsed.success ? parsed.data.text : null
+type ParsedText = { ok: true; text: string } | { ok: false; message: string }
+
+async function parseText(c: Context<AppEnv>): Promise<ParsedText> {
+  const parsed = textBody.safeParse(await c.req.json().catch(() => ({})))
+  return parsed.success
+    ? { ok: true, text: parsed.data.text }
+    : {
+        ok: false,
+        message: parsed.error.issues[0]?.message ?? "Invalid note.",
+      }
 }
 
 function itemRef(c: Context<AppEnv>): ItemRef | null {
-  const itemId = c.req.param("id")
-  return itemId && uuidPattern.test(itemId)
-    ? { userId: c.var.userId, itemId }
-    : null
+  const parsed = itemId.safeParse(c.req.param("id"))
+  return parsed.success ? { userId: c.var.userId, itemId: parsed.data } : null
 }
 
-const emptyText = (c: Context<AppEnv>) =>
-  apiError(c, 400, "invalid_request", "Write something before saving.")
+const invalidText = (c: Context<AppEnv>, message: string) =>
+  apiError(c, 400, "invalid_request", message)
 
 const notFound = (c: Context<AppEnv>) =>
   apiError(c, 404, "not_found", "This item does not exist or was deleted.")
@@ -51,25 +60,45 @@ async function enqueue(c: Context<AppEnv>, itemId: string): Promise<void> {
 export const itemRoutes = new Hono<AppEnv>()
 
 itemRoutes.post("/", async (c) => {
-  const text = await parseText(c)
-  if (text === null) return emptyText(c)
+  const parsed = await parseText(c)
+  if (!parsed.ok) return invalidText(c, parsed.message)
 
   const { item, created } = await captureTextItem(c.var.db, {
     userId: c.var.userId,
-    text,
-    contentHash: await contentHash(text),
+    text: parsed.text,
+    contentHash: await contentHash(parsed.text),
   })
-  if (created) await enqueue(c, item.id)
+  // Re-queue a repeat capture that is still pending, so a lost queue send heals on retry.
+  if (item.status === "pending") {
+    try {
+      await enqueue(c, item.id)
+    } catch (error) {
+      console.error("queue send failed", item.id, error)
+      return apiError(
+        c,
+        503,
+        "queue_unavailable",
+        "Your note is saved, but processing could not start. Save it again to retry."
+      )
+    }
+  }
   return c.json(item, created ? 201 : 200)
 })
 
 itemRoutes.get("/", async (c) => {
-  const page = await listItems(c.var.db, {
-    userId: c.var.userId,
-    limit: PAGE_SIZE,
-    cursor: c.req.query("cursor"),
-  })
-  return c.json(page)
+  try {
+    const page = await listItems(c.var.db, {
+      userId: c.var.userId,
+      limit: PAGE_SIZE,
+      cursor: c.req.query("cursor"),
+    })
+    return c.json(page)
+  } catch (error) {
+    if (error instanceof InvalidCursorError) {
+      return apiError(c, 400, "invalid_request", "That page link is invalid.")
+    }
+    throw error
+  }
 })
 
 itemRoutes.get("/:id", async (c) => {
@@ -81,12 +110,12 @@ itemRoutes.get("/:id", async (c) => {
 itemRoutes.patch("/:id", async (c) => {
   const ref = itemRef(c)
   if (!ref) return notFound(c)
-  const text = await parseText(c)
-  if (text === null) return emptyText(c)
+  const parsed = await parseText(c)
+  if (!parsed.ok) return invalidText(c, parsed.message)
 
   const result = await replaceItemText(c.var.db, ref, {
-    text,
-    contentHash: await contentHash(text),
+    text: parsed.text,
+    contentHash: await contentHash(parsed.text),
   })
   if (result.outcome === "not_found") return notFound(c)
   if (result.outcome === "duplicate") {

@@ -4,7 +4,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { formatListDate } from "@/lib/format-date"
 import { Button } from "@workspace/ui/components/button"
 
-import type { ItemSummary } from "@/lib/api"
+import type { ItemSummary } from "@/lib/items-api"
 
 export function ItemList({
   items,

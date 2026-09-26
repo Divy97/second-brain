@@ -2,7 +2,7 @@ import { ItemView } from "@/components/item-view"
 
 export const metadata = { title: "Note" }
 
-export default async function ItemPage({
+export default async function NotePage({
   params,
 }: {
   params: Promise<{ id: string }>

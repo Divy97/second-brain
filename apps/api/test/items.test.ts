@@ -69,7 +69,7 @@ describe("items", () => {
     expect(openRouter.calls).toHaveLength(0)
   })
 
-  it("queues a new item for processing, once, and again after an edit", async () => {
+  it("queues an item whenever it is saved while pending, and again after an edit", async () => {
     const send = vi.spyOn(env.ITEMS_QUEUE, "send")
     try {
       const session = await signUp()
@@ -82,6 +82,7 @@ describe("items", () => {
       })
 
       expect(send.mock.calls.map(([body]) => body)).toEqual([
+        { itemId: item.id },
         { itemId: item.id },
         { itemId: item.id },
       ])
@@ -215,17 +216,104 @@ describe("items", () => {
     expect((await detail.json<ErrorBody>()).error.code).toBe("not_found")
   })
 
-  it("brings a deleted item back when the same text is saved again", async () => {
+  it("starts a fresh item when the text of a deleted item is saved again", async () => {
     const session = await signUp()
     const item = await saveItem(session, "second thoughts")
     await request(`/items/${item.id}`, { method: "DELETE", session })
 
     const again = await saveItem(session, "second thoughts")
 
-    expect(again.id).toBe(item.id)
-    expect((await listItems(session)).map((entry) => entry.id)).toEqual([
-      item.id,
-    ])
+    expect(again.id).not.toBe(item.id)
+    expect((await getItem(session, item.id)).status).toBe(404)
+    const detail = await (await getItem(session, again.id)).json<ItemDetail>()
+    expect(detail.captures).toHaveLength(1)
+  })
+
+  it("allows editing a note to the text of a deleted note", async () => {
+    const session = await signUp()
+    const deleted = await saveItem(session, "old wording")
+    await request(`/items/${deleted.id}`, { method: "DELETE", session })
+    const item = await saveItem(session, "new wording")
+
+    const response = await request(`/items/${item.id}`, {
+      method: "PATCH",
+      session,
+      json: { text: "old wording" },
+    })
+
+    expect(response.status).toBe(200)
+  })
+
+  it("refuses to edit a note into the text of another live note", async () => {
+    const session = await signUp()
+    await saveItem(session, "taken")
+    const item = await saveItem(session, "free")
+
+    const response = await request(`/items/${item.id}`, {
+      method: "PATCH",
+      session,
+      json: { text: "taken" },
+    })
+
+    expect(response.status).toBe(409)
+    expect((await response.json<ErrorBody>()).error.code).toBe("duplicate")
+  })
+
+  it("pages through items without skipping any", async () => {
+    const session = await signUp()
+    const saved: string[] = []
+    for (let index = 0; index < 53; index += 1) {
+      saved.push((await saveItem(session, `note ${index}`)).id)
+    }
+
+    const first = await request("/items", { session })
+    const firstPage = await first.json<{
+      items: ItemSummary[]
+      nextCursor: string | null
+    }>()
+    expect(firstPage.items).toHaveLength(50)
+    expect(firstPage.nextCursor).not.toBeNull()
+    const second = await request(
+      `/items?cursor=${encodeURIComponent(firstPage.nextCursor ?? "")}`,
+      { session }
+    )
+    const secondPage = await second.json<{
+      items: ItemSummary[]
+      nextCursor: string | null
+    }>()
+
+    expect(secondPage.nextCursor).toBeNull()
+    expect(
+      [...firstPage.items, ...secondPage.items].map((item) => item.id)
+    ).toEqual(saved.reverse())
+  })
+
+  it("rejects a malformed page cursor", async () => {
+    const session = await signUp()
+
+    const response = await request("/items?cursor=garbage", { session })
+
+    expect(response.status).toBe(400)
+  })
+
+  it("re-queues a pending item when it is captured again", async () => {
+    const send = vi.spyOn(env.ITEMS_QUEUE, "send")
+    try {
+      const session = await signUp()
+      send.mockRejectedValueOnce(new Error("queue unavailable"))
+      const failed = await save(session, "lost in the queue")
+      expect(failed.status).toBe(503)
+      expect((await failed.json<ErrorBody>()).error.code).toBe(
+        "queue_unavailable"
+      )
+
+      const retried = await saveItem(session, "lost in the queue")
+
+      expect(retried.status).toBe("pending")
+      expect(send.mock.calls.at(-1)?.[0]).toEqual({ itemId: retried.id })
+    } finally {
+      send.mockRestore()
+    }
   })
 
   it("never shows one user's items to another", async () => {

@@ -3,7 +3,8 @@
 import { WarningCircleIcon } from "@phosphor-icons/react"
 import { useRef, useState, type KeyboardEvent, type SubmitEvent } from "react"
 
-import { ApiError, saveItem, type ItemSummary } from "@/lib/api"
+import { describeApiError, emptyNoteMessage } from "@/lib/describe-api-error"
+import { saveItem, type ItemSummary } from "@/lib/items-api"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import { Textarea } from "@workspace/ui/components/textarea"
@@ -20,23 +21,22 @@ export function CaptureBox({
 
   async function submit() {
     if (!text.trim()) {
-      setError("Write something before saving.")
+      setError(emptyNoteMessage)
       return
     }
     setPending(true)
     setError(null)
+    let saved: ItemSummary
     try {
-      await onSaved(await saveItem(text))
-      setText("")
+      saved = await saveItem(text)
     } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "The note could not be saved. Check your connection and try again."
-      )
-    } finally {
+      setError(describeApiError(caught))
       setPending(false)
+      return
     }
+    setText("")
+    setPending(false)
+    await onSaved(saved)
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {

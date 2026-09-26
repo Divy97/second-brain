@@ -9,6 +9,7 @@ export type ApiErrorCode =
   | "not_found"
   | "duplicate"
   | "upstream_unavailable"
+  | "queue_unavailable"
 
 export function apiError(
   c: Context,

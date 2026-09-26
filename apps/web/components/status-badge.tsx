@@ -1,6 +1,6 @@
 import { Badge } from "@workspace/ui/components/badge"
 
-import type { ItemStatus } from "@/lib/api"
+import type { ItemStatus } from "@/lib/items-api"
 
 const labelByStatus: Record<ItemStatus, string> = {
   pending: "Pending",

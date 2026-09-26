@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm"
+import { and, desc, eq, isNull, sql } from "drizzle-orm"
 
 import {
   chunks,
@@ -78,8 +78,9 @@ interface CaptureRow extends Record<string, unknown> {
   created: boolean
 }
 
-// One round trip: insert or revive the user's item for this content hash, and record the
-// capture in the same statement. xmax = 0 only for rows this statement inserted.
+// One round trip: insert the user's item for this content hash or reuse the live one, and
+// record the capture in the same statement. xmax = 0 only for rows this statement inserted.
+// Deleted items are outside the partial unique index, so saving their text again starts fresh.
 export async function captureTextItem(
   db: Database,
   input: { userId: string; text: string; contentHash: string }
@@ -88,8 +89,8 @@ export async function captureTextItem(
     with upserted as (
       insert into ${items} (id, user_id, type, status, content_hash, raw_text)
       values (${generateId()}, ${input.userId}, 'text', 'pending', ${input.contentHash}, ${input.text})
-      on conflict (user_id, content_hash) do update
-        set deleted_at = null, captured_at = now(), updated_at = now()
+      on conflict (user_id, content_hash) where deleted_at is null do update
+        set captured_at = now(), updated_at = now()
       returning id, status, kind, title, raw_text, captured_at, (xmax = 0) as created
     ), capture as (
       insert into ${itemCaptures} (id, item_id, captured_at)
@@ -112,47 +113,48 @@ export async function captureTextItem(
   }
 }
 
-function encodeCursor(item: ItemSummary): string {
-  return `${item.capturedAt.toISOString()}_${item.id}`
+// The cursor keeps captured_at at full microsecond precision; a JS Date would truncate it to
+// milliseconds and skip rows on the next page.
+const cursorKey = sql<string>`to_char(${items.capturedAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') || '_' || ${items.id}`
+
+const cursorPattern =
+  /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z)_([0-9a-f-]{36})$/i
+
+export class InvalidCursorError extends Error {
+  constructor() {
+    super("invalid cursor")
+    this.name = "InvalidCursorError"
+  }
 }
 
-function decodeCursor(cursor: string): { capturedAt: Date; id: string } | null {
-  const [iso, id] = cursor.split("_")
-  if (!iso || !id) return null
-  const capturedAt = new Date(iso)
-  return Number.isNaN(capturedAt.getTime()) ? null : { capturedAt, id }
+function afterCursor(cursor: string) {
+  const match = cursorPattern.exec(cursor)
+  if (!match) throw new InvalidCursorError()
+  const [, capturedAt, id] = match
+  return sql`(${items.capturedAt}, ${items.id}) < (${capturedAt}::timestamptz, ${id}::uuid)`
 }
 
 export async function listItems(
   db: Database,
   input: { userId: string; limit: number; cursor?: string }
 ): Promise<ItemPage> {
-  const after = input.cursor ? decodeCursor(input.cursor) : null
   const rows = await db
-    .select(summaryColumns)
+    .select({ ...summaryColumns, cursor: cursorKey })
     .from(items)
     .where(
       and(
         eq(items.userId, input.userId),
         isNull(items.deletedAt),
-        after
-          ? or(
-              lt(items.capturedAt, after.capturedAt),
-              and(
-                eq(items.capturedAt, after.capturedAt),
-                lt(items.id, after.id)
-              )
-            )
-          : undefined
+        input.cursor ? afterCursor(input.cursor) : undefined
       )
     )
     .orderBy(desc(items.capturedAt), desc(items.id))
     .limit(input.limit + 1)
   const page = rows.slice(0, input.limit)
-  const last = page.at(-1)
   return {
-    items: page,
-    nextCursor: rows.length > input.limit && last ? encodeCursor(last) : null,
+    items: page.map(({ cursor: _cursor, ...item }) => item),
+    nextCursor:
+      rows.length > input.limit ? (page.at(-1)?.cursor ?? null) : null,
   }
 }
 

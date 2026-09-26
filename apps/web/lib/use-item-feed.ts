@@ -2,12 +2,8 @@
 
 import useSWRInfinite from "swr/infinite"
 
-import {
-  fetchJson,
-  itemPagePath,
-  type ItemPage,
-  type ItemSummary,
-} from "@/lib/api"
+import { fetchJson } from "@/lib/api"
+import { itemPagePath, type ItemPage, type ItemSummary } from "@/lib/items-api"
 
 export function useItemFeed() {
   const feed = useSWRInfinite<ItemPage, Error>(

@@ -68,6 +68,7 @@ export {
 export {
   captureTextItem,
   findItem,
+  InvalidCursorError,
   listItems,
   replaceItemText,
   softDeleteItem,
