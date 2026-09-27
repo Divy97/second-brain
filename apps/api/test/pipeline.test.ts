@@ -303,10 +303,13 @@ describe("processing a saved note", () => {
     expect(openRouter.chatCalls).toHaveLength(0)
   })
 
-  it("refuses retry for a note that has not failed and reprocess for one that is not settled", async () => {
+  it("refuses retry for a ready note and reprocess for one that is not settled", async () => {
     const id = await save(session, "Still pending")
+    const readyId = await save(session, "Already ready")
+    queue.messages.splice(0, 1)
+    await queue.processLatest()
 
-    const retry = await request(`/items/${id}/retry`, {
+    const retry = await request(`/items/${readyId}/retry`, {
       method: "POST",
       session,
     })

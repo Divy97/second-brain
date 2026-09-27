@@ -1,6 +1,5 @@
 export {
   processItem,
-  runDirectly,
   type ProcessItemOutcome,
   type StepRunner,
 } from "./process-item.js"

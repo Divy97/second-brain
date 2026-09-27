@@ -53,8 +53,24 @@ const invalidText = (c: Context<AppEnv>, message: string) =>
 const notFound = (c: Context<AppEnv>) =>
   apiError(c, 404, "not_found", "This item does not exist or was deleted.")
 
-async function enqueue(c: Context<AppEnv>, job: PipelineJob): Promise<void> {
-  await c.env.ITEMS_QUEUE.send(job)
+// Answers 503 when the queue refuses the job: the note is saved, and saving it again (or
+// retrying) re-queues it.
+async function enqueueOrRefuse(
+  c: Context<AppEnv>,
+  job: PipelineJob
+): Promise<Response | null> {
+  try {
+    await c.env.ITEMS_QUEUE.send(job)
+    return null
+  } catch (error) {
+    console.error("queue send failed", job.itemId, error)
+    return apiError(
+      c,
+      503,
+      "queue_unavailable",
+      "Your note is saved, but processing could not start. Try again shortly."
+    )
+  }
 }
 
 export const itemRoutes = new Hono<AppEnv>()
@@ -70,17 +86,8 @@ itemRoutes.post("/", async (c) => {
   })
   // Re-queue a repeat capture that is still pending, so a lost queue send heals on retry.
   if (item.status === "pending") {
-    try {
-      await enqueue(c, { itemId: item.id, run })
-    } catch (error) {
-      console.error("queue send failed", item.id, error)
-      return apiError(
-        c,
-        503,
-        "queue_unavailable",
-        "Your note is saved, but processing could not start. Save it again to retry."
-      )
-    }
+    const refused = await enqueueOrRefuse(c, { itemId: item.id, run })
+    if (refused) return refused
   }
   return c.json(item, created ? 201 : 200)
 })
@@ -126,7 +133,11 @@ itemRoutes.patch("/:id", async (c) => {
       "Another saved item already has exactly this text."
     )
   }
-  await enqueue(c, { itemId: ref.itemId, run: result.run })
+  const refused = await enqueueOrRefuse(c, {
+    itemId: ref.itemId,
+    run: result.run,
+  })
+  if (refused) return refused
   const item = await findItem(c.var.db, ref)
   return item ? c.json(item) : notFound(c)
 })
@@ -138,7 +149,7 @@ itemRoutes.delete("/:id", async (c) => {
 })
 
 function requeueRoute(
-  allowedFrom: ("ready" | "failed")[],
+  allowedFrom: ("pending" | "ready" | "failed")[],
   conflictMessage: string
 ) {
   return async (c: Context<AppEnv>) => {
@@ -149,7 +160,8 @@ function requeueRoute(
     if (result.outcome === "conflict") {
       return apiError(c, 409, "conflict", conflictMessage)
     }
-    await enqueue(c, result.job)
+    const refused = await enqueueOrRefuse(c, result.job)
+    if (refused) return refused
     const item = await findItem(c.var.db, ref)
     return item ? c.json(item) : notFound(c)
   }
@@ -157,7 +169,10 @@ function requeueRoute(
 
 itemRoutes.post(
   "/:id/retry",
-  requeueRoute(["failed"], "Only a failed note can be retried.")
+  requeueRoute(
+    ["failed", "pending"],
+    "This note is already processing or ready. Reprocess it instead."
+  )
 )
 
 itemRoutes.post(

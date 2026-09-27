@@ -31,8 +31,6 @@ export type StepRunner = <T extends Rpc.Serializable<T>>(
   callback: () => Promise<T>
 ) => Promise<T>
 
-export const runDirectly: StepRunner = (_name, callback) => callback()
-
 export type ProcessItemOutcome =
   | { outcome: "ready"; chunkCount: number }
   | { outcome: "failed"; reason: FailureReason }
@@ -99,7 +97,7 @@ function searchText(enrichment: Enrichment, chunk: string): string {
 export async function processItem(
   env: Env,
   job: PipelineJob,
-  runStep: StepRunner = runDirectly
+  runStep: StepRunner
 ): Promise<ProcessItemOutcome> {
   try {
     const claimed = await runStep("claim", () =>
@@ -110,11 +108,13 @@ export async function processItem(
     const enrichment = await runStep("enrich", () =>
       inStep(env, async (db) => {
         const openRouter = await openRouterFor(db, env, claimed.userId)
-        const [noteEmbedding = []] = await embed(openRouter, [claimed.rawText])
+        const [opening = claimed.rawText] = chunkText(claimed.rawText)
+        const [noteEmbedding = []] = await embed(openRouter, [opening])
         const neighbourTags = await findNeighbourTags(db, {
           userId: claimed.userId,
           excludeItemId: job.itemId,
           embedding: noteEmbedding,
+          embeddingModel,
           limit: enrichmentLimits.neighbourCount,
         })
         return enrichNote(openRouter, { note: claimed.rawText, neighbourTags })

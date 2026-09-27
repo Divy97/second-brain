@@ -3,7 +3,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { chunks, entities, generateId, itemEntities, items } from "../schema.js"
 
 import type { Database } from "../database.js"
-import type { ItemKind, ItemRef } from "./item-types.js"
+import type { ItemEntity, ItemKind, ItemRef } from "./item-types.js"
 
 export interface PipelineJob {
   itemId: string
@@ -22,7 +22,7 @@ export interface Enrichment {
   kind: ItemKind
   language: string
   tags: string[]
-  entities: { name: string; type: string }[]
+  entities: ItemEntity[]
 }
 
 export interface IndexedChunk {
@@ -61,30 +61,41 @@ export async function claimItemRun(
   return row
 }
 
+// Nearest chunks first (index-ordered and bounded), then the closest distinct items.
 export async function findNeighbourTags(
   db: Database,
   input: {
     userId: string
     excludeItemId: string
     embedding: number[]
+    embeddingModel: string
     limit: number
   }
 ): Promise<string[]> {
   const vector = JSON.stringify(input.embedding)
   const rows = await db.execute<{ tags: string[] }>(sql`
-    select i.tags
-    from ${items} i
-    join lateral (
-      select min(c.embedding <=> ${vector}::vector) as distance
+    with nearest_chunks as (
+      select c.item_id, c.embedding <=> ${vector}::vector as distance
       from ${chunks} c
-      where c.item_id = i.id
-    ) nearest on nearest.distance is not null
-    where i.user_id = ${input.userId}
-      and i.id <> ${input.excludeItemId}
-      and i.deleted_at is null
-      and i.status = 'ready'
-    order by nearest.distance
-    limit ${input.limit}
+      join ${items} i on i.id = c.item_id
+      where i.user_id = ${input.userId}
+        and i.id <> ${input.excludeItemId}
+        and i.deleted_at is null
+        and i.status = 'ready'
+        and c.embedding_model = ${input.embeddingModel}
+      order by c.embedding <=> ${vector}::vector
+      limit ${input.limit * 8}
+    ), nearest_items as (
+      select item_id, min(distance) as distance
+      from nearest_chunks
+      group by item_id
+      order by min(distance)
+      limit ${input.limit}
+    )
+    select i.tags
+    from nearest_items n
+    join ${items} i on i.id = n.item_id
+    order by n.distance
   `)
   return [...new Set(rows.flatMap((row) => row.tags))]
 }
@@ -199,7 +210,7 @@ export type RequeueResult =
 export async function requeueItem(
   db: Database,
   ref: ItemRef,
-  allowedFrom: ("ready" | "failed")[]
+  allowedFrom: ("pending" | "ready" | "failed")[]
 ): Promise<RequeueResult> {
   const [row] = await db
     .update(items)
@@ -231,16 +242,4 @@ export async function requeueItem(
       )
     )
   return exists ? { outcome: "conflict" } : { outcome: "not_found" }
-}
-
-export async function listItemEntities(
-  db: Database,
-  itemId: string
-): Promise<{ name: string; type: string }[]> {
-  return db
-    .select({ name: entities.name, type: entities.type })
-    .from(itemEntities)
-    .innerJoin(entities, eq(entities.id, itemEntities.entityId))
-    .where(eq(itemEntities.itemId, itemId))
-    .orderBy(entities.name)
 }

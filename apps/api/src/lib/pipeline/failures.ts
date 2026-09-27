@@ -38,8 +38,12 @@ export function toPipelineFailure(error: unknown): PipelineFailure {
         return new PipelineFailure("model_error", error.message, false)
     }
   }
-  const message = error instanceof Error ? error.message : String(error)
-  return new PipelineFailure("processing_error", message, false)
+  console.error("item processing failed", error)
+  return new PipelineFailure(
+    "processing_error",
+    "Something went wrong while processing this note.",
+    false
+  )
 }
 
 const encodedFailure = new RegExp(

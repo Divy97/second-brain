@@ -25,7 +25,7 @@ export class ProcessItemWorkflow extends WorkflowEntrypoint<
   Env,
   ProcessItemParams
 > {
-  run(
+  async run(
     event: WorkflowEvent<ProcessItemParams>,
     step: WorkflowStep
   ): Promise<ProcessItemOutcome> {
@@ -40,6 +40,12 @@ export class ProcessItemWorkflow extends WorkflowEntrypoint<
           throw error
         }
       })
-    return processItem(this.env, event.payload, runStep)
+    const outcome = await processItem(this.env, event.payload, runStep)
+    // The item is already marked failed; failing the instance keeps Workflow status honest.
+    // Only steps retry, so a plain error here ends the instance as errored.
+    if (outcome.outcome === "failed") {
+      throw new Error(`item ${event.payload.itemId} failed: ${outcome.reason}`)
+    }
+    return outcome
   }
 }

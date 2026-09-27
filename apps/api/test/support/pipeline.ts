@@ -4,9 +4,12 @@ import { vi } from "vitest"
 import {
   processItem,
   type ProcessItemOutcome,
+  type StepRunner,
 } from "../../src/lib/pipeline/index.js"
 
 import type { ProcessItemParams } from "../../src/lib/process-item-workflow.js"
+
+const runDirectly: StepRunner = (_name, callback) => callback()
 
 export interface QueueRecorder {
   messages: ProcessItemParams[]
@@ -31,14 +34,14 @@ export function recordQueue(): QueueRecorder {
       const pending = messages.splice(0)
       const outcomes: ProcessItemOutcome[] = []
       for (const message of pending)
-        outcomes.push(await processItem(env, message))
+        outcomes.push(await processItem(env, message, runDirectly))
       return outcomes
     },
     processLatest: async () => {
       const message = messages.at(-1)
       if (!message) throw new Error("nothing was queued")
       messages.length = 0
-      return processItem(env, message)
+      return processItem(env, message, runDirectly)
     },
     restore: () => {
       spy.mockRestore()

@@ -7,83 +7,94 @@ export function estimateTokens(text: string): number {
   return Math.max(Math.ceil(text.length / 4), Math.ceil(words * 1.3))
 }
 
-function splitOversized(paragraph: string, limit: number): string[] {
-  if (estimateTokens(paragraph) <= limit) return [paragraph]
-  const sentences = paragraph.match(/[^.!?।。]+[.!?।。]*\s*/gu) ?? [paragraph]
+const sumTokens = (units: string[]) =>
+  units.reduce((sum, unit) => sum + estimateTokens(unit), 0)
+
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?।。])\s+/u)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+}
+
+function splitByWords(text: string, limit: number): string[] {
   const pieces: string[] = []
   let current = ""
-  for (const sentence of sentences) {
-    if (current && estimateTokens(current + sentence) > limit) {
-      pieces.push(current.trim())
-      current = ""
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const candidate = current ? `${current} ${word}` : word
+    if (current && estimateTokens(candidate) > limit) {
+      pieces.push(current)
+      current = word
+    } else {
+      current = candidate
     }
-    if (estimateTokens(sentence) > limit) {
-      const charLimit = limit * 4
-      for (let start = 0; start < sentence.length; start += charLimit) {
-        pieces.push(sentence.slice(start, start + charLimit).trim())
-      }
-      continue
+    while (estimateTokens(current) > limit) {
+      pieces.push(current.slice(0, limit * 4))
+      current = current.slice(limit * 4)
     }
-    current += sentence
   }
-  if (current.trim()) pieces.push(current.trim())
+  if (current) pieces.push(current)
   return pieces
 }
 
-function overlapTail(units: string[], budget: number): string[] {
-  const tail: string[] = []
-  let tokens = 0
-  for (let index = units.length - 1; index >= 0; index -= 1) {
-    const unit = units[index] ?? ""
-    tokens += estimateTokens(unit)
-    if (tokens > budget) break
-    tail.unshift(unit)
-  }
-  return tail
+// Paragraphs, then sentences, then words: every unit fits the target on its own.
+function toUnits(paragraph: string, limit: number): string[] {
+  if (estimateTokens(paragraph) <= limit) return [paragraph]
+  return splitSentences(paragraph).flatMap((sentence) =>
+    estimateTokens(sentence) <= limit
+      ? [sentence]
+      : splitByWords(sentence, limit)
+  )
 }
+
+// The overlap is the tail of the previous chunk, taken sentence by sentence.
+function overlapFrom(units: string[], budget: number): string[] {
+  const sentences = splitSentences(units.join(" "))
+  const tail: string[] = []
+  for (let index = sentences.length - 1; index > 0; index -= 1) {
+    const sentence = sentences[index] ?? ""
+    if (sumTokens([...tail, sentence]) > budget) break
+    tail.unshift(sentence)
+  }
+  return tail.length > 0 ? [tail.join(" ")] : []
+}
+
+const isHeading = (unit: string) => /^#{1,6}\s/.test(unit)
 
 export function chunkText(text: string): string[] {
   const trimmed = text.trim()
   if (estimateTokens(trimmed) <= chunking.singleChunkMaxTokens) return [trimmed]
 
   const units = trimmed
-    .split(/\n\s*\n/)
+    .split(/\n\s*\n|\n(?=#{1,6}\s)/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean)
-    .flatMap((paragraph) => splitOversized(paragraph, chunking.targetTokens))
+    .flatMap((paragraph) => toUnits(paragraph, chunking.targetTokens))
 
   const overlapBudget = Math.floor(
     chunking.targetTokens * chunking.overlapRatio
   )
-  const chunks: string[][] = []
-  let current: string[] = []
-  let currentTokens = 0
-  let fresh = 0
+  const chunks: { carried: string[]; fresh: string[] }[] = []
+  let carried: string[] = []
+  let fresh: string[] = []
 
   for (const unit of units) {
-    const tokens = estimateTokens(unit)
-    if (fresh > 0 && currentTokens + tokens > chunking.targetTokens) {
-      chunks.push(current)
-      current = overlapTail(current, overlapBudget)
-      currentTokens = current.reduce(
-        (sum, carried) => sum + estimateTokens(carried),
-        0
-      )
-      fresh = 0
+    const full = sumTokens([...carried, ...fresh, unit]) > chunking.targetTokens
+    const headingBreak =
+      isHeading(unit) && sumTokens(fresh) >= chunking.minTrailingTokens
+    if (fresh.length > 0 && (full || headingBreak)) {
+      chunks.push({ carried, fresh })
+      carried = headingBreak ? [] : overlapFrom(fresh, overlapBudget)
+      fresh = []
     }
-    current.push(unit)
-    currentTokens += tokens
-    fresh += 1
+    fresh.push(unit)
   }
 
-  const freshTokens = current
-    .slice(current.length - fresh)
-    .reduce((sum, unit) => sum + estimateTokens(unit), 0)
   const previous = chunks.at(-1)
-  if (previous && fresh > 0 && freshTokens < chunking.minTrailingTokens) {
-    previous.push(...current.slice(current.length - fresh))
-  } else if (fresh > 0) {
-    chunks.push(current)
+  if (previous && sumTokens(fresh) < chunking.minTrailingTokens) {
+    previous.fresh.push(...fresh)
+  } else if (fresh.length > 0) {
+    chunks.push({ carried, fresh })
   }
-  return chunks.map((chunk) => chunk.join("\n\n"))
+  return chunks.map((chunk) => [...chunk.carried, ...chunk.fresh].join("\n\n"))
 }

@@ -7,10 +7,10 @@ import {
   itemEntities,
   items,
 } from "../schema.js"
-import { listItemEntities } from "./pipeline.js"
+import { listItemEntities } from "./item-entities.js"
 
 import type { Database } from "../database.js"
-import type { ItemKind, ItemRef, ItemStatus } from "./item-types.js"
+import type { ItemEntity, ItemKind, ItemRef, ItemStatus } from "./item-types.js"
 
 const EXCERPT_LENGTH = 200
 
@@ -31,7 +31,7 @@ export interface ItemDetail extends ItemSummary {
   tags: string[]
   failureReason: string | null
   error: string | null
-  entities: { name: string; type: string }[]
+  entities: ItemEntity[]
   captures: Date[]
 }
 

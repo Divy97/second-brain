@@ -52,7 +52,7 @@ describe("queue consumer and workflow", () => {
     await worker.queue(batch, env)
     const result = await getQueueResult(batch, ctx)
 
-    expect(result.ackAll).toBe(true)
+    expect(result.explicitAcks.sort()).toEqual(["m1", "m2"])
     const instances = await introspector.get()
     expect(instances).toHaveLength(1)
     await instances[0]?.waitForStatus("complete")
@@ -89,12 +89,9 @@ describe("queue consumer and workflow", () => {
     await worker.queue(batch, env)
     await getQueueResult(batch, ctx)
     const [instance] = await introspector.get()
-    await instance?.waitForStatus("complete")
+    await instance?.waitForStatus("errored")
 
-    expect(await instance?.getOutput()).toEqual({
-      outcome: "failed",
-      reason: "model_error",
-    })
+    expect((await instance?.getError())?.message).toContain("model_error")
     expect(openRouter.chatCalls).toHaveLength(4)
     const item = await request(`/items/${id}`, { session })
     expect(await item.json()).toMatchObject({
