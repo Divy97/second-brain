@@ -7,6 +7,11 @@ export default defineConfig({
       wrangler: { configPath: "./wrangler.jsonc" },
       miniflare: {
         hyperdrives: { HYPERDRIVE: inject("databaseUrl") },
+        // Tests drive processItem directly; a queue with no consumer keeps the real
+        // consumer from racing them with a background workflow run.
+        queueProducers: {
+          ITEMS_QUEUE: { queueName: "second-brain-items-unconsumed" },
+        },
         bindings: {
           BETTER_AUTH_SECRET: inject("betterAuthSecret"),
           KEY_ENCRYPTION_SECRET: inject("keyEncryptionSecret"),

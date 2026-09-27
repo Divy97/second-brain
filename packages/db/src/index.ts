@@ -74,10 +74,27 @@ export {
   softDeleteItem,
   type CapturedItem,
   type ItemDetail,
-  type ItemKind,
   type ItemPage,
-  type ItemRef,
-  type ItemStatus,
   type ItemSummary,
   type ReplaceTextResult,
 } from "./queries/items.js"
+export type {
+  EntityType,
+  ItemEntity,
+  ItemKind,
+  ItemRef,
+  ItemStatus,
+} from "./queries/item-types.js"
+export {
+  claimItemRun,
+  findNeighbourTags,
+  markItemFailed,
+  requeueItem,
+  saveProcessedItem,
+  type ClaimedItem,
+  type Enrichment,
+  type FailureReason,
+  type IndexedChunk,
+  type PipelineJob,
+  type RequeueResult,
+} from "./queries/pipeline.js"

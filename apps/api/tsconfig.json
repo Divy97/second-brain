@@ -7,6 +7,6 @@
     "types": ["./worker-configuration.d.ts", "node"],
     "noEmit": true
   },
-  "include": ["src", "test", "*.ts", "worker-configuration.d.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src", "*.ts", "worker-configuration.d.ts"],
+  "exclude": ["node_modules", "dist", "test"]
 }

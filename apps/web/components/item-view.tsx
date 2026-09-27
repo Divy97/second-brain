@@ -9,16 +9,25 @@ import useSWR from "swr"
 import { CaptureHistory } from "@/components/capture-history"
 import { ItemActions } from "@/components/item-actions"
 import { ItemEditor } from "@/components/item-editor"
+import { ItemFailure } from "@/components/item-failure"
+import { ItemInsights } from "@/components/item-insights"
 import { StatusBadge } from "@/components/status-badge"
 import { ApiError, fetchJson } from "@/lib/api"
 import { describeApiError, emptyNoteMessage } from "@/lib/describe-api-error"
 import {
   deleteItem,
   editItem,
+  isSettling,
+  isStalled,
   itemPath,
+  reprocessItem,
+  retryItem,
   type ItemDetail,
 } from "@/lib/items-api"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+
+const SETTLING_POLL_MS = 3000
 
 const backLink = (
   <Link
@@ -37,7 +46,10 @@ export function ItemView({ id }: { id: string }) {
     error,
     isLoading,
     mutate,
-  } = useSWR<ItemDetail, Error>(itemPath(id), fetchJson)
+  } = useSWR<ItemDetail, Error>(itemPath(id), fetchJson, {
+    refreshInterval: (latest) =>
+      latest && isSettling(latest.status) ? SETTLING_POLL_MS : 0,
+  })
   const [editing, setEditing] = useState(false)
   const [pending, setPending] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -62,6 +74,12 @@ export function ItemView({ id }: { id: string }) {
     void runAction(async () => {
       await mutate(await editItem(id, text), { revalidate: false })
       setEditing(false)
+    })
+  }
+
+  function requeue(action: (itemId: string) => Promise<ItemDetail>) {
+    void runAction(async () => {
+      await mutate(await action(id), { revalidate: false })
     })
   }
 
@@ -112,6 +130,40 @@ export function ItemView({ id }: { id: string }) {
         </div>
       </header>
 
+      {isStalled(item) && (
+        <Alert>
+          <WarningCircleIcon aria-hidden />
+          <AlertDescription className="flex flex-col gap-3">
+            <p>
+              Processing is taking much longer than it should. Your note is
+              saved; retry to start processing again.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              className="self-start"
+              onClick={() => {
+                requeue(retryItem)
+              }}
+            >
+              {pending ? "Retrying" : "Retry"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {item.status === "failed" && (
+        <ItemFailure
+          reason={item.failureReason}
+          error={item.error}
+          pending={pending}
+          onRetry={() => {
+            requeue(retryItem)
+          }}
+        />
+      )}
+
       <section
         className="flex flex-col gap-3"
         aria-labelledby="original-heading"
@@ -143,13 +195,19 @@ export function ItemView({ id }: { id: string }) {
         </Alert>
       )}
 
+      {!editing && <ItemInsights item={item} />}
+
       <CaptureHistory captures={item.captures} />
 
       {!editing && (
         <ItemActions
           pending={pending}
+          canReprocess={item.status === "ready"}
           onEdit={() => {
             setEditing(true)
+          }}
+          onReprocess={() => {
+            requeue(reprocessItem)
           }}
           onDelete={remove}
         />

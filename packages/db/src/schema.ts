@@ -174,6 +174,7 @@ export const items = pgTable(
     failureReason: text("failure_reason"),
     error: text("error"),
     contentHash: text("content_hash").notNull(),
+    pipelineRun: integer("pipeline_run").notNull().default(0),
     rawText: text("raw_text").notNull(),
     cleanText: text("clean_text"),
     title: text("title"),

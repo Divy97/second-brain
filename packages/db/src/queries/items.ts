@@ -7,13 +7,10 @@ import {
   itemEntities,
   items,
 } from "../schema.js"
+import { listItemEntities } from "./item-entities.js"
 
 import type { Database } from "../database.js"
-
-type ItemRow = typeof items.$inferSelect
-
-export type ItemStatus = ItemRow["status"]
-export type ItemKind = NonNullable<ItemRow["kind"]>
+import type { ItemEntity, ItemKind, ItemRef, ItemStatus } from "./item-types.js"
 
 const EXCERPT_LENGTH = 200
 
@@ -34,17 +31,15 @@ export interface ItemDetail extends ItemSummary {
   tags: string[]
   failureReason: string | null
   error: string | null
+  updatedAt: Date
+  entities: ItemEntity[]
   captures: Date[]
 }
 
 export interface CapturedItem {
   item: ItemSummary & { rawText: string }
   created: boolean
-}
-
-export interface ItemRef {
-  userId: string
-  itemId: string
+  run: number
 }
 
 export interface ItemPage {
@@ -76,6 +71,7 @@ interface CaptureRow extends Record<string, unknown> {
   raw_text: string
   captured_at: Date
   created: boolean
+  run: number
 }
 
 // One round trip: insert the user's item for this content hash or reuse the live one, and
@@ -91,7 +87,7 @@ export async function captureTextItem(
       values (${generateId()}, ${input.userId}, 'text', 'pending', ${input.contentHash}, ${input.text})
       on conflict (user_id, content_hash) where deleted_at is null do update
         set captured_at = now(), updated_at = now()
-      returning id, status, kind, title, raw_text, captured_at, (xmax = 0) as created
+      returning id, status, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
     ), capture as (
       insert into ${itemCaptures} (id, item_id, captured_at)
       select ${generateId()}, id, captured_at from upserted
@@ -101,6 +97,7 @@ export async function captureTextItem(
   if (!row) throw new Error("capture did not return a row")
   return {
     created: row.created,
+    run: row.run,
     item: {
       id: row.id,
       status: row.status,
@@ -172,20 +169,30 @@ export async function findItem(
       tags: items.tags,
       failureReason: items.failureReason,
       error: items.error,
+      updatedAt: items.updatedAt,
     })
     .from(items)
     .where(visibleItem(ref))
   if (!row) return undefined
-  const captures = await db
-    .select({ capturedAt: itemCaptures.capturedAt })
-    .from(itemCaptures)
-    .where(eq(itemCaptures.itemId, ref.itemId))
-    .orderBy(desc(itemCaptures.capturedAt))
-  return { ...row, captures: captures.map((capture) => capture.capturedAt) }
+  const [captures, itemEntityRows] = await Promise.all([
+    db
+      .select({ capturedAt: itemCaptures.capturedAt })
+      .from(itemCaptures)
+      .where(eq(itemCaptures.itemId, ref.itemId))
+      .orderBy(desc(itemCaptures.capturedAt)),
+    listItemEntities(db, ref.itemId),
+  ])
+  return {
+    ...row,
+    entities: itemEntityRows,
+    captures: captures.map((capture) => capture.capturedAt),
+  }
 }
 
 export type ReplaceTextResult =
-  { outcome: "replaced" } | { outcome: "not_found" } | { outcome: "duplicate" }
+  | { outcome: "replaced"; run: number }
+  | { outcome: "not_found" }
+  | { outcome: "duplicate" }
 
 const UNIQUE_VIOLATION = "23505"
 
@@ -220,13 +227,15 @@ export async function replaceItemText(
           tags: [],
           failureReason: null,
           error: null,
+          pipelineRun: sql`${items.pipelineRun} + 1`,
         })
         .where(visibleItem(ref))
-        .returning({ id: items.id })
-      if (updated.length === 0) return { outcome: "not_found" as const }
+        .returning({ run: items.pipelineRun })
+      const [row] = updated
+      if (!row) return { outcome: "not_found" as const }
       await tx.delete(chunks).where(eq(chunks.itemId, ref.itemId))
       await tx.delete(itemEntities).where(eq(itemEntities.itemId, ref.itemId))
-      return { outcome: "replaced" as const }
+      return { outcome: "replaced" as const, run: row.run }
     })
   } catch (error) {
     if (isUniqueViolation(error)) return { outcome: "duplicate" }

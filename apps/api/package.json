@@ -9,7 +9,7 @@
     "types": "wrangler types --strict-vars=false",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test",
     "test": "bun --env-file=../../.env run vitest run",
     "lint:boundaries": "bunx --bun depcruise --config ../../.dependency-cruiser.cjs ."
   },

@@ -29,10 +29,28 @@ export interface ItemDetail extends ItemSummary {
   summary: string | null
   language: string | null
   tags: string[]
-  failureReason: string | null
+  failureReason: FailureReason | null
   error: string | null
+  updatedAt: string
+  entities: { name: string; type: string }[]
   captures: string[]
 }
+
+export type FailureReason =
+  | "missing_key"
+  | "invalid_key"
+  | "insufficient_credits"
+  | "model_error"
+  | "processing_error"
+
+export const isSettling = (status: ItemStatus) =>
+  status === "pending" || status === "processing"
+
+const STALLED_AFTER_MS = 10 * 60 * 1000
+
+export const isStalled = (item: ItemDetail, now = Date.now()) =>
+  item.status === "processing" &&
+  now - new Date(item.updatedAt).getTime() > STALLED_AFTER_MS
 
 export interface ItemPage {
   items: ItemSummary[]
@@ -52,3 +70,9 @@ export const editItem = (id: string, text: string) =>
 
 export const deleteItem = (id: string) =>
   apiRequest<null>(itemPath(id), { method: "DELETE" })
+
+export const retryItem = (id: string) =>
+  apiRequest<ItemDetail>(`${itemPath(id)}/retry`, { method: "POST" })
+
+export const reprocessItem = (id: string) =>
+  apiRequest<ItemDetail>(`${itemPath(id)}/reprocess`, { method: "POST" })

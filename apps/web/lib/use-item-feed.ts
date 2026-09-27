@@ -3,7 +3,14 @@
 import useSWRInfinite from "swr/infinite"
 
 import { fetchJson } from "@/lib/api"
-import { itemPagePath, type ItemPage, type ItemSummary } from "@/lib/items-api"
+import {
+  isSettling,
+  itemPagePath,
+  type ItemPage,
+  type ItemSummary,
+} from "@/lib/items-api"
+
+const SETTLING_POLL_MS = 3000
 
 export function useItemFeed() {
   const feed = useSWRInfinite<ItemPage, Error>(
@@ -11,7 +18,15 @@ export function useItemFeed() {
       if (pageIndex === 0) return itemPagePath(null)
       return previous?.nextCursor ? itemPagePath(previous.nextCursor) : null
     },
-    fetchJson
+    fetchJson,
+    {
+      refreshInterval: (pages) =>
+        pages?.some((page) =>
+          page.items.some((item) => isSettling(item.status))
+        )
+          ? SETTLING_POLL_MS
+          : 0,
+    }
   )
 
   const pages = feed.data ?? []

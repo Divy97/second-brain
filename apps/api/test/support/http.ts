@@ -34,11 +34,8 @@ export function sessionCookieFrom(response: Response): string {
   return cookie
 }
 
-let userCounter = 0
-
 export function uniqueEmail(label = "user"): string {
-  userCounter += 1
-  return `${label}-${Date.now()}-${userCounter}@example.test`
+  return `${label}-${crypto.randomUUID()}@example.test`
 }
 
 export const testPassword = "correct horse battery staple"
@@ -55,4 +52,20 @@ export async function signUp(email = uniqueEmail()): Promise<Session> {
   }
   const body = await response.json<{ user: { id: string } }>()
   return { userId: body.user.id, email, cookie: sessionCookieFrom(response) }
+}
+
+export const testOpenRouterKey = "sk-or-v1-test-key-cafe1234"
+
+export async function saveOpenRouterKey(
+  session: Session,
+  key = testOpenRouterKey
+): Promise<void> {
+  const response = await request("/keys/openrouter", {
+    method: "PUT",
+    session,
+    json: { key },
+  })
+  if (response.status !== 200) {
+    throw new Error(`saving the key failed: ${response.status}`)
+  }
 }
