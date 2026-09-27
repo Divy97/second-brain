@@ -7,7 +7,12 @@ import {
 } from "@workspace/db"
 
 import { embeddingModel, retrieval } from "../config.js"
-import { answerQuestion, toSources, type Answer } from "./answer.js"
+import {
+  answerQuestion,
+  nothingSaved,
+  toSources,
+  type Answer,
+} from "./answer.js"
 import { timeWindow } from "./filters.js"
 import { rerankCandidates } from "./rerank.js"
 import { rewriteQuestion } from "./rewrite.js"
@@ -37,6 +42,12 @@ export async function askQuestion(
   const openRouter = createOpenRouter({ apiKey: key.apiKey })
 
   const rewrite = await rewriteQuestion(openRouter, input)
+  // A follow-up about an exchange whose note was deleted has nothing left to refer to.
+  const lastAnswer = [...input.history]
+    .reverse()
+    .find((turn) => turn.role === "assistant")
+  if (rewrite.followUp && lastAnswer?.hidden)
+    return { ok: true, answer: nothingSaved }
   const { embeddings } = await openRouter.embed({
     model: embeddingModel,
     input: rewrite.variants,
@@ -49,7 +60,7 @@ export async function askQuestion(
       embedding: embeddings[index] ?? [],
     })),
     keywords: rewrite.keywords,
-    window: timeWindow(rewrite.filters),
+    window: timeWindow(rewrite.filters, input.now, input.timezone),
     preferredKind: rewrite.filters.kind,
     limit: retrieval.perListLimit,
   })

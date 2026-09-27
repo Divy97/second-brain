@@ -4,6 +4,7 @@ export interface HistoryTurn {
   role: ThreadMessage["role"]
   text: string
   citedItemIds: string[]
+  hidden: boolean
 }
 
 const hiddenTurn = "[Hidden: this exchange used a note that was since deleted.]"
@@ -23,11 +24,12 @@ export function toHistory(
   })
   return messages.map((message, index) =>
     hidden.has(index)
-      ? { role: message.role, text: hiddenTurn, citedItemIds: [] }
+      ? { role: message.role, text: hiddenTurn, citedItemIds: [], hidden: true }
       : {
           role: message.role,
           text: message.text,
           citedItemIds: message.citedItemIds,
+          hidden: false,
         }
   )
 }

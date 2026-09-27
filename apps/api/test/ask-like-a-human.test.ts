@@ -12,6 +12,7 @@ import {
   defaultRewrite,
   parseAnswerInput,
   parseEnrichmentInput,
+  parseRerankInput,
   parseRewriteInput,
   stubOpenRouter,
   type ChatCall,
@@ -20,7 +21,6 @@ import {
 import { recordQueue, type QueueRecorder } from "./support/pipeline.js"
 
 const nothingSaved = "I don't have anything saved about that."
-const day = 24 * 60 * 60 * 1000
 
 interface Message {
   text: string
@@ -95,17 +95,13 @@ describe("asking like a human", () => {
       "Sourdough starter: switch to rye flour feeding"
     )
     openRouter.onChat("rewrite", (call) => {
-      const { question, now } = parseRewriteInput(call)
+      const { question } = parseRewriteInput(call)
       const base = defaultRewrite(question)
       return question.includes("recently")
         ? {
             ...base,
             variants: ["sourdough starter feeding"],
-            filters: {
-              from: new Date(Date.parse(now) - 30 * day).toISOString(),
-              to: null,
-              kind: null,
-            },
+            filters: { lastDays: 30, from: null, to: null, kind: null },
           }
         : { ...base, variants: ["sourdough starter feeding"] }
     })
@@ -123,12 +119,45 @@ describe("asking like a human", () => {
     expect(citedIds(plain)).toEqual([old, recent].sort())
   })
 
+  it("resolves a closed calendar period in the user's timezone, both days included", async () => {
+    const inside = await saveReady("Garden plan: plant the tomato seedlings", 3)
+    await saveReady("Garden plan: harvest the tomato crop")
+    const outside = await saveReady("Garden plan: order tomato seeds", 20)
+    const inclusiveDay = (daysAgo: number) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(
+        Date.now() - daysAgo * 24 * 60 * 60 * 1000
+      )
+    openRouter.onChat("rewrite", (call) => ({
+      ...defaultRewrite(parseRewriteInput(call).question),
+      variants: ["garden plan tomato"],
+      filters: {
+        lastDays: null,
+        from: inclusiveDay(5),
+        to: inclusiveDay(3),
+        kind: null,
+      },
+    }))
+
+    const answer = await ask(
+      await startThread(),
+      "garden plans from last week?"
+    )
+
+    expect(citedIds(answer)).toEqual([inside])
+    expect(citedIds(answer)).not.toContain(outside)
+  })
+
   it("ignores filters it cannot use instead of failing", async () => {
     const id = await saveReady("Sourdough starter needs feeding twice a day")
     openRouter.onChat("rewrite", (call) => ({
       ...defaultRewrite(parseRewriteInput(call).question),
       variants: ["sourdough starter feeding"],
-      filters: { from: "last tuesday-ish", to: "soonish", kind: null },
+      filters: {
+        lastDays: null,
+        from: "last tuesday-ish",
+        to: "soonish",
+        kind: null,
+      },
     }))
 
     const answer = await ask(await startThread(), "sourdough?")
@@ -153,7 +182,7 @@ describe("asking like a human", () => {
     openRouter.onChat("rewrite", (call) => ({
       ...defaultRewrite(parseRewriteInput(call).question),
       variants: ["time management"],
-      filters: { from: null, to: null, kind: "quote" },
+      filters: { lastDays: null, from: null, to: null, kind: "quote" },
     }))
 
     await ask(await startThread(), "that quote about time management")
@@ -283,6 +312,12 @@ describe("asking like a human", () => {
     })
     await ask(threadId, "what was Comet by Perplexity?")
     await request(`/items/${comet}`, { method: "DELETE", session })
+    openRouter.onChat("rerank", (call) => ({
+      ranking: parseRerankInput(call).candidates.map((candidate) => ({
+        id: candidate.id,
+        score: 1,
+      })),
+    }))
     openRouter.chatCalls.length = 0
 
     const followUp = await ask(threadId, "tell me more about that one")

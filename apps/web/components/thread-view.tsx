@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useState } from "react"
 import useSWR from "swr"
 
+import { AnswerText } from "@/components/answer-text"
 import { AskBox } from "@/components/ask-box"
 import { AskError } from "@/components/ask-error"
 import { DeleteThread } from "@/components/delete-thread"
@@ -39,9 +40,7 @@ function MessageView({ message }: { message: ThreadMessage }) {
   }
   return (
     <div className="flex flex-col gap-3">
-      <p className="max-w-[65ch] text-base leading-relaxed break-words whitespace-pre-wrap md:text-sm">
-        {message.text}
-      </p>
+      <AnswerText text={message.text} />
       <SourceCards sources={message.sources} />
     </div>
   )

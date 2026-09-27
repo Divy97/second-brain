@@ -20,15 +20,28 @@ const rewriteSchema = z.object({
       "Distinctive words to match exactly: names, products, rare terms."
     ),
   filters: z.object({
+    lastDays: z
+      .number()
+      .nullable()
+      .describe(
+        "For windows reaching up to now: how many days back. Else null."
+      ),
     from: z
       .string()
       .nullable()
-      .describe("ISO 8601 start of the time window, or null."),
+      .describe("First calendar day (YYYY-MM-DD) of a past period, or null."),
     to: z
       .string()
       .nullable()
-      .describe("ISO 8601 end of the time window, or null."),
-    kind: z.enum(["quote", "fact", "thought", "meeting", "other"]).nullable(),
+      .describe(
+        "Last calendar day (YYYY-MM-DD, inclusive) of a past period, or null."
+      ),
+    kind: z
+      .enum(["quote", "fact", "thought", "meeting"])
+      .nullable()
+      .describe(
+        "Only when the question explicitly asks for that kind of note."
+      ),
   }),
   followUp: z
     .boolean()
@@ -42,7 +55,11 @@ Return JSON matching the schema.
 - question: the question with typos, dictation and transliteration errors fixed (e.g. "Asian tech browser" -> "agentic browser"). Keep its meaning.
 - variants: 2-3 short rephrasings that expand vague wording into the words the note itself likely contains ("that browser that browses for you" -> "agentic browser"). Write at least one variant in English.
 - keywords: distinctive words worth matching exactly (names of people, products, books, places; rare terms). Leave out common words. May be empty.
-- filters: from/to as ISO 8601 timestamps in UTC when the question limits time, resolved against "now" in the user's timezone ("recently" = last 30 days, "a few days ago" = last 14 days, "last week" = the previous calendar week); kind when the question asks for a quote, fact, thought or meeting note. Otherwise null.
+- filters, when the question limits time:
+  - a window reaching up to now sets lastDays ("recently" = 30, "a few days ago" = 14, "this week" = 7, "today" = 1) and leaves from/to null;
+  - a closed past period sets from/to as calendar dates in the user's timezone, to inclusive ("last week" = the previous Monday to Sunday, "in August" = August 1 to 31), using "now" and "timezone" from the input;
+  - kind only when the question explicitly asks for a quote, fact, thought or meeting note; otherwise null.
+  Everything else null.
 - followUp: true when the question refers back to the previous answer ("that one", "which book was that from?").
 The input is JSON: { "question": string, "now": string, "timezone": string, "history": [{ "role", "text" }] }.`
 
