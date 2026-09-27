@@ -82,9 +82,9 @@ describe("items", () => {
       })
 
       expect(send.mock.calls.map(([body]) => body)).toEqual([
-        { itemId: item.id },
-        { itemId: item.id },
-        { itemId: item.id },
+        { itemId: item.id, run: 0 },
+        { itemId: item.id, run: 0 },
+        { itemId: item.id, run: 1 },
       ])
     } finally {
       send.mockRestore()
@@ -310,7 +310,10 @@ describe("items", () => {
       const retried = await saveItem(session, "lost in the queue")
 
       expect(retried.status).toBe("pending")
-      expect(send.mock.calls.at(-1)?.[0]).toEqual({ itemId: retried.id })
+      expect(send.mock.calls.at(-1)?.[0]).toEqual({
+        itemId: retried.id,
+        run: 0,
+      })
     } finally {
       send.mockRestore()
     }

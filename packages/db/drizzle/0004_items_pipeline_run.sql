@@ -1,0 +1,1 @@
+ALTER TABLE "items" ADD COLUMN "pipeline_run" integer DEFAULT 0 NOT NULL;

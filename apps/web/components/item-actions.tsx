@@ -6,11 +6,15 @@ import { Button } from "@workspace/ui/components/button"
 
 export function ItemActions({
   pending,
+  canReprocess,
   onEdit,
+  onReprocess,
   onDelete,
 }: {
   pending: boolean
+  canReprocess: boolean
   onEdit: () => void
+  onReprocess: () => void
   onDelete: () => void
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -39,6 +43,11 @@ export function ItemActions({
           <Button variant="outline" onClick={onEdit}>
             Edit
           </Button>
+          {canReprocess && (
+            <Button variant="ghost" disabled={pending} onClick={onReprocess}>
+              Reprocess
+            </Button>
+          )}
           <Button
             variant="destructive"
             className="ml-auto"

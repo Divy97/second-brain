@@ -8,6 +8,7 @@ export type ApiErrorCode =
   | "missing_key"
   | "not_found"
   | "duplicate"
+  | "conflict"
   | "upstream_unavailable"
   | "queue_unavailable"
 

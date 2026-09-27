@@ -7,15 +7,16 @@ import {
   InvalidCursorError,
   listItems,
   replaceItemText,
+  requeueItem,
   softDeleteItem,
   type ItemRef,
+  type PipelineJob,
 } from "@workspace/db"
 
 import { apiError } from "../api-error.js"
 import { contentHash } from "./content-hash.js"
 
 import type { AppEnv } from "../app-env.js"
-import type { ProcessItemParams } from "../process-item-workflow.js"
 
 const MAX_TEXT_LENGTH = 100_000
 const PAGE_SIZE = 50
@@ -52,9 +53,8 @@ const invalidText = (c: Context<AppEnv>, message: string) =>
 const notFound = (c: Context<AppEnv>) =>
   apiError(c, 404, "not_found", "This item does not exist or was deleted.")
 
-async function enqueue(c: Context<AppEnv>, itemId: string): Promise<void> {
-  const message: ProcessItemParams = { itemId }
-  await c.env.ITEMS_QUEUE.send(message)
+async function enqueue(c: Context<AppEnv>, job: PipelineJob): Promise<void> {
+  await c.env.ITEMS_QUEUE.send(job)
 }
 
 export const itemRoutes = new Hono<AppEnv>()
@@ -63,7 +63,7 @@ itemRoutes.post("/", async (c) => {
   const parsed = await parseText(c)
   if (!parsed.ok) return invalidText(c, parsed.message)
 
-  const { item, created } = await captureTextItem(c.var.db, {
+  const { item, created, run } = await captureTextItem(c.var.db, {
     userId: c.var.userId,
     text: parsed.text,
     contentHash: await contentHash(parsed.text),
@@ -71,7 +71,7 @@ itemRoutes.post("/", async (c) => {
   // Re-queue a repeat capture that is still pending, so a lost queue send heals on retry.
   if (item.status === "pending") {
     try {
-      await enqueue(c, item.id)
+      await enqueue(c, { itemId: item.id, run })
     } catch (error) {
       console.error("queue send failed", item.id, error)
       return apiError(
@@ -126,7 +126,7 @@ itemRoutes.patch("/:id", async (c) => {
       "Another saved item already has exactly this text."
     )
   }
-  await enqueue(c, ref.itemId)
+  await enqueue(c, { itemId: ref.itemId, run: result.run })
   const item = await findItem(c.var.db, ref)
   return item ? c.json(item) : notFound(c)
 })
@@ -136,3 +136,34 @@ itemRoutes.delete("/:id", async (c) => {
   const deleted = ref && (await softDeleteItem(c.var.db, ref))
   return deleted ? c.body(null, 204) : notFound(c)
 })
+
+function requeueRoute(
+  allowedFrom: ("ready" | "failed")[],
+  conflictMessage: string
+) {
+  return async (c: Context<AppEnv>) => {
+    const ref = itemRef(c)
+    if (!ref) return notFound(c)
+    const result = await requeueItem(c.var.db, ref, allowedFrom)
+    if (result.outcome === "not_found") return notFound(c)
+    if (result.outcome === "conflict") {
+      return apiError(c, 409, "conflict", conflictMessage)
+    }
+    await enqueue(c, result.job)
+    const item = await findItem(c.var.db, ref)
+    return item ? c.json(item) : notFound(c)
+  }
+}
+
+itemRoutes.post(
+  "/:id/retry",
+  requeueRoute(["failed"], "Only a failed note can be retried.")
+)
+
+itemRoutes.post(
+  "/:id/reprocess",
+  requeueRoute(
+    ["ready", "failed"],
+    "This note is still being processed. Try again when it is ready."
+  )
+)

@@ -11,5 +11,6 @@
     "./**/*.ts",
     "../worker-configuration.d.ts",
     "../global-props.d.ts"
-  ]
+  ],
+  "exclude": ["node_modules"]
 }
