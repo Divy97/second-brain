@@ -102,6 +102,8 @@ export {
   appendExchange,
   createThread,
   findThread,
+  listLiveItemIds,
+  listRecentMessages,
   listSourceCards,
   listThreads,
   softDeleteThread,

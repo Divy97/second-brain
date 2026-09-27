@@ -54,13 +54,18 @@ export async function askQuestion(
     limit: retrieval.perListLimit,
   })
   const fused = fuseRankings(lists, retrieval.rrfK).map((entry) => entry.id)
+  // Follow-ups: the most recently cited notes lead the candidates and skip the rerank
+  // floor, so "tell me more about that one" always reaches the note it refers to.
   const previouslyCited = rewrite.followUp
     ? await loadItemChunks(db, {
         userId: input.userId,
         embeddingModel,
         itemIds: [
-          ...new Set(input.history.flatMap((turn) => turn.citedItemIds)),
-        ].reverse(),
+          ...new Set(
+            input.history.flatMap((turn) => turn.citedItemIds).reverse()
+          ),
+        ].slice(0, retrieval.followUpItems),
+        chunksPerItem: retrieval.followUpChunksPerItem,
       })
     : []
   const candidates = await loadCandidates(db, {
@@ -71,11 +76,22 @@ export async function askQuestion(
       retrieval.rerankCandidates
     ),
   })
-  const relevant = await rerankCandidates(openRouter, {
+  const reranked = await rerankCandidates(openRouter, {
     rewrite,
     candidates,
     history: input.history,
   })
+  const carriedOver = candidates.filter((candidate) =>
+    previouslyCited.includes(candidate.chunkId)
+  )
+  const relevant = [
+    ...new Map(
+      [...carriedOver, ...reranked].map((candidate) => [
+        candidate.chunkId,
+        candidate,
+      ])
+    ).values(),
+  ].slice(0, retrieval.rerankKeep)
   const answer = await answerQuestion(openRouter, {
     question: rewrite.question,
     sources: toSources(relevant, input.timezone),

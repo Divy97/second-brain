@@ -281,7 +281,7 @@ describe("asking like a human", () => {
         ? { ...defaultRewrite(question), variants: [question], followUp: true }
         : { ...defaultRewrite(question), keywords: ["Comet"] }
     })
-    await ask(threadId, "what was Comet?")
+    await ask(threadId, "what was Comet by Perplexity?")
     await request(`/items/${comet}`, { method: "DELETE", session })
     openRouter.chatCalls.length = 0
 

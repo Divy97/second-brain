@@ -96,11 +96,9 @@ const keywordQuery = (keywords: string[]) => sql`(
   from unnest(tsvector_to_array(to_tsvector('simple', ${keywords.join(" ")}))) as lexeme
 )`
 
-// One statement for every list: per variant a vector and a full-text list, plus one list
-// over the keywords. The time window narrows every list; a preferred kind adds a
-// kind-only vector list per variant, so matching items rank higher without excluding the
-// rest. Iterative index scans keep filtered HNSW searches from returning fewer than
-// `limit` rows when the user owns a small share of the index.
+// A preferred kind adds lists instead of filtering, so those items rank higher without
+// excluding the rest. Iterative index scans keep filtered HNSW searches from returning
+// fewer than `limit` rows when the user owns a small share of the index.
 export async function searchChunks(
   db: Database,
   input: SearchInput
@@ -191,7 +189,12 @@ export async function loadCandidates(
 // the thread's previous citations at the top of the candidates.
 export async function loadItemChunks(
   db: Database,
-  input: { userId: string; embeddingModel: string; itemIds: string[] }
+  input: {
+    userId: string
+    embeddingModel: string
+    itemIds: string[]
+    chunksPerItem: number
+  }
 ): Promise<string[]> {
   if (input.itemIds.length === 0) return []
   const rows = await db.execute<{ id: string; item_id: string }>(sql`
@@ -202,7 +205,11 @@ export async function loadItemChunks(
       and ${searchableChunk(input.userId, input.embeddingModel)}
     order by c.idx
   `)
+  const byItem = new Map<string, string[]>()
+  for (const row of rows) {
+    byItem.set(row.item_id, [...(byItem.get(row.item_id) ?? []), row.id])
+  }
   return input.itemIds.flatMap((itemId) =>
-    rows.filter((row) => row.item_id === itemId).map((row) => row.id)
+    (byItem.get(itemId) ?? []).slice(0, input.chunksPerItem)
   )
 }

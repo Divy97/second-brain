@@ -126,13 +126,7 @@ const contentWords = (text: string) =>
 
 // A third per shared content word, capped at 1; a keyword hit counts as a full match.
 export function defaultRerank(input: RerankInput) {
-  const asked = contentWords(
-    [
-      input.question,
-      ...input.variants,
-      ...(input.followUp ? input.history.map((turn) => turn.text) : []),
-    ].join(" ")
-  )
+  const asked = contentWords([input.question, ...input.variants].join(" "))
   const keywords = input.keywords.map((keyword) => keyword.toLowerCase())
   return {
     ranking: input.candidates.map((candidate) => {

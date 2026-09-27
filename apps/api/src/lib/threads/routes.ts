@@ -6,15 +6,18 @@ import {
   appendExchange,
   createThread,
   findThread,
+  listLiveItemIds,
+  listRecentMessages,
   listSourceCards,
   listThreads,
   softDeleteThread,
+  threadExists,
   type ThreadMessage,
   type ThreadRef,
 } from "@workspace/db"
 
 import { apiError } from "../api-error.js"
-import { askQuestion, type HistoryTurn } from "../ask/index.js"
+import { askQuestion, toHistory } from "../ask/index.js"
 import { retrieval } from "../config.js"
 
 import type { AppEnv } from "../app-env.js"
@@ -64,29 +67,16 @@ async function withSources(c: Context<AppEnv>, messages: ThreadMessage[]) {
   }))
 }
 
-const removedAnswer = "[This answer is hidden: a note it used was deleted.]"
-
-// Follow-up context: the last messages, with any answer that used a since-deleted note
-// replaced, so deleted content never reaches the model again.
-async function followUpHistory(
-  c: Context<AppEnv>,
-  messages: ThreadMessage[]
-): Promise<HistoryTurn[]> {
-  const recent = messages.slice(-retrieval.historyMessages)
-  const cited = [...new Set(recent.flatMap((message) => message.citedItemIds))]
-  const live = new Set(
-    (
-      await listSourceCards(c.var.db, { userId: c.var.userId, itemIds: cited })
-    ).map((card) => card.id)
-  )
-  return recent.map((message) => {
-    const usesDeleted = message.citedItemIds.some((id) => !live.has(id))
-    return {
-      role: message.role,
-      text: usesDeleted ? removedAnswer : message.text,
-      citedItemIds: usesDeleted ? [] : message.citedItemIds,
-    }
+async function followUpContext(c: Context<AppEnv>, ref: ThreadRef) {
+  const recent = await listRecentMessages(c.var.db, {
+    threadId: ref.threadId,
+    limit: retrieval.historyMessages,
   })
+  const live = await listLiveItemIds(c.var.db, {
+    userId: ref.userId,
+    itemIds: [...new Set(recent.flatMap((message) => message.citedItemIds))],
+  })
+  return toHistory(recent, live)
 }
 
 function modelFailure(c: Context<AppEnv>, error: OpenRouterError): Response {
@@ -135,8 +125,7 @@ threadRoutes.get("/:id", async (c) => {
 
 threadRoutes.post("/:id/messages", async (c) => {
   const ref = threadRef(c)
-  const thread = ref && (await findThread(c.var.db, ref))
-  if (!ref || !thread) return notFound(c)
+  if (!ref || !(await threadExists(c.var.db, ref))) return notFound(c)
   const parsed = askBody.safeParse(await c.req.json().catch(() => ({})))
   if (!parsed.success) {
     return apiError(
@@ -154,7 +143,7 @@ threadRoutes.post("/:id/messages", async (c) => {
       question: parsed.data.question,
       timezone: parsed.data.timezone,
       now: new Date(),
-      history: await followUpHistory(c, thread.messages),
+      history: await followUpContext(c, ref),
     })
   } catch (error) {
     if (error instanceof OpenRouterError) return modelFailure(c, error)
