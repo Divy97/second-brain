@@ -1,8 +1,6 @@
-import { env } from "cloudflare:workers"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
-import { connect } from "@workspace/db"
-
+import { testDb } from "./support/database.js"
 import {
   request,
   saveOpenRouterKey,
@@ -146,7 +144,7 @@ describe("processing a saved note", () => {
     const id = await save(session, "A note to index.")
     await queue.processLatest()
 
-    const { db } = connect(env.HYPERDRIVE.connectionString)
+    const db = testDb()
     const rows = await db.execute<{
       embedding_model: string
       embedding_dimensions: number
@@ -325,7 +323,7 @@ describe("processing a saved note", () => {
   it("lets a note stuck in processing be retried once its run has stalled", async () => {
     const id = await save(session, "A run that died halfway")
     const [lostRun] = queue.messages.splice(0)
-    const { db } = connect(env.HYPERDRIVE.connectionString)
+    const db = testDb()
     await db.execute(
       `update items set status = 'processing', updated_at = now() - interval '11 minutes' where id = '${id}'`
     )
@@ -343,7 +341,7 @@ describe("processing a saved note", () => {
 
   it("does not retry a note that is actively processing", async () => {
     const id = await save(session, "Busy right now")
-    const { db } = connect(env.HYPERDRIVE.connectionString)
+    const db = testDb()
     await db.execute(
       `update items set status = 'processing' where id = '${id}'`
     )

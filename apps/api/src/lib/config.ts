@@ -30,3 +30,15 @@ export const pipelineStep = {
   retries: { limit: 3, delay: "10 seconds", backoff: "exponential" },
   timeout: "5 minutes",
 } as const
+
+export const retrieval = {
+  perListLimit: 20,
+  rrfK: 60,
+  rerankCandidates: 30,
+  rerankKeep: 8,
+  rerankFloor: 0.3,
+  answerConfidenceFloor: 0.4,
+  wholeItemMaxChars: 4000,
+}
+
+export const nothingSavedReply = "I don't have anything saved about that."

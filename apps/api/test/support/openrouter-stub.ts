@@ -84,6 +84,86 @@ export function defaultEnrichment(note: string) {
   }
 }
 
+const lastContent = (call: ChatCall) => call.messages.at(-1)?.content ?? ""
+
+export interface RewriteInput {
+  question: string
+  now: string
+  timezone: string
+  history: { role: string; text: string }[]
+}
+
+export function parseRewriteInput(call: ChatCall): RewriteInput {
+  return JSON.parse(lastContent(call)) as RewriteInput
+}
+
+export function defaultRewrite(question: string) {
+  const questionWords = question.match(/[\p{L}\p{N}]+/gu) ?? []
+  return {
+    question,
+    variants: [question],
+    keywords: questionWords.filter((word) => /^\p{Lu}/u.test(word)),
+    filters: { from: null, to: null, kind: null },
+    followUp: false,
+  }
+}
+
+export interface RerankInput {
+  question: string
+  variants: string[]
+  keywords: string[]
+  candidates: { id: string; text: string }[]
+}
+
+export function parseRerankInput(call: ChatCall): RerankInput {
+  return JSON.parse(lastContent(call)) as RerankInput
+}
+
+const contentWords = (text: string) =>
+  new Set(words(text).filter((word) => word.length > 3))
+
+// A third per shared content word, capped at 1; a keyword hit counts as a full match.
+export function defaultRerank(input: RerankInput) {
+  const asked = contentWords([input.question, ...input.variants].join(" "))
+  const keywords = input.keywords.map((keyword) => keyword.toLowerCase())
+  return {
+    ranking: input.candidates.map((candidate) => {
+      const offered = contentWords(candidate.text)
+      const shared = [...asked].filter((word) => offered.has(word)).length
+      const keywordHit = keywords.some((keyword) => offered.has(keyword))
+      return {
+        id: candidate.id,
+        score: keywordHit ? 1 : Math.min(1, shared / 3),
+      }
+    }),
+  }
+}
+
+export interface AnswerInput {
+  question: string
+  sources: {
+    itemId: string
+    title: string
+    kind: string
+    savedAt: string
+    text: string
+  }[]
+  history: { role: string; text: string; citedItemIds: string[] }[]
+}
+
+export function parseAnswerInput(call: ChatCall): AnswerInput {
+  return JSON.parse(lastContent(call)) as AnswerInput
+}
+
+// Quotes every source verbatim and cites them all.
+export function defaultAnswer(input: AnswerInput) {
+  return {
+    answer: input.sources.map((source) => source.text).join("\n\n"),
+    citedItemIds: input.sources.map((source) => source.itemId),
+    confidence: 0.9,
+  }
+}
+
 export function stubOpenRouter(): OpenRouterStub {
   const calls: Request[] = []
   const chatCalls: ChatCall[] = []
@@ -94,6 +174,9 @@ export function stubOpenRouter(): OpenRouterStub {
       "enrichment",
       (call) => defaultEnrichment(parseEnrichmentInput(call).note),
     ],
+    ["rewrite", (call) => defaultRewrite(parseRewriteInput(call).question)],
+    ["rerank", (call) => defaultRerank(parseRerankInput(call))],
+    ["answer", (call) => defaultAnswer(parseAnswerInput(call))],
   ])
   let chatFailures = { remaining: 0, status: 500 }
   const realFetch = globalThis.fetch

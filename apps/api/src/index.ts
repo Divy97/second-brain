@@ -6,6 +6,7 @@ import { itemRoutes } from "./lib/items/index.js"
 import { itemsQueueConsumer } from "./lib/items-queue.js"
 import { type ProcessItemParams } from "./lib/process-item-workflow.js"
 import { requestContext, requireUser } from "./lib/request-context.js"
+import { threadRoutes } from "./lib/threads/index.js"
 import { userKeyRoutes } from "./lib/user-keys/index.js"
 
 import type { AppEnv } from "./lib/app-env.js"
@@ -29,6 +30,7 @@ app.on(["GET", "POST"], "/api/auth/*", (c) => c.var.auth.handler(c.req.raw))
 app.use("*", requireUser)
 app.route("/keys", userKeyRoutes)
 app.route("/items", itemRoutes)
+app.route("/threads", threadRoutes)
 
 export default {
   fetch: app.fetch,

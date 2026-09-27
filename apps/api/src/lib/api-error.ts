@@ -9,6 +9,8 @@ export type ApiErrorCode =
   | "not_found"
   | "duplicate"
   | "conflict"
+  | "insufficient_credits"
+  | "model_unavailable"
   | "upstream_unavailable"
   | "queue_unavailable"
 

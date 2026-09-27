@@ -5,6 +5,8 @@ import {
 } from "cloudflare:workers"
 import { NonRetryableError } from "cloudflare:workflows"
 
+import { connect, type PipelineJob } from "@workspace/db"
+
 import { pipelineStep } from "./config.js"
 import {
   PipelineFailure,
@@ -12,8 +14,6 @@ import {
   type ProcessItemOutcome,
   type StepRunner,
 } from "./pipeline/index.js"
-
-import type { PipelineJob } from "@workspace/db"
 
 export type ProcessItemParams = PipelineJob
 
@@ -40,7 +40,12 @@ export class ProcessItemWorkflow extends WorkflowEntrypoint<
           throw error
         }
       })
-    const outcome = await processItem(this.env, event.payload, runStep)
+    const env = this.env
+    const outcome = await processItem(
+      { env, openDb: () => connect(env.HYPERDRIVE.connectionString).db },
+      event.payload,
+      runStep
+    )
     // The item is already marked failed; failing the instance keeps Workflow status honest.
     // Only steps retry, so a plain error here ends the instance as errored.
     if (outcome.outcome === "failed") {

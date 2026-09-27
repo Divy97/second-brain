@@ -12,6 +12,7 @@ import { cn } from "@workspace/ui/lib/utils"
 
 const navigation = [
   { href: "/", label: "Home", matches: ["/", "/items"] },
+  { href: "/threads", label: "Ask", matches: ["/threads"] },
   { href: "/settings", label: "Settings", matches: ["/settings"] },
 ]
 

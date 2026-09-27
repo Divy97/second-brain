@@ -1,7 +1,6 @@
 import { createOpenRouter, type OpenRouter } from "@workspace/ai"
 import {
   claimItemRun,
-  connect,
   findNeighbourTags,
   markItemFailed,
   saveProcessedItem,
@@ -36,13 +35,19 @@ export type ProcessItemOutcome =
   | { outcome: "failed"; reason: FailureReason }
   | { outcome: "skipped" }
 
-// Hyperdrive guidance for Workflows: a fresh connection inside every step, never shared.
+export interface PipelineContext {
+  env: Env
+  // Called once per step: Hyperdrive wants a fresh connection inside every Workflow step.
+  // Clients are not closed; the runtime reclaims them when the invocation ends.
+  openDb: () => Database
+}
+
 async function inStep<T>(
-  env: Env,
+  context: PipelineContext,
   work: (db: Database) => Promise<T>
 ): Promise<T> {
   try {
-    return await work(connect(env.HYPERDRIVE.connectionString).db)
+    return await work(context.openDb())
   } catch (error) {
     throw toPipelineFailure(error)
   }
@@ -95,18 +100,19 @@ function searchText(enrichment: Enrichment, chunk: string): string {
 }
 
 export async function processItem(
-  env: Env,
+  context: PipelineContext,
   job: PipelineJob,
   runStep: StepRunner
 ): Promise<ProcessItemOutcome> {
+  const { env } = context
   try {
     const claimed = await runStep("claim", () =>
-      inStep(env, (db) => claimItemRun(db, job))
+      inStep(context, (db) => claimItemRun(db, job))
     )
     if (!claimed) return { outcome: "skipped" }
 
     const enrichment = await runStep("enrich", () =>
-      inStep(env, async (db) => {
+      inStep(context, async (db) => {
         const openRouter = await openRouterFor(db, env, claimed.userId)
         const [opening = claimed.rawText] = chunkText(claimed.rawText)
         const [noteEmbedding = []] = await embed(openRouter, [opening])
@@ -122,7 +128,7 @@ export async function processItem(
     )
 
     const indexed = await runStep("index", () =>
-      inStep(env, async (db) => {
+      inStep(context, async (db) => {
         const openRouter = await openRouterFor(db, env, claimed.userId)
         const chunks = chunkText(enrichment.cleanText)
         const embeddings = await embed(
@@ -149,7 +155,7 @@ export async function processItem(
   } catch (error) {
     const failure = describeFailure(error)
     await runStep("mark failed", () =>
-      inStep(env, (db) => markItemFailed(db, job, failure))
+      inStep(context, (db) => markItemFailed(db, job, failure))
     )
     return { outcome: "failed", reason: failure.reason }
   }
