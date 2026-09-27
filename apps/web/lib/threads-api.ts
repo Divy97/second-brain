@@ -42,3 +42,6 @@ export const askInThread = (id: string, question: string) =>
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
   })
+
+export const deleteThread = (id: string) =>
+  apiRequest<null>(threadPath(id), { method: "DELETE" })

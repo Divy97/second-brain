@@ -176,3 +176,52 @@ export async function listSourceCards(
       )
     )
 }
+
+export async function softDeleteThread(
+  db: Database,
+  ref: ThreadRef
+): Promise<boolean> {
+  const deleted = await db
+    .update(threads)
+    .set({ deletedAt: new Date() })
+    .where(ownedThread(ref))
+    .returning({ id: threads.id })
+  return deleted.length > 0
+}
+
+export async function listRecentMessages(
+  db: Database,
+  input: { threadId: string; limit: number }
+): Promise<ThreadMessage[]> {
+  const rows = await db
+    .select({
+      id: messages.id,
+      role: messages.role,
+      text: messages.text,
+      citedItemIds: messages.citedItemIds,
+      createdAt: messages.createdAt,
+    })
+    .from(messages)
+    .where(eq(messages.threadId, input.threadId))
+    .orderBy(desc(messages.createdAt), desc(messages.id))
+    .limit(input.limit)
+  return rows.reverse()
+}
+
+export async function listLiveItemIds(
+  db: Database,
+  input: { userId: string; itemIds: string[] }
+): Promise<Set<string>> {
+  if (input.itemIds.length === 0) return new Set()
+  const rows = await db
+    .select({ id: items.id })
+    .from(items)
+    .where(
+      and(
+        eq(items.userId, input.userId),
+        isNull(items.deletedAt),
+        inArray(items.id, input.itemIds)
+      )
+    )
+  return new Set(rows.map((row) => row.id))
+}

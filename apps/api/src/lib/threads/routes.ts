@@ -6,15 +6,19 @@ import {
   appendExchange,
   createThread,
   findThread,
+  listLiveItemIds,
+  listRecentMessages,
   listSourceCards,
   listThreads,
+  softDeleteThread,
   threadExists,
   type ThreadMessage,
   type ThreadRef,
 } from "@workspace/db"
 
 import { apiError } from "../api-error.js"
-import { askQuestion } from "../ask/index.js"
+import { askQuestion, toHistory } from "../ask/index.js"
+import { retrieval } from "../config.js"
 
 import type { AppEnv } from "../app-env.js"
 
@@ -61,6 +65,18 @@ async function withSources(c: Context<AppEnv>, messages: ThreadMessage[]) {
     ...message,
     sources: citedItemIds.flatMap((id) => byId.get(id) ?? []),
   }))
+}
+
+async function followUpContext(c: Context<AppEnv>, ref: ThreadRef) {
+  const recent = await listRecentMessages(c.var.db, {
+    threadId: ref.threadId,
+    limit: retrieval.historyMessages,
+  })
+  const live = await listLiveItemIds(c.var.db, {
+    userId: ref.userId,
+    itemIds: [...new Set(recent.flatMap((message) => message.citedItemIds))],
+  })
+  return toHistory(recent, live)
 }
 
 function modelFailure(c: Context<AppEnv>, error: OpenRouterError): Response {
@@ -127,7 +143,7 @@ threadRoutes.post("/:id/messages", async (c) => {
       question: parsed.data.question,
       timezone: parsed.data.timezone,
       now: new Date(),
-      history: [],
+      history: await followUpContext(c, ref),
     })
   } catch (error) {
     if (error instanceof OpenRouterError) return modelFailure(c, error)
@@ -150,4 +166,10 @@ threadRoutes.post("/:id/messages", async (c) => {
   if (!message) return notFound(c)
   const [withCards] = await withSources(c, [message])
   return c.json(withCards)
+})
+
+threadRoutes.delete("/:id", async (c) => {
+  const ref = threadRef(c)
+  const deleted = ref && (await softDeleteThread(c.var.db, ref))
+  return deleted ? c.body(null, 204) : notFound(c)
 })

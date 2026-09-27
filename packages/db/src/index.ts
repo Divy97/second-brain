@@ -102,8 +102,11 @@ export {
   appendExchange,
   createThread,
   findThread,
+  listLiveItemIds,
+  listRecentMessages,
   listSourceCards,
   listThreads,
+  softDeleteThread,
   threadExists,
   type SourceCard,
   type ThreadMessage,
@@ -112,7 +115,9 @@ export {
 } from "./queries/threads.js"
 export {
   loadCandidates,
+  loadItemChunks,
   searchChunks,
   type Candidate,
   type SearchInput,
+  type TimeWindow,
 } from "./queries/search.js"

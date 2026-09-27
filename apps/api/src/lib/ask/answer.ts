@@ -89,7 +89,17 @@ export async function answerQuestion(
     model: chatModel,
     messages: [
       { role: "system", content: instructions },
-      { role: "user", content: JSON.stringify(input) },
+      {
+        role: "user",
+        content: JSON.stringify({
+          ...input,
+          history: input.history.map(({ role, text, citedItemIds }) => ({
+            role,
+            text,
+            citedItemIds,
+          })),
+        }),
+      },
     ],
     output: { name: "answer", schema: answerSchema },
   })

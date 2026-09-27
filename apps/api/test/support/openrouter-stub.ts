@@ -103,7 +103,7 @@ export function defaultRewrite(question: string) {
     question,
     variants: [question],
     keywords: questionWords.filter((word) => /^\p{Lu}/u.test(word)),
-    filters: { from: null, to: null, kind: null },
+    filters: { lastDays: null, from: null, to: null, kind: null },
     followUp: false,
   }
 }
@@ -112,6 +112,8 @@ export interface RerankInput {
   question: string
   variants: string[]
   keywords: string[]
+  followUp: boolean
+  history: { role: string; text: string }[]
   candidates: { id: string; text: string }[]
 }
 
