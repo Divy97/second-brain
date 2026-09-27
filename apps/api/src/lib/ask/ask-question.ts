@@ -56,7 +56,7 @@ export async function askQuestion(
   const relevant = await rerankCandidates(openRouter, { rewrite, candidates })
   const answer = await answerQuestion(openRouter, {
     question: rewrite.question,
-    sources: toSources(relevant),
+    sources: toSources(relevant, input.timezone),
     history: input.history,
   })
   return { ok: true, answer }

@@ -49,7 +49,7 @@ export function ThreadsView() {
         <h1 className="text-2xl font-medium tracking-tight">Ask</h1>
         <AskBox
           label="Ask your notes"
-          placeholder="What was that quote about attention?"
+          placeholder="Ask about something you saved"
           pending={asking !== null}
           onAsk={ask}
         />

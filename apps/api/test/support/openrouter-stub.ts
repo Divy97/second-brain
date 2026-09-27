@@ -146,6 +146,7 @@ export interface AnswerInput {
     title: string
     kind: string
     savedAt: string
+    savedOn: string
     text: string
   }[]
   history: { role: string; text: string; citedItemIds: string[] }[]

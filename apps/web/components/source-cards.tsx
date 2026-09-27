@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import { formatListDate } from "@/lib/format-date"
+import { formatDateTime } from "@/lib/format-date"
 
 import type { SourceCard } from "@/lib/threads-api"
 
@@ -20,7 +20,7 @@ export function SourceCards({ sources }: { sources: SourceCard[] }) {
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               {source.kind && <span className="capitalize">{source.kind}</span>}
               <time dateTime={source.capturedAt} className="ml-auto font-mono">
-                {formatListDate(source.capturedAt)}
+                {formatDateTime(source.capturedAt)}
               </time>
             </span>
           </Link>

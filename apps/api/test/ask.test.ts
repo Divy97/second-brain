@@ -203,6 +203,7 @@ describe("asking", () => {
     )
     for (const source of sources) {
       expect(source.savedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      expect(source.savedOn).toMatch(/^\d{1,2} \p{L}{3,4} \d{4}$/u)
     }
   })
 

@@ -99,9 +99,7 @@ export function ThreadView({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-8">
       {backLink}
-      <h1 className="text-2xl font-medium tracking-tight break-words">
-        {data.title || "New question"}
-      </h1>
+      <h1 className="sr-only">{data.title || "New question"}</h1>
       <ol className="flex flex-col gap-6">
         {data.messages.map((message) => (
           <li key={message.id} className="flex flex-col">
