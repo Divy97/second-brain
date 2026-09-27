@@ -8,12 +8,14 @@ import { rewriteQuestion } from "./rewrite.js"
 import { fuseRankings } from "./rrf.js"
 import { resolveOpenRouterKey } from "../user-keys/index.js"
 
+import type { HistoryTurn } from "./history.js"
+
 export interface AskInput {
   userId: string
   question: string
   timezone: string
   now: Date
-  history: { role: string; text: string; citedItemIds: string[] }[]
+  history: HistoryTurn[]
 }
 
 export type AskResult =
@@ -36,13 +38,17 @@ export async function askQuestion(
   const lists = await searchChunks(db, {
     userId: input.userId,
     embeddingModel,
-    queryEmbeddings: embeddings,
+    variants: rewrite.variants.map((text, index) => ({
+      text,
+      embedding: embeddings[index] ?? [],
+    })),
     keywords: rewrite.keywords,
     limit: retrieval.perListLimit,
   })
-  const fused = fuseRankings([...lists.vector, lists.keyword], retrieval.rrfK)
+  const fused = fuseRankings(lists, retrieval.rrfK)
   const candidates = await loadCandidates(db, {
     userId: input.userId,
+    embeddingModel,
     chunkIds: fused
       .slice(0, retrieval.rerankCandidates)
       .map((entry) => entry.id),

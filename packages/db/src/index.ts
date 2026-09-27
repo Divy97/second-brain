@@ -114,6 +114,5 @@ export {
   loadCandidates,
   searchChunks,
   type Candidate,
-  type RankedLists,
   type SearchInput,
 } from "./queries/search.js"

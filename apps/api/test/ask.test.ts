@@ -140,6 +140,16 @@ describe("asking", () => {
     expect(answer.sources.map((source) => source.id)).toEqual([id])
   })
 
+  it("finds a note by an exact name through full-text search of a variant, with no keywords picked", async () => {
+    const id = await saveReady("Comet by Perplexity browses websites for you")
+    await saveReady("Tulips need a cold winter before they bloom")
+    rewriteWith({ variants: ["Comet"], keywords: [] })
+
+    const answer = await answerTo("what was that Comet thing?")
+
+    expect(answer.sources.map((source) => source.id)).toEqual([id])
+  })
+
   it("finds a note by a paraphrase that shares no words with it", async () => {
     const id = await saveReady("Dialling in espresso grind size on the grinder")
     await saveReady("Tulips need a cold winter before they bloom")

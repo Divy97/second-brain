@@ -1,6 +1,7 @@
 "use client"
 
-import { WarningCircleIcon } from "@phosphor-icons/react"
+import { ChatCircleTextIcon, WarningCircleIcon } from "@phosphor-icons/react"
+import Link from "next/link"
 
 import { CaptureBox } from "@/components/capture-box"
 import { ItemList } from "@/components/item-list"
@@ -13,6 +14,13 @@ export function HomeFeed() {
   return (
     <div className="flex flex-col gap-8">
       <CaptureBox onSaved={feed.prepend} />
+      <Link
+        href="/threads"
+        className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ChatCircleTextIcon aria-hidden />
+        Ask your notes
+      </Link>
       <KeyReminder />
       {feed.error && (
         <Alert variant="destructive">

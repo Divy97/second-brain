@@ -32,6 +32,8 @@ export const pipelineStep = {
 } as const
 
 export const retrieval = {
+  // The corrected question plus two variants.
+  maxQueryStrings: 3,
   perListLimit: 20,
   rrfK: 60,
   rerankCandidates: 30,

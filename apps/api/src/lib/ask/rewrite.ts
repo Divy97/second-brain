@@ -1,7 +1,8 @@
 import { z } from "zod"
 
-import { chatModel } from "../config.js"
+import { chatModel, retrieval } from "../config.js"
 
+import type { HistoryTurn } from "./history.js"
 import type { OpenRouter } from "@workspace/ai"
 
 const rewriteSchema = z.object({
@@ -51,7 +52,7 @@ export async function rewriteQuestion(
     question: string
     now: Date
     timezone: string
-    history: { role: string; text: string }[]
+    history: HistoryTurn[]
   }
 ): Promise<Rewrite> {
   const { content } = await openRouter.chat({
@@ -64,7 +65,7 @@ export async function rewriteQuestion(
           question: input.question,
           now: input.now.toISOString(),
           timezone: input.timezone,
-          history: input.history,
+          history: input.history.map(({ role, text }) => ({ role, text })),
         }),
       },
     ],
@@ -76,7 +77,7 @@ export async function rewriteQuestion(
         .map((variant) => variant.trim())
         .filter(Boolean)
     ),
-  ].slice(0, 4)
+  ].slice(0, retrieval.maxQueryStrings)
   return {
     ...content,
     question: content.question.trim() || input.question,

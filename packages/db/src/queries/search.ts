@@ -8,14 +8,9 @@ import type { ItemKind } from "./item-types.js"
 export interface SearchInput {
   userId: string
   embeddingModel: string
-  queryEmbeddings: number[][]
+  variants: { text: string; embedding: number[] }[]
   keywords: string[]
   limit: number
-}
-
-export interface RankedLists {
-  vector: string[][]
-  keyword: string[]
 }
 
 export interface Candidate {
@@ -55,43 +50,52 @@ function vectorList(
   )`
 }
 
-// OR over the parser-normalised keyword lexemes; the parser drops operator characters, so
-// arbitrary text cannot break the query. No keywords → a null query that matches nothing.
-function keywordList(input: SearchInput): SQL {
-  const text = input.keywords.join(" ")
+function fullTextList(label: string, query: SQL, input: SearchInput): SQL {
   return sql`(
-    with query as (
-      select string_agg(quote_literal(lexeme), ' | ')::tsquery as q
-      from unnest(tsvector_to_array(to_tsvector('simple', ${text}))) as lexeme
-    ), hits as materialized (
+    with query as (select ${query} as q), hits as materialized (
       select c.id, ts_rank_cd(c.tsv, query.q) as score
       from ${chunks} c
       join ${items} i on i.id = c.item_id
       cross join query
       where query.q is not null
+        and querytree(query.q) not in ('', 'T')
         and c.tsv @@ query.q
         and ${searchableChunk(input.userId, input.embeddingModel)}
       order by score desc, c.id
       limit ${input.limit}
     )
-    select 'keyword' as list, id, row_number() over (order by score desc, id) as rank
+    select ${label} as list, id, row_number() over (order by score desc, id) as rank
     from hits
   )`
 }
 
-// One statement for every list; iterative index scans keep filtered HNSW searches from
-// returning fewer than `limit` rows when the user owns a small share of the index.
+// websearch_to_tsquery never raises on raw text; AND across a variant's words.
+const variantQuery = (text: string) =>
+  sql`websearch_to_tsquery('simple', ${text})`
+
+// OR across the parser-normalised keyword lexemes; the parser drops operator characters.
+const keywordQuery = (keywords: string[]) => sql`(
+  select string_agg(quote_literal(lexeme), ' | ')::tsquery
+  from unnest(tsvector_to_array(to_tsvector('simple', ${keywords.join(" ")}))) as lexeme
+)`
+
+// One statement for every list: per variant a vector and a full-text list, plus one list
+// over the keywords. Iterative index scans keep filtered HNSW searches from returning
+// fewer than `limit` rows when the user owns a small share of the index.
 export async function searchChunks(
   db: Database,
   input: SearchInput
-): Promise<RankedLists> {
+): Promise<string[][]> {
   const lists = [
-    ...input.queryEmbeddings.map((embedding, index) =>
-      vectorList(`vector:${index}`, embedding, input)
-    ),
-    ...(input.keywords.length > 0 ? [keywordList(input)] : []),
+    ...input.variants.flatMap((variant, index) => [
+      vectorList(`vector:${index}`, variant.embedding, input),
+      fullTextList(`text:${index}`, variantQuery(variant.text), input),
+    ]),
+    ...(input.keywords.length > 0
+      ? [fullTextList("keywords", keywordQuery(input.keywords), input)]
+      : []),
   ]
-  if (lists.length === 0) return { vector: [], keyword: [] }
+  if (lists.length === 0) return []
 
   const rows = await db.transaction(
     async (tx) => {
@@ -111,19 +115,14 @@ export async function searchChunks(
     entries.push({ id: row.id, rank: Number(row.rank) })
     byList.set(row.list, entries)
   }
-  const ordered = (label: string) =>
-    (byList.get(label) ?? [])
-      .sort((a, b) => a.rank - b.rank)
-      .map((entry) => entry.id)
-  return {
-    vector: input.queryEmbeddings.map((_, index) => ordered(`vector:${index}`)),
-    keyword: ordered("keyword"),
-  }
+  return [...byList.values()].map((entries) =>
+    entries.sort((a, b) => a.rank - b.rank).map((entry) => entry.id)
+  )
 }
 
 export async function loadCandidates(
   db: Database,
-  input: { userId: string; chunkIds: string[] }
+  input: { userId: string; embeddingModel: string; chunkIds: string[] }
 ): Promise<Candidate[]> {
   if (input.chunkIds.length === 0) return []
   const rows = await db.execute<{
@@ -140,8 +139,7 @@ export async function loadCandidates(
     from ${chunks} c
     join ${items} i on i.id = c.item_id
     where c.id in ${input.chunkIds}
-      and i.user_id = ${input.userId}
-      and i.deleted_at is null
+      and ${searchableChunk(input.userId, input.embeddingModel)}
   `)
   const byId = new Map(
     rows.map((row) => [

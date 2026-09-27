@@ -18,12 +18,12 @@ export function AskBox({
   onAsk: (question: string) => Promise<boolean>
 }) {
   const [question, setQuestion] = useState("")
-  const [empty, setEmpty] = useState(false)
+  const [showEmptyError, setShowEmptyError] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
 
   async function submit() {
     if (!question.trim()) {
-      setEmpty(true)
+      setShowEmptyError(true)
       return
     }
     if (await onAsk(question.trim())) setQuestion("")
@@ -54,12 +54,12 @@ export function AskBox({
           value={question}
           onChange={(event) => {
             setQuestion(event.target.value)
-            if (empty) setEmpty(false)
+            if (showEmptyError) setShowEmptyError(false)
           }}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           disabled={pending}
-          aria-invalid={empty ? true : undefined}
+          aria-invalid={showEmptyError ? true : undefined}
           rows={1}
           className="max-h-40 min-h-11 flex-1 text-base leading-relaxed md:text-sm"
         />
@@ -73,7 +73,7 @@ export function AskBox({
           <ArrowUpIcon aria-hidden />
         </Button>
       </div>
-      {empty && (
+      {showEmptyError && (
         <p className="text-xs text-destructive">Type a question first.</p>
       )}
     </form>

@@ -24,7 +24,10 @@ const threadId = z.uuid()
 const askBody = z.object({
   question: z
     .string("Send the question as JSON.")
-    .max(MAX_QUESTION_LENGTH, "Questions can be at most 2,000 characters.")
+    .max(
+      MAX_QUESTION_LENGTH,
+      `Questions can be at most ${MAX_QUESTION_LENGTH.toLocaleString("en")} characters.`
+    )
     .trim()
     .min(1, "Type a question first."),
   timezone: z
