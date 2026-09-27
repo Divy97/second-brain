@@ -176,3 +176,15 @@ export async function listSourceCards(
       )
     )
 }
+
+export async function softDeleteThread(
+  db: Database,
+  ref: ThreadRef
+): Promise<boolean> {
+  const deleted = await db
+    .update(threads)
+    .set({ deletedAt: new Date() })
+    .where(ownedThread(ref))
+    .returning({ id: threads.id })
+  return deleted.length > 0
+}

@@ -7,6 +7,7 @@ import useSWR from "swr"
 
 import { AskBox } from "@/components/ask-box"
 import { AskError } from "@/components/ask-error"
+import { DeleteThread } from "@/components/delete-thread"
 import { PendingAnswer } from "@/components/pending-answer"
 import { SourceCards } from "@/components/source-cards"
 import { ApiError, fetchJson } from "@/lib/api"
@@ -115,6 +116,7 @@ export function ThreadView({ id }: { id: string }) {
         pending={asking !== null}
         onAsk={ask}
       />
+      <DeleteThread id={id} />
     </div>
   )
 }

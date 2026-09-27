@@ -5,11 +5,18 @@ import { chunks, items } from "../schema.js"
 import type { Database } from "../database.js"
 import type { ItemKind } from "./item-types.js"
 
+export interface TimeWindow {
+  from: Date | null
+  to: Date | null
+}
+
 export interface SearchInput {
   userId: string
   embeddingModel: string
   variants: { text: string; embedding: number[] }[]
   keywords: string[]
+  window: TimeWindow
+  preferredKind: ItemKind | null
   limit: number
 }
 
@@ -30,10 +37,20 @@ const searchableChunk = (userId: string, embeddingModel: string) => sql`
   and c.embedding_model = ${embeddingModel}
 `
 
+function listFilter(input: SearchInput, kind: ItemKind | null): SQL {
+  return sql`
+    ${searchableChunk(input.userId, input.embeddingModel)}
+    ${input.window.from ? sql`and i.captured_at >= ${input.window.from.toISOString()}::timestamptz` : sql``}
+    ${input.window.to ? sql`and i.captured_at < ${input.window.to.toISOString()}::timestamptz` : sql``}
+    ${kind ? sql`and i.kind = ${kind}` : sql``}
+  `
+}
+
 function vectorList(
   label: string,
   embedding: number[],
-  input: SearchInput
+  input: SearchInput,
+  kind: ItemKind | null = null
 ): SQL {
   const vector = JSON.stringify(embedding)
   return sql`(
@@ -41,7 +58,7 @@ function vectorList(
       select c.id, c.embedding <=> ${vector}::vector as distance
       from ${chunks} c
       join ${items} i on i.id = c.item_id
-      where ${searchableChunk(input.userId, input.embeddingModel)}
+      where ${listFilter(input, kind)}
       order by c.embedding <=> ${vector}::vector
       limit ${input.limit}
     )
@@ -60,7 +77,7 @@ function fullTextList(label: string, query: SQL, input: SearchInput): SQL {
       where query.q is not null
         and querytree(query.q) not in ('', 'T')
         and c.tsv @@ query.q
-        and ${searchableChunk(input.userId, input.embeddingModel)}
+        and ${listFilter(input, null)}
       order by score desc, c.id
       limit ${input.limit}
     )
@@ -80,8 +97,10 @@ const keywordQuery = (keywords: string[]) => sql`(
 )`
 
 // One statement for every list: per variant a vector and a full-text list, plus one list
-// over the keywords. Iterative index scans keep filtered HNSW searches from returning
-// fewer than `limit` rows when the user owns a small share of the index.
+// over the keywords. The time window narrows every list; a preferred kind adds a
+// kind-only vector list per variant, so matching items rank higher without excluding the
+// rest. Iterative index scans keep filtered HNSW searches from returning fewer than
+// `limit` rows when the user owns a small share of the index.
 export async function searchChunks(
   db: Database,
   input: SearchInput
@@ -90,6 +109,16 @@ export async function searchChunks(
     ...input.variants.flatMap((variant, index) => [
       vectorList(`vector:${index}`, variant.embedding, input),
       fullTextList(`text:${index}`, variantQuery(variant.text), input),
+      ...(input.preferredKind
+        ? [
+            vectorList(
+              `kind:${index}`,
+              variant.embedding,
+              input,
+              input.preferredKind
+            ),
+          ]
+        : []),
     ]),
     ...(input.keywords.length > 0
       ? [fullTextList("keywords", keywordQuery(input.keywords), input)]
@@ -156,4 +185,24 @@ export async function loadCandidates(
     ])
   )
   return input.chunkIds.flatMap((id) => byId.get(id) ?? [])
+}
+
+// Every chunk of the given items, in item order then chunk order: the follow-up path puts
+// the thread's previous citations at the top of the candidates.
+export async function loadItemChunks(
+  db: Database,
+  input: { userId: string; embeddingModel: string; itemIds: string[] }
+): Promise<string[]> {
+  if (input.itemIds.length === 0) return []
+  const rows = await db.execute<{ id: string; item_id: string }>(sql`
+    select c.id, c.item_id
+    from ${chunks} c
+    join ${items} i on i.id = c.item_id
+    where c.item_id in ${input.itemIds}
+      and ${searchableChunk(input.userId, input.embeddingModel)}
+    order by c.idx
+  `)
+  return input.itemIds.flatMap((itemId) =>
+    rows.filter((row) => row.item_id === itemId).map((row) => row.id)
+  )
 }

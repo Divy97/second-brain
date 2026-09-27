@@ -41,6 +41,7 @@ export const retrieval = {
   rerankFloor: 0.3,
   answerConfidenceFloor: 0.4,
   wholeItemMaxChars: 4000,
+  historyMessages: 6,
 }
 
 export const nothingSavedReply = "I don't have anything saved about that."

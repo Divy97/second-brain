@@ -1,8 +1,14 @@
 import { createOpenRouter } from "@workspace/ai"
-import { loadCandidates, searchChunks, type Database } from "@workspace/db"
+import {
+  loadCandidates,
+  loadItemChunks,
+  searchChunks,
+  type Database,
+} from "@workspace/db"
 
 import { embeddingModel, retrieval } from "../config.js"
 import { answerQuestion, toSources, type Answer } from "./answer.js"
+import { timeWindow } from "./filters.js"
 import { rerankCandidates } from "./rerank.js"
 import { rewriteQuestion } from "./rewrite.js"
 import { fuseRankings } from "./rrf.js"
@@ -43,17 +49,33 @@ export async function askQuestion(
       embedding: embeddings[index] ?? [],
     })),
     keywords: rewrite.keywords,
+    window: timeWindow(rewrite.filters),
+    preferredKind: rewrite.filters.kind,
     limit: retrieval.perListLimit,
   })
-  const fused = fuseRankings(lists, retrieval.rrfK)
+  const fused = fuseRankings(lists, retrieval.rrfK).map((entry) => entry.id)
+  const previouslyCited = rewrite.followUp
+    ? await loadItemChunks(db, {
+        userId: input.userId,
+        embeddingModel,
+        itemIds: [
+          ...new Set(input.history.flatMap((turn) => turn.citedItemIds)),
+        ].reverse(),
+      })
+    : []
   const candidates = await loadCandidates(db, {
     userId: input.userId,
     embeddingModel,
-    chunkIds: fused
-      .slice(0, retrieval.rerankCandidates)
-      .map((entry) => entry.id),
+    chunkIds: [...new Set([...previouslyCited, ...fused])].slice(
+      0,
+      retrieval.rerankCandidates
+    ),
   })
-  const relevant = await rerankCandidates(openRouter, { rewrite, candidates })
+  const relevant = await rerankCandidates(openRouter, {
+    rewrite,
+    candidates,
+    history: input.history,
+  })
   const answer = await answerQuestion(openRouter, {
     question: rewrite.question,
     sources: toSources(relevant, input.timezone),
