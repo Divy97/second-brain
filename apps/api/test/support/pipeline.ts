@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers"
 import { vi } from "vitest"
 
+import { testDb } from "./database.js"
 import {
   processItem,
   type ProcessItemOutcome,
@@ -34,14 +35,16 @@ export function recordQueue(): QueueRecorder {
       const pending = messages.splice(0)
       const outcomes: ProcessItemOutcome[] = []
       for (const message of pending)
-        outcomes.push(await processItem(env, message, runDirectly))
+        outcomes.push(
+          await processItem({ env, openDb: testDb }, message, runDirectly)
+        )
       return outcomes
     },
     processLatest: async () => {
       const message = messages.at(-1)
       if (!message) throw new Error("nothing was queued")
       messages.length = 0
-      return processItem(env, message, runDirectly)
+      return processItem({ env, openDb: testDb }, message, runDirectly)
     },
     restore: () => {
       spy.mockRestore()

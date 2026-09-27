@@ -98,3 +98,21 @@ export {
   type PipelineJob,
   type RequeueResult,
 } from "./queries/pipeline.js"
+export {
+  appendExchange,
+  createThread,
+  findThread,
+  listSourceCards,
+  listThreads,
+  threadExists,
+  type SourceCard,
+  type ThreadMessage,
+  type ThreadRef,
+  type ThreadSummary,
+} from "./queries/threads.js"
+export {
+  loadCandidates,
+  searchChunks,
+  type Candidate,
+  type SearchInput,
+} from "./queries/search.js"
