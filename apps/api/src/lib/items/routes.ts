@@ -15,6 +15,7 @@ import {
 
 import { apiError } from "../api-error.js"
 import { contentHash } from "./content-hash.js"
+import { stalledRunAfterMs } from "../config.js"
 
 import type { AppEnv } from "../app-env.js"
 
@@ -150,12 +151,20 @@ itemRoutes.delete("/:id", async (c) => {
 
 function requeueRoute(
   allowedFrom: ("pending" | "ready" | "failed")[],
-  conflictMessage: string
+  conflictMessage: string,
+  options: { recoverStalled?: boolean } = {}
 ) {
   return async (c: Context<AppEnv>) => {
     const ref = itemRef(c)
     if (!ref) return notFound(c)
-    const result = await requeueItem(c.var.db, ref, allowedFrom)
+    const result = await requeueItem(
+      c.var.db,
+      ref,
+      allowedFrom,
+      options.recoverStalled
+        ? new Date(Date.now() - stalledRunAfterMs)
+        : undefined
+    )
     if (result.outcome === "not_found") return notFound(c)
     if (result.outcome === "conflict") {
       return apiError(c, 409, "conflict", conflictMessage)
@@ -171,7 +180,8 @@ itemRoutes.post(
   "/:id/retry",
   requeueRoute(
     ["failed", "pending"],
-    "This note is already processing or ready. Reprocess it instead."
+    "This note is already processing or ready. Reprocess it instead.",
+    { recoverStalled: true }
   )
 )
 

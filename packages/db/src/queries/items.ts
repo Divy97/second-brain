@@ -31,6 +31,7 @@ export interface ItemDetail extends ItemSummary {
   tags: string[]
   failureReason: string | null
   error: string | null
+  updatedAt: Date
   entities: ItemEntity[]
   captures: Date[]
 }
@@ -168,6 +169,7 @@ export async function findItem(
       tags: items.tags,
       failureReason: items.failureReason,
       error: items.error,
+      updatedAt: items.updatedAt,
     })
     .from(items)
     .where(visibleItem(ref))

@@ -31,6 +31,7 @@ export interface ItemDetail extends ItemSummary {
   tags: string[]
   failureReason: FailureReason | null
   error: string | null
+  updatedAt: string
   entities: { name: string; type: string }[]
   captures: string[]
 }
@@ -44,6 +45,12 @@ export type FailureReason =
 
 export const isSettling = (status: ItemStatus) =>
   status === "pending" || status === "processing"
+
+const STALLED_AFTER_MS = 10 * 60 * 1000
+
+export const isStalled = (item: ItemDetail, now = Date.now()) =>
+  item.status === "processing" &&
+  now - new Date(item.updatedAt).getTime() > STALLED_AFTER_MS
 
 export interface ItemPage {
   items: ItemSummary[]

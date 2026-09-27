@@ -42,7 +42,7 @@ Return JSON matching the schema.
 - title: short and specific.
 - summary: 2-3 sentences in English, even when the note is in another language.
 - cleanText: fix only obvious dictation, OCR and typing errors using context (e.g. "Asian tech browser" -> "agentic browser"). Keep the note's language and wording; never add content.
-- kind: quote (someone's words, or text in quotation marks), fact (a statement of fact to remember), thought (the user's own idea or reflection), meeting (notes from a meeting or call), other.
+- kind: quote (someone's words, or text in quotation marks), fact (a statement of fact to remember), thought (the user's own idea, reflection, plan, reminder or to-do), meeting (notes from a meeting or call), other (anything else).
 - language: ISO 639-1 code of the note's main language.
 - tags: 5-10 lowercase topical tags. Reuse tags from neighbourTags whenever they fit, so the vocabulary stays consistent.
 - entities: people, products, books, places and organizations named in the note.

@@ -18,6 +18,14 @@ const titleByReason: Record<FailureReason, string> = {
   processing_error: "Processing failed",
 }
 
+const actionByReason: Record<FailureReason, string> = {
+  missing_key: "Add your OpenRouter key in settings, then retry.",
+  invalid_key: "Replace your OpenRouter key in settings, then retry.",
+  insufficient_credits: "Add credits on OpenRouter, then retry.",
+  model_error: "Retry to process it again.",
+  processing_error: "Retry to process it again.",
+}
+
 const keyReasons = new Set<FailureReason>([
   "missing_key",
   "invalid_key",
@@ -41,13 +49,10 @@ export function ItemFailure({
       <WarningCircleIcon aria-hidden />
       <AlertTitle>{titleByReason[known]}</AlertTitle>
       <AlertDescription className="flex flex-col gap-3">
-        {error && <p className="break-words">{error}</p>}
-        <p>
-          Your note is saved.{" "}
-          {keyReasons.has(known)
-            ? "Fix the key in settings, then retry."
-            : "Retry to process it again."}
-        </p>
+        {!keyReasons.has(known) && error && (
+          <p className="break-words">{error}</p>
+        )}
+        <p>Your note is saved. {actionByReason[known]}</p>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"

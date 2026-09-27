@@ -18,12 +18,14 @@ import {
   deleteItem,
   editItem,
   isSettling,
+  isStalled,
   itemPath,
   reprocessItem,
   retryItem,
   type ItemDetail,
 } from "@/lib/items-api"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 
 const SETTLING_POLL_MS = 3000
 
@@ -128,6 +130,29 @@ export function ItemView({ id }: { id: string }) {
         </div>
       </header>
 
+      {isStalled(item) && (
+        <Alert>
+          <WarningCircleIcon aria-hidden />
+          <AlertDescription className="flex flex-col gap-3">
+            <p>
+              Processing is taking much longer than it should. Your note is
+              saved; retry to start processing again.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              className="self-start"
+              onClick={() => {
+                requeue(retryItem)
+              }}
+            >
+              {pending ? "Retrying" : "Retry"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {item.status === "failed" && (
         <ItemFailure
           reason={item.failureReason}
@@ -177,7 +202,7 @@ export function ItemView({ id }: { id: string }) {
       {!editing && (
         <ItemActions
           pending={pending}
-          canReprocess={item.status === "ready" || item.status === "failed"}
+          canReprocess={item.status === "ready"}
           onEdit={() => {
             setEditing(true)
           }}

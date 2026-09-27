@@ -321,4 +321,38 @@ describe("processing a saved note", () => {
     expect(retry.status).toBe(409)
     expect(reprocess.status).toBe(409)
   })
+
+  it("lets a note stuck in processing be retried once its run has stalled", async () => {
+    const id = await save(session, "A run that died halfway")
+    const [lostRun] = queue.messages.splice(0)
+    const { db } = connect(env.HYPERDRIVE.connectionString)
+    await db.execute(
+      `update items set status = 'processing', updated_at = now() - interval '11 minutes' where id = '${id}'`
+    )
+
+    const retry = await request(`/items/${id}/retry`, {
+      method: "POST",
+      session,
+    })
+
+    expect(retry.status).toBe(200)
+    expect(queue.messages[0]?.run).toBe((lostRun?.run ?? 0) + 1)
+    await queue.processLatest()
+    expect((await detail(session, id)).status).toBe("ready")
+  })
+
+  it("does not retry a note that is actively processing", async () => {
+    const id = await save(session, "Busy right now")
+    const { db } = connect(env.HYPERDRIVE.connectionString)
+    await db.execute(
+      `update items set status = 'processing' where id = '${id}'`
+    )
+
+    const retry = await request(`/items/${id}/retry`, {
+      method: "POST",
+      session,
+    })
+
+    expect(retry.status).toBe(409)
+  })
 })

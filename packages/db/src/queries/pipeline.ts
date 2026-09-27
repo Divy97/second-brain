@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm"
 
 import { chunks, entities, generateId, itemEntities, items } from "../schema.js"
 
@@ -210,7 +210,8 @@ export type RequeueResult =
 export async function requeueItem(
   db: Database,
   ref: ItemRef,
-  allowedFrom: ("pending" | "ready" | "failed")[]
+  allowedFrom: ("pending" | "ready" | "failed")[],
+  stalledBefore?: Date
 ): Promise<RequeueResult> {
   const [row] = await db
     .update(items)
@@ -225,7 +226,15 @@ export async function requeueItem(
         eq(items.id, ref.itemId),
         eq(items.userId, ref.userId),
         isNull(items.deletedAt),
-        inArray(items.status, allowedFrom)
+        or(
+          inArray(items.status, allowedFrom),
+          stalledBefore
+            ? and(
+                eq(items.status, "processing"),
+                lt(items.updatedAt, stalledBefore)
+              )
+            : undefined
+        )
       )
     )
     .returning({ run: items.pipelineRun })

@@ -23,6 +23,9 @@ export const chunking = {
   minTrailingTokens: 80,
 }
 
+// A run that has not moved an item for this long is presumed dead and may be retried.
+export const stalledRunAfterMs = 10 * 60 * 1000
+
 export const pipelineStep = {
   retries: { limit: 3, delay: "10 seconds", backoff: "exponential" },
   timeout: "5 minutes",

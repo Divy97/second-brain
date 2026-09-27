@@ -12,6 +12,12 @@ function languageName(code: string): string {
   }
 }
 
+const collapseWhitespace = (text: string) => text.replace(/\s+/g, " ").trim()
+
+function differsBeyondWhitespace(a: string, b: string): boolean {
+  return collapseWhitespace(a) !== collapseWhitespace(b)
+}
+
 export function ItemInsights({ item }: { item: ItemDetail }) {
   if (item.summary === null) return null
   return (
@@ -28,23 +34,24 @@ export function ItemInsights({ item }: { item: ItemDetail }) {
         </p>
       </section>
 
-      {item.cleanText && item.cleanText !== item.rawText && (
-        <section
-          className="flex flex-col gap-2"
-          aria-labelledby="clean-heading"
-        >
-          <h2 id="clean-heading" className="text-sm font-medium">
-            Cleaned text
-          </h2>
-          <p className="text-base leading-relaxed break-words whitespace-pre-wrap md:text-sm">
-            {item.cleanText}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Dictation and typing errors corrected for search. Your original is
-            kept above.
-          </p>
-        </section>
-      )}
+      {item.cleanText &&
+        differsBeyondWhitespace(item.cleanText, item.rawText) && (
+          <section
+            className="flex flex-col gap-2"
+            aria-labelledby="clean-heading"
+          >
+            <h2 id="clean-heading" className="text-sm font-medium">
+              Cleaned text
+            </h2>
+            <p className="text-base leading-relaxed break-words whitespace-pre-wrap md:text-sm">
+              {item.cleanText}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Dictation and typing errors corrected for search. Your original is
+              kept above.
+            </p>
+          </section>
+        )}
 
       <dl className="grid grid-cols-1 gap-x-8 gap-y-5 text-sm sm:grid-cols-[max-content_1fr]">
         {item.language && (
