@@ -31,7 +31,7 @@ const SETTLING_POLL_MS = 3000
 
 const backLink = (
   <Link
-    href="/"
+    href="/home"
     className="flex w-fit items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
   >
     <ArrowLeftIcon aria-hidden />
@@ -86,7 +86,7 @@ export function ItemView({ id }: { id: string }) {
   function remove() {
     void runAction(async () => {
       await deleteItem(id)
-      router.replace("/")
+      router.replace("/home")
     })
   }
 
@@ -118,10 +118,10 @@ export function ItemView({ id }: { id: string }) {
   }
 
   return (
-    <article className="flex flex-col gap-8">
+    <article className="mx-auto flex max-w-4xl flex-col gap-8">
       {backLink}
       <header className="flex flex-col gap-3">
-        <h1 className="text-2xl font-medium tracking-tight break-words">
+        <h1 className="max-w-3xl font-heading text-4xl leading-tight tracking-tight break-words sm:text-6xl">
           {item.title ?? "Untitled note"}
         </h1>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -165,10 +165,10 @@ export function ItemView({ id }: { id: string }) {
       )}
 
       <section
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-5 rounded-[2rem] bg-butter p-7 sm:p-10"
         aria-labelledby="original-heading"
       >
-        <h2 id="original-heading" className="text-sm font-medium">
+        <h2 id="original-heading" className="font-heading text-2xl">
           Original
         </h2>
         {editing ? (
@@ -182,7 +182,7 @@ export function ItemView({ id }: { id: string }) {
             }}
           />
         ) : (
-          <p className="text-base leading-relaxed break-words whitespace-pre-wrap md:text-sm">
+          <p className="max-w-[65ch] text-lg leading-relaxed break-words whitespace-pre-wrap">
             {item.rawText}
           </p>
         )}

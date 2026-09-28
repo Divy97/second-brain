@@ -61,14 +61,14 @@ export function AskBox({
           disabled={pending}
           aria-invalid={showEmptyError ? true : undefined}
           rows={1}
-          className="max-h-40 min-h-11 flex-1 text-base leading-relaxed md:text-sm"
+          className="max-h-40 min-h-12 flex-1 resize-none border-0 bg-transparent px-3 py-3 text-base leading-relaxed focus-visible:ring-0"
         />
         <Button
           type="submit"
           size="icon-lg"
           disabled={pending}
           aria-label="Ask"
-          className="size-11 shrink-0"
+          className="size-12 shrink-0 bg-coral text-foreground hover:bg-coral/90"
         >
           <ArrowUpIcon aria-hidden />
         </Button>

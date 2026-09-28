@@ -14,9 +14,7 @@ function Row({ label, ok, detail }: RowProps) {
     <div className="flex items-start gap-3 py-4">
       <Icon
         weight="fill"
-        className={
-          ok ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-        }
+        className={ok ? "text-primary" : "text-destructive"}
         size={20}
         aria-hidden
       />

@@ -26,12 +26,10 @@ export function ItemInsights({ item }: { item: ItemDetail }) {
         className="flex flex-col gap-2"
         aria-labelledby="summary-heading"
       >
-        <h2 id="summary-heading" className="text-sm font-medium">
+        <h2 id="summary-heading" className="font-heading text-2xl">
           Summary
         </h2>
-        <p className="max-w-[65ch] text-base leading-relaxed md:text-sm">
-          {item.summary}
-        </p>
+        <p className="max-w-[65ch] text-lg leading-relaxed">{item.summary}</p>
       </section>
 
       {item.cleanText &&
@@ -40,10 +38,10 @@ export function ItemInsights({ item }: { item: ItemDetail }) {
             className="flex flex-col gap-2"
             aria-labelledby="clean-heading"
           >
-            <h2 id="clean-heading" className="text-sm font-medium">
+            <h2 id="clean-heading" className="font-heading text-2xl">
               Cleaned text
             </h2>
-            <p className="text-base leading-relaxed break-words whitespace-pre-wrap md:text-sm">
+            <p className="text-lg leading-relaxed break-words whitespace-pre-wrap">
               {item.cleanText}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -65,7 +63,7 @@ export function ItemInsights({ item }: { item: ItemDetail }) {
             <dt className="text-muted-foreground">Tags</dt>
             <dd className="flex flex-wrap gap-1.5">
               {item.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="font-mono">
+                <Badge key={tag} variant="secondary">
                   {tag}
                 </Badge>
               ))}

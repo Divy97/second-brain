@@ -12,14 +12,14 @@ export function SourceCards({ sources }: { sources: SourceCard[] }) {
         <li key={source.id}>
           <Link
             href={`/items/${source.id}`}
-            className="flex h-full flex-col gap-1 border p-3 transition-colors outline-none hover:bg-muted/50 focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-full flex-col gap-2 rounded-2xl bg-butter p-5 transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="line-clamp-2 text-sm break-words">
               {source.title ?? "Untitled note"}
             </span>
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               {source.kind && <span className="capitalize">{source.kind}</span>}
-              <time dateTime={source.capturedAt} className="ml-auto font-mono">
+              <time dateTime={source.capturedAt} className="ml-auto">
                 {formatDateTime(source.capturedAt)}
               </time>
             </span>

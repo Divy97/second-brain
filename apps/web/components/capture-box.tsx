@@ -53,7 +53,7 @@ export function CaptureBox({
         event.preventDefault()
         void submit()
       }}
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 sm:p-7"
     >
       <label htmlFor="capture" className="sr-only">
         New note
@@ -66,11 +66,11 @@ export function CaptureBox({
           if (error) setError(null)
         }}
         onKeyDown={onKeyDown}
-        placeholder="A thought, a quote, a fact someone told you"
+        placeholder="A thought, a quote, a tiny detail..."
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "capture-error" : undefined}
         autoFocus
-        className="max-h-[50dvh] min-h-28 text-base leading-relaxed md:text-sm"
+        className="max-h-[50dvh] min-h-44 resize-none border-0 bg-transparent px-0 py-0 font-heading text-2xl leading-snug placeholder:text-muted-foreground/70 focus-visible:ring-0 sm:text-3xl"
       />
       {error && (
         <Alert variant="destructive" id="capture-error">
@@ -84,8 +84,13 @@ export function CaptureBox({
           <kbd className="font-mono">⌘</kbd> +{" "}
           <kbd className="font-mono">Enter</kbd> saves
         </p>
-        <Button type="submit" size="lg" disabled={pending} className="ml-auto">
-          {pending ? "Saving" : "Save"}
+        <Button
+          type="submit"
+          size="lg"
+          disabled={pending}
+          className="ml-auto bg-coral text-foreground hover:bg-coral/90"
+        >
+          {pending ? "Saving" : "Save this thought ↗"}
         </Button>
       </div>
     </form>

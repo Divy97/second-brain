@@ -5,7 +5,7 @@ export function AnswerText({ text }: { text: string }) {
   const lines = text.split("\n").filter((line) => line.trim())
   const isList = lines.length > 1 && lines.every((line) => listItem.test(line))
   const className =
-    "max-w-[65ch] text-base leading-relaxed break-words md:text-sm"
+    "max-w-[65ch] font-heading text-xl leading-relaxed break-words sm:text-2xl"
   if (!isList) {
     return <p className={`${className} whitespace-pre-wrap`}>{text}</p>
   }
