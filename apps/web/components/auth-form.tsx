@@ -82,13 +82,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   const switchHref =
-    next === "/"
+    next === "/home"
       ? text.switchHref
       : `${text.switchHref}?next=${encodeURIComponent(next)}`
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-medium tracking-tight">{text.title}</h1>
+      <h1 className="font-heading text-4xl tracking-tight">{text.title}</h1>
       <form
         onSubmit={(event: SubmitEvent<HTMLFormElement>) => {
           event.preventDefault()
@@ -105,7 +105,6 @@ export function AuthForm({ mode }: { mode: Mode }) {
               type="email"
               autoComplete="email"
               required
-              className="h-10 text-base md:h-9 md:text-sm"
             />
           </Field>
           <Field>
@@ -119,7 +118,6 @@ export function AuthForm({ mode }: { mode: Mode }) {
               }
               minLength={mode === "sign-up" ? 8 : undefined}
               required
-              className="h-10 text-base md:h-9 md:text-sm"
             />
             {mode === "sign-up" && (
               <FieldDescription>At least 8 characters.</FieldDescription>
@@ -132,7 +130,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <Button type="submit" size="lg" disabled={pending} className="h-10">
+        <Button type="submit" size="lg" disabled={pending}>
           {pending ? text.pending : text.submit}
         </Button>
       </form>

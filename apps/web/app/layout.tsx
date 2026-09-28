@@ -1,38 +1,25 @@
-import { Geist, JetBrains_Mono } from "next/font/google"
+import { Fraunces, Geist, JetBrains_Mono } from "next/font/google"
 
 import "@workspace/ui/globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@workspace/ui/lib/utils"
 
-const fontSans = Geist({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
+const display = Fraunces({ subsets: ["latin"], variable: "--font-display" })
+const body = Geist({ subsets: ["latin"], variable: "--font-body" })
+const code = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code" })
 
-const fontMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
+export const metadata = {
+  title: { default: "Second Brain", template: "%s | Second Brain" },
+  description: "A place for everything you want to remember.",
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
-      suppressHydrationWarning
-      className={cn(
-        "antialiased",
-        fontSans.variable,
-        "font-mono",
-        fontMono.variable
-      )}
+      className={`${display.variable} ${body.variable} ${code.variable}`}
     >
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
+      <body>{children}</body>
     </html>
   )
 }

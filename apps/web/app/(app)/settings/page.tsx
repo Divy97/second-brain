@@ -4,8 +4,10 @@ export const metadata = { title: "Settings" }
 
 export default function SettingsPage() {
   return (
-    <div className="flex flex-col gap-10">
-      <h1 className="text-2xl font-medium tracking-tight">Settings</h1>
+    <div className="mx-auto flex max-w-3xl flex-col gap-10">
+      <h1 className="font-heading text-5xl tracking-tight sm:text-6xl">
+        Settings
+      </h1>
       <OpenRouterKeySettings />
     </div>
   )

@@ -70,7 +70,7 @@ export function OpenRouterKeySettings() {
       aria-labelledby="openrouter-heading"
     >
       <div className="flex flex-col gap-2">
-        <h2 id="openrouter-heading" className="text-base font-medium">
+        <h2 id="openrouter-heading" className="font-heading text-3xl">
           OpenRouter key
         </h2>
         <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
@@ -100,13 +100,13 @@ export function OpenRouterKeySettings() {
       )}
 
       {status && (
-        <div className="flex flex-col gap-4 border-t pt-6">
+        <div className="flex flex-col gap-6 rounded-[2rem] bg-card p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             {status.set ? (
               <p className="flex items-center gap-2 text-sm">
                 <CheckCircleIcon
                   weight="fill"
-                  className="text-emerald-600 dark:text-emerald-400"
+                  className="text-primary"
                   aria-hidden
                 />
                 <span>
@@ -186,7 +186,7 @@ export function OpenRouterKeySettings() {
                   autoComplete="off"
                   spellCheck={false}
                   placeholder="sk-or-v1-..."
-                  className="h-10 font-mono text-base md:h-9 md:text-sm"
+                  className="font-mono"
                 />
                 <FieldDescription>
                   Checked with OpenRouter before saving. Stored encrypted and

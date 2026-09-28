@@ -8,7 +8,7 @@ export function CaptureHistory({ captures }: { captures: string[] }) {
           ? "Saved once"
           : `Saved ${captures.length} times`}
       </h2>
-      <ul className="flex flex-col gap-1 font-mono text-xs text-muted-foreground">
+      <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
         {captures.map((capturedAt) => (
           <li key={capturedAt}>
             <time dateTime={capturedAt}>{formatDateTime(capturedAt)}</time>

@@ -33,13 +33,13 @@ const backLink = (
 function MessageView({ message }: { message: ThreadMessage }) {
   if (message.role === "user") {
     return (
-      <p className="max-w-[85%] self-end bg-muted px-3 py-2 text-sm break-words whitespace-pre-wrap">
+      <p className="max-w-[85%] self-end rounded-[1.5rem] rounded-br-sm bg-lilac px-5 py-4 text-base break-words whitespace-pre-wrap">
         {message.text}
       </p>
     )
   }
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-6 sm:p-8">
       <AnswerText text={message.text} />
       <SourceCards sources={message.sources} />
     </div>
@@ -71,7 +71,7 @@ export function ThreadView({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6" aria-busy aria-label="Loading">
+      <div className="flex flex-col gap-8" aria-busy aria-label="Loading">
         {backLink}
         <div className="h-6 w-2/3 animate-pulse bg-muted" />
         <div className="h-24 w-full animate-pulse bg-muted" />
@@ -82,7 +82,7 @@ export function ThreadView({ id }: { id: string }) {
   if (error || !data) {
     const notFound = error instanceof ApiError && error.status === 404
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
         {backLink}
         <h1 className="text-2xl font-medium tracking-tight">
           {notFound ? "Question not found" : "Could not load this question"}
@@ -97,10 +97,10 @@ export function ThreadView({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex max-w-3xl flex-col gap-8">
       {backLink}
       <h1 className="sr-only">{data.title || "New question"}</h1>
-      <ol className="flex flex-col gap-6">
+      <ol className="flex flex-col gap-8">
         {data.messages.map((message) => (
           <li key={message.id} className="flex flex-col">
             <MessageView message={message} />
