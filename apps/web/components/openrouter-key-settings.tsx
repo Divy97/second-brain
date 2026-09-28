@@ -25,6 +25,7 @@ import {
   FieldLabel,
 } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 
 export function OpenRouterKeySettings() {
   const { data, error, isLoading, mutate } = useSWR<KeySettings, Error>(
@@ -88,9 +89,7 @@ export function OpenRouterKeySettings() {
         </AlertDescription>
       </Alert>
 
-      {isLoading && (
-        <div className="h-16 w-full animate-pulse bg-muted" aria-busy />
-      )}
+      {isLoading && <Skeleton className="h-16 w-full" aria-busy />}
 
       {error && (
         <Alert variant="destructive">
@@ -106,7 +105,7 @@ export function OpenRouterKeySettings() {
               <p className="flex items-center gap-2 text-sm">
                 <CheckCircleIcon
                   weight="fill"
-                  className="text-emerald-600 dark:text-emerald-400"
+                  className="text-brand-ink"
                   aria-hidden
                 />
                 <span>
@@ -186,7 +185,7 @@ export function OpenRouterKeySettings() {
                   autoComplete="off"
                   spellCheck={false}
                   placeholder="sk-or-v1-..."
-                  className="h-10 font-mono text-base md:h-9 md:text-sm"
+                  className="font-mono"
                 />
                 <FieldDescription>
                   Checked with OpenRouter before saving. Stored encrypted and

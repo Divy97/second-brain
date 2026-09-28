@@ -1,3 +1,5 @@
+import { Skeleton } from "@workspace/ui/components/skeleton"
+
 export function PendingAnswer({ question }: { question: string }) {
   return (
     <div className="flex flex-col gap-4" aria-live="polite" aria-busy>
@@ -6,8 +8,8 @@ export function PendingAnswer({ question }: { question: string }) {
       </p>
       <div className="flex flex-col gap-2">
         <p className="text-xs text-muted-foreground">Searching your notes</p>
-        <div className="h-4 w-3/4 animate-pulse bg-muted" />
-        <div className="h-4 w-1/2 animate-pulse bg-muted" />
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
       </div>
     </div>
   )

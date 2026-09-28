@@ -26,6 +26,7 @@ import {
 } from "@/lib/items-api"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 
 const SETTLING_POLL_MS = 3000
 
@@ -94,8 +95,8 @@ export function ItemView({ id }: { id: string }) {
     return (
       <div className="flex flex-col gap-6" aria-busy aria-label="Loading note">
         {backLink}
-        <div className="h-6 w-48 animate-pulse bg-muted" />
-        <div className="h-32 w-full animate-pulse bg-muted" />
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-32 w-full" />
       </div>
     )
   }

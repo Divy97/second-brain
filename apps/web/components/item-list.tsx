@@ -39,7 +39,10 @@ export function ItemList({
               <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <StatusBadge status={item.status} />
                 {item.kind && <span className="capitalize">{item.kind}</span>}
-                <time dateTime={item.capturedAt} className="ml-auto font-mono">
+                <time
+                  dateTime={item.capturedAt}
+                  className="ml-auto tabular-nums"
+                >
                   {formatListDate(item.capturedAt)}
                 </time>
               </span>

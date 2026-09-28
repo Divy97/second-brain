@@ -8,6 +8,7 @@ import { useEffect, useRef, type ReactNode } from "react"
 
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@workspace/ui/components/button"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { cn } from "@workspace/ui/lib/utils"
 
 const navigation = [
@@ -111,9 +112,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 function ShellSkeleton() {
   return (
     <div className="flex flex-col gap-4" aria-busy aria-label="Loading">
-      <div className="h-6 w-40 animate-pulse bg-muted" />
-      <div className="h-4 w-72 max-w-full animate-pulse bg-muted" />
-      <div className="h-24 w-full animate-pulse bg-muted" />
+      <Skeleton className="h-6 w-40" />
+      <Skeleton className="h-4 w-72 max-w-full" />
+      <Skeleton className="h-24 w-full" />
     </div>
   )
 }

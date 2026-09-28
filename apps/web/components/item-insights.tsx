@@ -65,7 +65,7 @@ export function ItemInsights({ item }: { item: ItemDetail }) {
             <dt className="text-muted-foreground">Tags</dt>
             <dd className="flex flex-wrap gap-1.5">
               {item.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="font-mono">
+                <Badge key={tag} variant="secondary">
                   {tag}
                 </Badge>
               ))}

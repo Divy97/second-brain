@@ -18,8 +18,6 @@ const variantByStatus = {
 
 export function StatusBadge({ status }: { status: ItemStatus }) {
   return (
-    <Badge variant={variantByStatus[status]} className="font-mono">
-      {labelByStatus[status]}
-    </Badge>
+    <Badge variant={variantByStatus[status]}>{labelByStatus[status]}</Badge>
   )
 }

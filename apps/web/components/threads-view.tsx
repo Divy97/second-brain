@@ -16,6 +16,7 @@ import {
   threadsPath,
   type ThreadSummary,
 } from "@/lib/threads-api"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 
 export function ThreadsView() {
   const router = useRouter()
@@ -62,7 +63,7 @@ export function ThreadsView() {
           Past questions
         </h2>
         {isLoading ? (
-          <div className="h-16 w-full animate-pulse bg-muted" aria-busy />
+          <Skeleton className="h-16 w-full" aria-busy />
         ) : threads.length === 0 ? (
           <p className="border-t pt-4 text-sm text-muted-foreground">
             No questions yet. Ask anything you remember saving.
@@ -80,7 +81,7 @@ export function ThreadsView() {
                   </span>
                   <time
                     dateTime={thread.createdAt}
-                    className="shrink-0 font-mono text-xs text-muted-foreground"
+                    className="shrink-0 text-xs text-muted-foreground tabular-nums"
                   >
                     {formatListDate(thread.createdAt)}
                   </time>

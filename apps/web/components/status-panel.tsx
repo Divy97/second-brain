@@ -1,6 +1,7 @@
 import { CheckCircleIcon, XCircleIcon } from "@phosphor-icons/react/dist/ssr"
 
 import { apiBaseUrl, fetchHealth } from "@/lib/api"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 
 interface RowProps {
   label: string
@@ -14,9 +15,7 @@ function Row({ label, ok, detail }: RowProps) {
     <div className="flex items-start gap-3 py-4">
       <Icon
         weight="fill"
-        className={
-          ok ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-        }
+        className={ok ? "text-brand-ink" : "text-destructive"}
         size={20}
         aria-hidden
       />
@@ -70,10 +69,10 @@ export function StatusPanelSkeleton() {
     <div className="divide-y divide-border" aria-busy>
       {["API", "Database"].map((label) => (
         <div key={label} className="flex items-start gap-3 py-4">
-          <div className="size-5 animate-pulse bg-muted" />
+          <Skeleton className="size-5" />
           <div className="flex flex-col gap-2">
-            <div className="h-4 w-20 animate-pulse bg-muted" />
-            <div className="h-3 w-56 animate-pulse bg-muted" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-3 w-56" />
           </div>
         </div>
       ))}

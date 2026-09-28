@@ -19,7 +19,10 @@ export function SourceCards({ sources }: { sources: SourceCard[] }) {
             </span>
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               {source.kind && <span className="capitalize">{source.kind}</span>}
-              <time dateTime={source.capturedAt} className="ml-auto font-mono">
+              <time
+                dateTime={source.capturedAt}
+                className="ml-auto tabular-nums"
+              >
                 {formatDateTime(source.capturedAt)}
               </time>
             </span>

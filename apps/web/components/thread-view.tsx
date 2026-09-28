@@ -19,6 +19,7 @@ import {
   type ThreadDetail,
   type ThreadMessage,
 } from "@/lib/threads-api"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 
 const backLink = (
   <Link
@@ -73,8 +74,8 @@ export function ThreadView({ id }: { id: string }) {
     return (
       <div className="flex flex-col gap-6" aria-busy aria-label="Loading">
         {backLink}
-        <div className="h-6 w-2/3 animate-pulse bg-muted" />
-        <div className="h-24 w-full animate-pulse bg-muted" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-24 w-full" />
       </div>
     )
   }

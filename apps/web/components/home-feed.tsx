@@ -8,6 +8,7 @@ import { ItemList } from "@/components/item-list"
 import { KeyReminder } from "@/components/key-reminder"
 import { useItemFeed } from "@/lib/use-item-feed"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 
 export function HomeFeed() {
   const feed = useItemFeed()
@@ -37,7 +38,7 @@ export function HomeFeed() {
           aria-label="Loading notes"
         >
           {[0, 1, 2].map((row) => (
-            <div key={row} className="h-16 w-full animate-pulse bg-muted" />
+            <Skeleton key={row} className="h-16 w-full" />
           ))}
         </div>
       ) : (
