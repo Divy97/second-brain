@@ -1,8 +1,7 @@
-import { Fraunces, Geist, JetBrains_Mono } from "next/font/google"
+import { Geist, JetBrains_Mono } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 
-const display = Fraunces({ subsets: ["latin"], variable: "--font-display" })
 const body = Geist({ subsets: ["latin"], variable: "--font-body" })
 const code = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code" })
 
@@ -15,10 +14,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${display.variable} ${body.variable} ${code.variable}`}
-    >
+    <html lang="en" className={`${body.variable} ${code.variable}`}>
       <body>{children}</body>
     </html>
   )

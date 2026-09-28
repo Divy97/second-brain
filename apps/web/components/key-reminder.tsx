@@ -7,7 +7,6 @@ import useSWR from "swr"
 import { fetchKeySettings, keySettingsPath } from "@/lib/keys-api"
 import {
   Alert,
-  AlertAction,
   AlertDescription,
   AlertTitle,
 } from "@workspace/ui/components/alert"
@@ -17,18 +16,18 @@ export function KeyReminder() {
   const { data } = useSWR(keySettingsPath, fetchKeySettings)
   if (!data || data.openrouter.set) return null
   return (
-    <Alert>
+    <Alert className="max-w-2xl">
       <KeyIcon aria-hidden />
       <AlertTitle>Add your OpenRouter key</AlertTitle>
-      <AlertDescription>
-        Notes are saved without it, but they are not processed or searchable
-        until a key is set.
-      </AlertDescription>
-      <AlertAction>
+      <AlertDescription className="flex flex-col items-start gap-3">
+        <span>
+          Notes are saved without it, but they are not processed or searchable
+          until a key is set.
+        </span>
         <Button asChild size="sm" variant="outline">
-          <Link href="/settings">Settings</Link>
+          <Link href="/settings">Open settings</Link>
         </Button>
-      </AlertAction>
+      </AlertDescription>
     </Alert>
   )
 }

@@ -45,9 +45,12 @@ export function AskBox({
       }}
       className="flex flex-col gap-2"
     >
-      <label htmlFor="question" className="sr-only">
-        {label}
-      </label>
+      <div className="flex items-center justify-between gap-3 px-3 text-sm">
+        <label htmlFor="question" className="font-semibold">
+          {label}
+        </label>
+        <span className="text-xs text-muted-foreground">Required</span>
+      </div>
       <div className="flex items-end gap-2">
         <Textarea
           id="question"
@@ -60,6 +63,12 @@ export function AskBox({
           placeholder={placeholder}
           disabled={pending}
           aria-invalid={showEmptyError ? true : undefined}
+          aria-describedby={showEmptyError ? "question-error" : undefined}
+          required
+          onInvalid={(event) => {
+            event.preventDefault()
+            setShowEmptyError(true)
+          }}
           rows={1}
           className="max-h-40 min-h-12 flex-1 resize-none border-0 bg-transparent px-3 py-3 text-base leading-relaxed focus-visible:ring-0"
         />
@@ -74,7 +83,13 @@ export function AskBox({
         </Button>
       </div>
       {showEmptyError && (
-        <p className="text-xs text-destructive">Type a question first.</p>
+        <p
+          id="question-error"
+          role="alert"
+          className="text-xs text-destructive"
+        >
+          Type a question first.
+        </p>
       )}
     </form>
   )

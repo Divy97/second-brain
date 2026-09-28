@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-background">
       <header className="border-b border-border/70 bg-card/70">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8">
           <Wordmark href="/home" />
           <nav
             className="hidden items-center gap-2 rounded-full bg-secondary p-1.5 sm:flex"
@@ -65,7 +65,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   aria-current={current ? "page" : undefined}
                   className={cn(
                     "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-card",
-                    current && "bg-card shadow-sm"
+                    current &&
+                      "bg-primary text-primary-foreground hover:bg-primary"
                   )}
                 >
                   <Icon size={18} aria-hidden />
@@ -89,7 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl px-5 py-9 pb-28 sm:px-8 sm:py-14">
+      <main className="mx-auto w-full max-w-7xl px-5 py-7 pb-28 sm:px-8 sm:py-10">
         {session ? (
           children
         ) : (
@@ -101,7 +102,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       </main>
       <nav
-        className="fixed right-4 bottom-4 left-4 z-20 flex justify-around rounded-full border border-border bg-card/95 p-2 shadow-[0_16px_45px_#533c5129] backdrop-blur sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-border bg-card px-3 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] sm:hidden"
         aria-label="Main mobile"
       >
         {navigation.map(({ href, label, icon: Icon }) => {
@@ -112,8 +113,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               href={href}
               aria-current={current ? "page" : undefined}
               className={cn(
-                "flex min-w-20 flex-col items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold",
-                current && "bg-lilac"
+                "flex min-w-20 flex-col items-center gap-1 rounded-xl px-3 py-2 text-sm font-semibold",
+                current && "bg-primary text-primary-foreground"
               )}
             >
               <Icon size={20} aria-hidden />

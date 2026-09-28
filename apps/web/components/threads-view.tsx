@@ -46,18 +46,18 @@ export function ThreadsView() {
   const threads = data?.threads ?? []
   return (
     <div className="mx-auto max-w-4xl">
-      <section className="rounded-[2.25rem] bg-mint px-6 py-12 text-center sm:px-12 sm:py-20">
-        <p className="mb-5 text-xs font-bold tracking-[0.15em] uppercase">
+      <section className="rounded-2xl bg-mint px-5 py-9 text-center sm:px-10 sm:py-12">
+        <p className="mb-4 text-xs font-bold tracking-wide uppercase">
           Your memories, on call
         </p>
-        <h1 className="mx-auto max-w-xl font-heading text-5xl leading-[1.03] tracking-tight sm:text-7xl">
+        <h1 className="mx-auto max-w-xl font-heading text-3xl leading-tight tracking-tight sm:text-4xl lg:text-5xl">
           Ask what your brain <em className="text-coral-ink">kept.</em>
         </h1>
         <p className="mx-auto mt-5 max-w-md text-muted-foreground">
           A name, a date, that one detail. Ask naturally and see where the
           answer came from.
         </p>
-        <div className="mx-auto mt-9 max-w-xl rounded-[1.75rem] bg-card p-3 shadow-[0_16px_45px_#533c5112]">
+        <div className="mx-auto mt-7 max-w-xl rounded-xl bg-card p-2 shadow-[0_12px_30px_#533c5110]">
           <AskBox
             label="Ask your notes"
             placeholder="What did I save about..."
@@ -76,9 +76,9 @@ export function ThreadsView() {
           <AskError error={error} />
         </div>
       )}
-      <section className="mt-14" aria-labelledby="past-heading">
+      <section className="mt-10" aria-labelledby="past-heading">
         <div className="mb-6 flex items-end justify-between">
-          <h2 id="past-heading" className="font-heading text-4xl">
+          <h2 id="past-heading" className="font-heading text-2xl sm:text-3xl">
             Past questions
           </h2>
           <span className="text-sm text-muted-foreground">

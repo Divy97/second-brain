@@ -53,11 +53,14 @@ export function CaptureBox({
         event.preventDefault()
         void submit()
       }}
-      className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 sm:p-7"
+      className="flex flex-col gap-4 rounded-xl bg-card p-5 sm:p-6"
     >
-      <label htmlFor="capture" className="sr-only">
-        New note
-      </label>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <label htmlFor="capture" className="font-semibold">
+          New note
+        </label>
+        <span className="text-xs text-muted-foreground">Required</span>
+      </div>
       <Textarea
         id="capture"
         value={text}
@@ -66,11 +69,15 @@ export function CaptureBox({
           if (error) setError(null)
         }}
         onKeyDown={onKeyDown}
-        placeholder="A thought, a quote, a tiny detail..."
+        placeholder="Write a thought, quote, or detail..."
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "capture-error" : undefined}
-        autoFocus
-        className="max-h-[50dvh] min-h-44 resize-none border-0 bg-transparent px-0 py-0 font-heading text-2xl leading-snug placeholder:text-muted-foreground/70 focus-visible:ring-0 sm:text-3xl"
+        required
+        onInvalid={(event) => {
+          event.preventDefault()
+          setError(emptyNoteMessage)
+        }}
+        className="max-h-[50dvh] min-h-28 resize-none border-0 bg-transparent px-0 py-0 font-sans text-base leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:min-h-36 sm:text-lg"
       />
       {error && (
         <Alert variant="destructive" id="capture-error">

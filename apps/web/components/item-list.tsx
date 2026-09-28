@@ -41,7 +41,7 @@ export function ItemList({
           <li key={item.id}>
             <Link
               href={`/items/${item.id}`}
-              className={`group flex h-full min-h-56 flex-col justify-between rounded-[1.75rem] p-6 transition-transform hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-ring ${colors[index % colors.length]}`}
+              className={`group flex h-full min-h-48 flex-col justify-between rounded-2xl p-5 transition-transform hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-ring ${colors[index % colors.length]}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <StatusBadge status={item.status} />
@@ -51,7 +51,7 @@ export function ItemList({
                   aria-hidden
                 />
               </div>
-              <h3 className="my-6 line-clamp-4 font-heading text-2xl leading-tight break-words">
+              <h3 className="my-5 line-clamp-4 font-heading text-xl leading-snug break-words">
                 {item.title ?? item.excerpt}
               </h3>
               <div className="flex items-center justify-between gap-2 border-t border-foreground/15 pt-4 text-xs font-medium text-muted-foreground">

@@ -121,7 +121,7 @@ export function ItemView({ id }: { id: string }) {
     <article className="mx-auto flex max-w-4xl flex-col gap-8">
       {backLink}
       <header className="flex flex-col gap-3">
-        <h1 className="max-w-3xl font-heading text-4xl leading-tight tracking-tight break-words sm:text-6xl">
+        <h1 className="max-w-3xl font-heading text-3xl leading-tight tracking-tight break-words sm:text-4xl">
           {item.title ?? "Untitled note"}
         </h1>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

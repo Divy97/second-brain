@@ -12,27 +12,27 @@ import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 export function HomeFeed() {
   const feed = useItemFeed()
   return (
-    <div className="flex flex-col gap-14">
-      <section className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:gap-16">
+    <div className="flex flex-col gap-10">
+      <section className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:gap-10">
         <div>
-          <p className="mb-5 w-fit rotate-[-3deg] rounded-full bg-butter px-4 py-2 text-xs font-bold tracking-widest uppercase">
+          <p className="mb-4 w-fit rounded-full bg-butter px-3 py-1.5 text-xs font-bold tracking-wide uppercase">
             Your space to think
           </p>
-          <h1 className="max-w-xl font-heading text-5xl leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="max-w-xl font-heading text-3xl leading-tight tracking-tight sm:text-4xl lg:text-5xl">
             What&apos;s on your <em className="text-coral-ink">mind?</em>
           </h1>
-          <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">
+          <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
             Save the thought before it slips away. You can make sense of it
             later.
           </p>
           <Link
             href="/threads"
-            className="mt-7 inline-flex items-center gap-2 font-semibold hover:underline"
+            className="mt-5 inline-flex items-center gap-2 font-semibold hover:underline"
           >
             Or ask your notes <ArrowUpRightIcon aria-hidden />
           </Link>
         </div>
-        <div className="rounded-[2.25rem] bg-lilac p-4 shadow-[0_20px_60px_#533c5110] sm:p-6">
+        <div className="rounded-2xl bg-lilac p-3 sm:p-5">
           <CaptureBox onSaved={feed.prepend} />
         </div>
       </section>
@@ -40,12 +40,12 @@ export function HomeFeed() {
       <section aria-labelledby="notes-heading">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="mb-2 text-xs font-bold tracking-[0.15em] text-muted-foreground uppercase">
+            <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground uppercase">
               Your collection
             </p>
             <h2
               id="notes-heading"
-              className="font-heading text-4xl tracking-tight sm:text-5xl"
+              className="font-heading text-3xl tracking-tight sm:text-4xl"
             >
               The things you kept.
             </h2>
