@@ -2,7 +2,7 @@
 
 import { ArrowLeftIcon } from "@phosphor-icons/react"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import useSWR from "swr"
 
 import { AnswerText } from "@/components/answer-text"
@@ -53,6 +53,13 @@ export function ThreadView({ id }: { id: string }) {
   )
   const [asking, setAsking] = useState<string | null>(null)
   const [askError, setAskError] = useState<unknown>(null)
+  const latestRef = useRef<HTMLDivElement>(null)
+  const messageCount = data?.messages.length
+
+  useEffect(() => {
+    if (messageCount === undefined) return
+    latestRef.current?.scrollIntoView({ block: "end" })
+  }, [id, messageCount, asking])
 
   async function ask(question: string): Promise<boolean> {
     setAsking(question)
@@ -97,7 +104,7 @@ export function ThreadView({ id }: { id: string }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-48 sm:pb-32">
       {backLink}
       <h1 className="sr-only">{data.title || "New question"}</h1>
       <ol className="flex flex-col gap-8">
@@ -108,14 +115,19 @@ export function ThreadView({ id }: { id: string }) {
         ))}
       </ol>
       {asking !== null && <PendingAnswer question={asking} />}
-      {askError !== null && <AskError error={askError} />}
-      <AskBox
-        label="Ask a follow-up"
-        placeholder="Ask a follow-up"
-        pending={asking !== null}
-        onAsk={ask}
-      />
+      <div ref={latestRef} className="scroll-mb-48 sm:scroll-mb-32" />
       <DeleteThread id={id} />
+      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 border-t border-border bg-background px-5 py-3 sm:bottom-0 sm:px-8">
+        <div className="mx-auto max-w-3xl">
+          {askError !== null && <AskError error={askError} />}
+          <AskBox
+            label="Ask a follow-up"
+            placeholder="Ask a follow-up"
+            pending={asking !== null}
+            onAsk={ask}
+          />
+        </div>
+      </div>
     </div>
   )
 }
