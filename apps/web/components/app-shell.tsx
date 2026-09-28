@@ -21,6 +21,12 @@ const navigation = [
   { href: "/settings", label: "Settings", icon: GearSixIcon },
 ]
 
+function isCurrentRoute(href: string, pathname: string) {
+  return href === "/home"
+    ? pathname === "/home" || pathname.startsWith("/items/")
+    : pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -51,10 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label="Main"
           >
             {navigation.map(({ href, label, icon: Icon }) => {
-              const current =
-                href === "/home"
-                  ? pathname === "/home" || pathname.startsWith("/items")
-                  : pathname.startsWith(href)
+              const current = isCurrentRoute(href, pathname)
               return (
                 <Link
                   key={href}
@@ -102,10 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         aria-label="Main mobile"
       >
         {navigation.map(({ href, label, icon: Icon }) => {
-          const current =
-            href === "/home"
-              ? pathname === "/home" || pathname.startsWith("/items")
-              : pathname.startsWith(href)
+          const current = isCurrentRoute(href, pathname)
           return (
             <Link
               key={href}

@@ -1,16 +1,10 @@
 import Link from "next/link"
 
-export function Wordmark({
-  href = "/",
-  light = false,
-}: {
-  href?: string
-  light?: boolean
-}) {
+export function Wordmark({ href = "/" }: { href?: string }) {
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-2.5 font-heading text-xl font-bold tracking-tight ${light ? "text-primary-foreground" : "text-foreground"}`}
+      className="inline-flex items-center gap-2.5 font-heading text-xl font-bold tracking-tight text-foreground"
     >
       <span
         aria-hidden
