@@ -8,6 +8,7 @@ import {
 import { useState, type SubmitEvent } from "react"
 import useSWR from "swr"
 
+import { PasswordInput } from "@/components/password-input"
 import { describeApiError } from "@/lib/describe-api-error"
 import { formText } from "@/lib/form-text"
 import {
@@ -24,7 +25,6 @@ import {
   FieldDescription,
   FieldLabel,
 } from "@workspace/ui/components/field"
-import { Input } from "@workspace/ui/components/input"
 
 export function OpenRouterKeySettings() {
   const { data, error, isLoading, mutate } = useSWR<KeySettings, Error>(
@@ -66,11 +66,11 @@ export function OpenRouterKeySettings() {
 
   return (
     <section
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-5"
       aria-labelledby="openrouter-heading"
     >
       <div className="flex flex-col gap-2">
-        <h2 id="openrouter-heading" className="font-heading text-3xl">
+        <h2 id="openrouter-heading" className="font-heading text-2xl">
           OpenRouter key
         </h2>
         <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
@@ -79,12 +79,11 @@ export function OpenRouterKeySettings() {
         </p>
       </div>
 
-      <Alert>
+      <Alert className="max-w-[65ch]">
         <InfoIcon aria-hidden />
         <AlertDescription className="text-sm leading-relaxed">
-          Your notes and questions are sent to third-party model providers
-          through OpenRouter, using this key. Only add a key if you are
-          comfortable with that.
+          Your notes and questions go through OpenRouter to model providers. Add
+          a key only if you are comfortable with that.
         </AlertDescription>
       </Alert>
 
@@ -100,9 +99,9 @@ export function OpenRouterKeySettings() {
       )}
 
       {status && (
-        <div className="flex flex-col gap-6 rounded-[2rem] bg-card p-6 sm:p-8">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-            {status.set ? (
+        <div className="flex flex-col gap-5 rounded-2xl bg-card p-5 sm:p-7">
+          {status.set && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
               <p className="flex items-center gap-2 text-sm">
                 <CheckCircleIcon
                   weight="fill"
@@ -114,30 +113,28 @@ export function OpenRouterKeySettings() {
                   <span className="font-mono">{status.last4}</span>
                 </span>
               </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">No key set</p>
-            )}
-            {status.set && !editing && !confirmingRemove && (
-              <div className="ml-auto flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditing(true)
-                  }}
-                >
-                  Replace
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    setConfirmingRemove(true)
-                  }}
-                >
-                  Remove
-                </Button>
-              </div>
-            )}
-          </div>
+              {!editing && !confirmingRemove && (
+                <div className="ml-auto flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditing(true)
+                    }}
+                  >
+                    Replace
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setConfirmingRemove(true)
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           {confirmingRemove && (
             <div className="flex flex-wrap items-center gap-3 border p-3">
@@ -176,19 +173,39 @@ export function OpenRouterKeySettings() {
               className="flex flex-col gap-4"
             >
               <Field>
-                <FieldLabel htmlFor="openrouter-key">
+                <FieldLabel
+                  htmlFor="openrouter-key"
+                  className="w-full justify-between"
+                >
                   {status.set ? "New API key" : "API key"}
+                  <span
+                    aria-hidden
+                    className="text-xs font-normal text-muted-foreground"
+                  >
+                    Required
+                  </span>
                 </FieldLabel>
-                <Input
+                <PasswordInput
                   id="openrouter-key"
                   name="key"
-                  type="password"
                   autoComplete="off"
                   spellCheck={false}
                   placeholder="sk-or-v1-..."
                   className="font-mono"
+                  required
+                  aria-invalid={!!actionError}
+                  aria-describedby={
+                    actionError ? "openrouter-key-error" : "openrouter-key-help"
+                  }
+                  onInvalid={(event) => {
+                    event.preventDefault()
+                    setActionError("Paste your OpenRouter API key first.")
+                  }}
+                  onInput={() => {
+                    setActionError(null)
+                  }}
                 />
-                <FieldDescription>
+                <FieldDescription id="openrouter-key-help">
                   Checked with OpenRouter before saving. Stored encrypted and
                   never shown again.
                 </FieldDescription>
@@ -216,7 +233,7 @@ export function OpenRouterKeySettings() {
           )}
 
           {actionError && (
-            <Alert variant="destructive">
+            <Alert id="openrouter-key-error" variant="destructive">
               <WarningCircleIcon aria-hidden />
               <AlertDescription>{actionError}</AlertDescription>
             </Alert>

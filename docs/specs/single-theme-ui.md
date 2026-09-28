@@ -6,7 +6,7 @@ The existing interface has no clear identity. The unfinished graphite and lime r
 
 ## Direction
 
-Replace the interface with one warm, light design. Cream paper, plum text, coral, lilac, butter and mint. Use Fraunces for display text and Geist for body text. No theme switch, dark mode, blue accent or sidebar highlight.
+Replace the interface with one warm, light design. Cream paper, plum text, coral, lilac, butter and mint. Use Geist throughout. No theme switch, dark mode, blue accent or sidebar highlight.
 
 ## Scope
 
@@ -24,3 +24,11 @@ Replace the interface with one warm, light design. Cream paper, plum text, coral
 3. Capture, browse, edit, delete, ask, source navigation and key management still work.
 4. Every screen uses the single palette and works at phone and desktop widths.
 5. `bun run check` and the production web build pass; browser checks cover landing, auth, notes and ask.
+
+## Usability correction
+
+- At 100% zoom, the wordmark stays on one line and the landing hero, intro, and CTA fit phone and desktop viewports.
+- A phone menu exposes public navigation. Signed-in phone navigation remains visible and does not leave content trapped behind it.
+- Body text, helper text, and accents meet WCAG AA contrast on the surfaces where they appear.
+- Required fields are marked, validate inline, and allow password visibility toggling. Wrong credentials say "Email or password is incorrect."
+- Capture, note cards, ask, settings, and auth use a consistent, readable type scale and aligned spacing.

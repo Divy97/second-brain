@@ -8,7 +8,7 @@
 
 @theme inline {
   --font-sans: var(--font-body);
-  --font-heading: var(--font-display);
+  --font-heading: var(--font-body);
   --font-mono: var(--font-code);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -29,7 +29,7 @@
   --color-input: var(--border);
   --color-ring: var(--primary);
   --color-coral: #ff8c74;
-  --color-coral-ink: #c9493b;
+  --color-coral-ink: #a02e2b;
   --color-lilac: #d9c8ef;
   --color-butter: #f6d980;
   --color-mint: #cce6d5;
@@ -49,7 +49,7 @@
   --primary-foreground: #fffaf4;
   --secondary: #efe5dd;
   --muted: #f1e9e1;
-  --muted-foreground: #746a71;
+  --muted-foreground: #5d5059;
   --accent: #f7d9d0;
   --destructive: #ac3f44;
   --border: #e7dbd2;
@@ -69,7 +69,7 @@
   h1,
   h2,
   h3 {
-    @apply font-heading;
+    @apply font-heading font-semibold;
   }
   ::selection {
     background: #f7d9d0;
