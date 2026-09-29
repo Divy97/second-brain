@@ -17,7 +17,7 @@ import { timeWindow } from "./filters.js"
 import { rerankCandidates } from "./rerank.js"
 import { rewriteQuestion } from "./rewrite.js"
 import { fuseRankings } from "./rrf.js"
-import { resolveOpenRouterKey } from "../user-keys/index.js"
+import { resolveUserKey } from "../user-keys/index.js"
 
 import type { HistoryTurn } from "./history.js"
 
@@ -37,7 +37,7 @@ export async function askQuestion(
   env: Env,
   input: AskInput
 ): Promise<AskResult> {
-  const key = await resolveOpenRouterKey(db, env, input.userId)
+  const key = await resolveUserKey(db, env, input.userId, "openrouter")
   if (!key.ok) return { ok: false, reason: "missing_key" }
   const openRouter = createOpenRouter({ apiKey: key.apiKey })
 

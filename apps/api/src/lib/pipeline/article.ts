@@ -1,9 +1,18 @@
+import { createJina, JinaError, type JinaArticle } from "@workspace/ai"
+
 import { safeArticleUrl } from "../article-url.js"
 import { PipelineFailure } from "./failures.js"
 
 export interface ArticleExtraction {
   text: string
   quality: "full" | "partial"
+}
+
+export interface ArticleRequest {
+  sourceUrl: string
+  note: string | null
+  readerKey?: string | null
+  fetchPage?: typeof fetch
 }
 
 const blockedWords =
@@ -94,23 +103,30 @@ async function fetchSafe(
   )
 }
 
-export async function extractArticle(
-  sourceUrl: string,
-  note: string | null,
-  fetchPage: typeof fetch = fetch
-): Promise<ArticleExtraction> {
-  let response: Response
+// spec.md §4.1 step 3 (Browser Run for JS-rendered pages) is not built yet, so the
+// ladder runs fetch, then parsed HTML, then the reader API. A page still walled after
+// those is kept partial: title and note only, never invented article text.
+export async function extractArticle({
+  sourceUrl,
+  note,
+  readerKey = null,
+  fetchPage = fetch,
+}: ArticleRequest): Promise<ArticleExtraction> {
+  const read = (): Promise<JinaArticle | null> =>
+    readWithReader(sourceUrl, readerKey, fetchPage)
+
+  let response: Response | null = null
   try {
     response = await fetchSafe(sourceUrl, fetchPage)
-  } catch {
-    throw new PipelineFailure(
-      "processing_error",
-      "The page could not be fetched. Retry later.",
-      false
-    )
+  } catch (error) {
+    if (error instanceof PipelineFailure) throw error
   }
 
-  if (!response.ok && response.status !== 401 && response.status !== 403) {
+  // A wall the fetch could not get past at all still has the reader as a way through,
+  // so the key is consulted before the capture is called unfetchable.
+  if (!response || (!response.ok && !isWall(response.status))) {
+    const rescued = await read()
+    if (rescued) return fullFromReader(note, sourceUrl, rescued)
     throw new PipelineFailure(
       "processing_error",
       "The page could not be fetched. Retry later.",
@@ -127,16 +143,70 @@ export async function extractArticle(
   }
 
   const { title, description, text } = await parseHtml(response)
-  const blocked =
-    !response.ok || blockedWords.test([title, description, text].join(" "))
+  if (response.ok && !blockedWords.test([title, description, text].join(" "))) {
+    return {
+      text: assemble([note, sourceUrl, title, description, text]),
+      quality: "full",
+    }
+  }
+
+  const viaReader = await read()
+  if (viaReader) {
+    return fullFromReader(note, sourceUrl, viaReader, title, description)
+  }
+
+  return {
+    text: assemble([note, sourceUrl, title, description]),
+    quality: "partial",
+  }
+}
+
+const isWall = (status: number) => status === 401 || status === 403
+
+function fullFromReader(
+  note: string | null,
+  sourceUrl: string,
+  article: JinaArticle,
+  title = "",
+  description = ""
+): ArticleExtraction {
   return {
     text: assemble([
       note,
       sourceUrl,
-      title,
-      description,
-      blocked ? null : text,
+      article.title || title,
+      article.description || description,
+      article.content,
     ]),
-    quality: blocked ? "partial" : "full",
+    quality: "full",
+  }
+}
+
+async function readWithReader(
+  sourceUrl: string,
+  readerKey: string | null,
+  fetchPage: typeof fetch
+): Promise<JinaArticle | null> {
+  if (!readerKey) return null
+  try {
+    const article = await createJina({
+      apiKey: readerKey,
+      fetch: fetchPage,
+    }).read(sourceUrl)
+    return article.content.trim() ? article : null
+  } catch (error) {
+    // A rejected key is the user's to fix, so it surfaces as a retryable failure.
+    // A reader that is merely down leaves the item partial instead.
+    if (error instanceof JinaError) {
+      if (error.status === 401) {
+        throw new PipelineFailure(
+          "invalid_key",
+          "The reader key was rejected. Update it in settings and retry.",
+          true
+        )
+      }
+      return null
+    }
+    throw error
   }
 }

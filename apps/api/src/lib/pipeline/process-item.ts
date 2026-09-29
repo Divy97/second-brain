@@ -26,7 +26,7 @@ import {
   PipelineFailure,
   toPipelineFailure,
 } from "./failures.js"
-import { resolveOpenRouterKey } from "../user-keys/index.js"
+import { resolveOptionalKey, resolveUserKey } from "../user-keys/index.js"
 
 // Step results are persisted by the Workflow engine, so they must be serialisable.
 export type StepRunner = <T extends Rpc.Serializable<T>>(
@@ -63,7 +63,7 @@ async function openRouterFor(
   env: Env,
   userId: string
 ): Promise<OpenRouter> {
-  const key = await resolveOpenRouterKey(db, env, userId)
+  const key = await resolveUserKey(db, env, userId, "openrouter")
   if (!key.ok) {
     throw new PipelineFailure(
       "missing_key",
@@ -226,11 +226,17 @@ export async function processItem(
               true
             )
           }
-          const article = await extractArticle(
-            claimed.sourceUrl,
-            claimed.sourceNote,
-            context.fetchPage
-          )
+          const article = await extractArticle({
+            sourceUrl: claimed.sourceUrl,
+            note: claimed.sourceNote,
+            readerKey: await resolveOptionalKey(
+              db,
+              env,
+              claimed.userId,
+              "reader"
+            ),
+            fetchPage: context.fetchPage,
+          })
           return saveExtractedText(db, job, article.text, article.quality)
         })
       )

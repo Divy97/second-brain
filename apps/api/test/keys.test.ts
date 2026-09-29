@@ -6,9 +6,18 @@ import {
   type OpenRouterStub,
 } from "./support/openrouter-stub.js"
 
+type ProviderStatus = { set: false } | { set: true; last4: string }
+
 interface KeyStatus {
-  openrouter: { set: false } | { set: true; last4: string }
+  openrouter: ProviderStatus
+  transcript: ProviderStatus
+  reader: ProviderStatus
 }
+
+const others = {
+  transcript: { set: false },
+  reader: { set: false },
+} as const
 
 const firstKey = "sk-or-v1-first-key-aaaa1111"
 const secondKey = "sk-or-v1-second-key-bbbb2222"
@@ -40,20 +49,26 @@ describe("OpenRouter key settings", () => {
 
   it("goes from not set, to set with last4, to replaced, to removed", async () => {
     const session = await signUp()
-    expect(await keyStatus(session)).toEqual({ openrouter: { set: false } })
+    expect(await keyStatus(session)).toEqual({
+      openrouter: { set: false },
+      ...others,
+    })
 
     const saved = await saveKey(session, firstKey)
     expect(saved.status).toBe(200)
     expect(await saved.json()).toEqual({
       openrouter: { set: true, last4: "1111" },
+      ...others,
     })
     expect(await keyStatus(session)).toEqual({
       openrouter: { set: true, last4: "1111" },
+      ...others,
     })
 
     await saveKey(session, secondKey)
     expect(await keyStatus(session)).toEqual({
       openrouter: { set: true, last4: "2222" },
+      ...others,
     })
 
     const removed = await request("/keys/openrouter", {
@@ -61,7 +76,10 @@ describe("OpenRouter key settings", () => {
       session,
     })
     expect(removed.status).toBe(200)
-    expect(await keyStatus(session)).toEqual({ openrouter: { set: false } })
+    expect(await keyStatus(session)).toEqual({
+      openrouter: { set: false },
+      ...others,
+    })
   })
 
   it("never returns the saved key in any response", async () => {
@@ -89,7 +107,10 @@ describe("OpenRouter key settings", () => {
     expect(response.status).toBe(422)
     const body = await response.json<{ error: { code: string } }>()
     expect(body.error.code).toBe("invalid_key")
-    expect(await keyStatus(session)).toEqual({ openrouter: { set: false } })
+    expect(await keyStatus(session)).toEqual({
+      openrouter: { set: false },
+      ...others,
+    })
     expect(openRouter.calls.map((call) => new URL(call.url).pathname)).toEqual([
       "/api/v1/key",
     ])
@@ -109,13 +130,17 @@ describe("OpenRouter key settings", () => {
     const other = await signUp()
     await saveKey(owner, firstKey)
 
-    expect(await keyStatus(other)).toEqual({ openrouter: { set: false } })
+    expect(await keyStatus(other)).toEqual({
+      openrouter: { set: false },
+      ...others,
+    })
 
     await request("/keys/openrouter", { method: "DELETE", session: other })
     await saveKey(other, secondKey)
 
     expect(await keyStatus(owner)).toEqual({
       openrouter: { set: true, last4: "1111" },
+      ...others,
     })
   })
 

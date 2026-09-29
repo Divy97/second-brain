@@ -1,17 +1,18 @@
-import { findUserKey, type Database } from "@workspace/db"
+import { findUserKey, type Database, type KeyProvider } from "@workspace/db"
 
 import { decryptApiKey } from "./encryption.js"
-import { openRouterKeyRef } from "./routes.js"
+import { keyRef } from "./routes.js"
 
 export type ResolvedKey =
   { ok: true; apiKey: string } | { ok: false; reason: "missing_key" }
 
-export async function resolveOpenRouterKey(
+export async function resolveUserKey(
   db: Database,
   env: Env,
-  userId: string
+  userId: string,
+  provider: KeyProvider
 ): Promise<ResolvedKey> {
-  const stored = await findUserKey(db, openRouterKeyRef(userId))
+  const stored = await findUserKey(db, keyRef(userId, provider))
   if (!stored) return { ok: false, reason: "missing_key" }
   return {
     ok: true,
@@ -21,4 +22,15 @@ export async function resolveOpenRouterKey(
       userId
     ),
   }
+}
+
+// Optional keys unlock a fallback; absent is a normal state, not a failure.
+export async function resolveOptionalKey(
+  db: Database,
+  env: Env,
+  userId: string,
+  provider: Extract<KeyProvider, "transcript" | "reader">
+): Promise<string | null> {
+  const resolved = await resolveUserKey(db, env, userId, provider)
+  return resolved.ok ? resolved.apiKey : null
 }
