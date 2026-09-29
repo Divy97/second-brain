@@ -1,0 +1,13 @@
+# Multimodal capture API check
+
+Checked 2026-09-29 against primary docs. Earlier design research remains in `01-url-extraction-and-cloudflare-ai-features.md` and `02-video-ingestion-youtube-instagram-compute.md`.
+
+- Cloudflare Workers can stream files to an R2 binding with `put` and retrieve them with `get`. Single uploads suit files under about 100 MB; the Worker request cap is 100 MB on a Free zone, and Worker memory is 128 MB. V1 should set smaller per-format limits and keep the R2 bucket private. [R2 Workers API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/), [R2 uploads](https://developers.cloudflare.com/r2/objects/upload-objects/), [Worker limits](https://developers.cloudflare.com/workers/platform/limits/)
+- OpenRouter accepts private images as base64 `image_url` parts in chat completions. Supported types include JPEG, PNG, WebP and GIF. [Image input](https://openrouter.ai/docs/guides/overview/multimodal/image-understanding)
+- OpenRouter's transcription endpoint accepts base64 audio or multipart upload and returns transcript text. It is billed to the user's OpenRouter key. [Transcription](https://openrouter.ai/blog/tutorials/transcription-on-openrouter/)
+- Cloudflare `AI.toMarkdown` accepts PDFs through a Worker binding and returns text/markdown; PDF conversion is free in the documented pricing. OpenRouter's PDF parser can use OCR for scanned pages on the user's key, with per-page charges. [Binding](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/usage/binding/), [PDF inputs](https://openrouter.ai/docs/guides/overview/multimodal/pdfs)
+- Browser Run Quick Actions offer rendered HTML/Markdown in Workers for pages whose static response is thin. This is a fallback after ordinary fetch and extraction. [Quick Actions](https://developers.cloudflare.com/browser-run/quick-actions/)
+- YouTube `videos.list` supplies public video metadata at one quota unit per call but needs a Google API key. A platform secret is required for the spec's official metadata step. [Videos.list](https://developers.google.com/youtube/v3/docs/videos/list), [Getting started](https://developers.google.com/youtube/v3/getting-started)
+- Supadata's current universal `/transcript` and `/metadata` endpoints support YouTube and Instagram URLs on a user's `x-api-key`. Transcript requests can return a job ID and need polling. [Supadata video API](https://github.com/supadata-ai/skills/blob/main/skills/supadata/references/video.md)
+
+Implementation must still verify package-specific behavior against its installed version before each ticket. No live credentials were used in this check.
