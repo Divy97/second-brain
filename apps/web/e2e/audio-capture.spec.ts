@@ -106,3 +106,35 @@ test("recording audio can be stopped and saved", async ({ page }) => {
   await page.getByRole("button", { name: "Save audio" }).click()
   await expect(page.getByRole("link", { name: /Voice note/ })).toBeVisible()
 })
+
+test("microphone denial leaves audio upload available", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia: () => Promise.reject(new Error("denied")) },
+    })
+  })
+  await page.route("**/api/auth/get-session", (route) =>
+    route.fulfill({
+      json: {
+        session: { id: "session-1", token: "test", userId: "user-1" },
+        user: { id: "user-1", email: "test@example.com", name: "Test" },
+      },
+    })
+  )
+  await page.route("**/items", (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } })
+  )
+  await page.route("**/keys", (route) =>
+    route.fulfill({ json: { openrouter: { set: true, last4: "1234" } } })
+  )
+
+  await page.goto("/home")
+  await page.getByRole("button", { name: "Record audio" }).click()
+  await expect(
+    page.getByText(
+      "Microphone access failed. Allow access or upload an audio file."
+    )
+  ).toBeVisible()
+  await expect(page.getByLabel("Upload audio")).toBeVisible()
+})

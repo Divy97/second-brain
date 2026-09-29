@@ -147,11 +147,66 @@ describe("audio capture", () => {
     } finally {
       failedDelete.mockRestore()
     }
-    await deletePendingFiles(testDb(), env.ITEM_FILES)
+    await deletePendingFiles(
+      testDb(),
+      env.ITEM_FILES,
+      new Date(Date.now() + 1000)
+    )
     expect(await listFileDeletions(testDb(), 10)).toEqual([])
     expect(
       (await env.ITEM_FILES.list({ prefix: `${session.userId}/` })).objects
     ).toEqual([])
+  })
+
+  it("cleans a duplicate upload even when immediate storage deletion fails", async () => {
+    const session = await signUp()
+    const file = new File([wavBytes], "duplicate.wav", { type: "audio/wav" })
+    expect((await upload(file, session)).status).toBe(201)
+    const failedDelete = vi
+      .spyOn(env.ITEM_FILES, "delete")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+    try {
+      expect((await upload(file, session)).status).toBe(200)
+      expect(await listFileDeletions(testDb(), 10)).toHaveLength(1)
+    } finally {
+      failedDelete.mockRestore()
+    }
+    await deletePendingFiles(
+      testDb(),
+      env.ITEM_FILES,
+      new Date(Date.now() + 1000)
+    )
+    expect(await listFileDeletions(testDb(), 10)).toEqual([])
+    expect(
+      (await env.ITEM_FILES.list({ prefix: `${session.userId}/` })).objects
+    ).toHaveLength(1)
+  })
+
+  it("reports storage failure without creating a broken item", async () => {
+    const session = await signUp()
+    const failedPut = vi
+      .spyOn(env.ITEM_FILES, "put")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+    try {
+      const response = await upload(
+        new File([wavBytes], "unavailable.wav", { type: "audio/wav" }),
+        session
+      )
+      expect(response.status).toBe(503)
+      expect(
+        (await response.json<{ error: { code: string } }>()).error.code
+      ).toBe("storage_unavailable")
+    } finally {
+      failedPut.mockRestore()
+    }
+    const list = await request("/items", { session })
+    expect((await list.json<{ items: unknown[] }>()).items).toEqual([])
+    await deletePendingFiles(
+      testDb(),
+      env.ITEM_FILES,
+      new Date(Date.now() + 1000)
+    )
+    expect(await listFileDeletions(testDb(), 10)).toEqual([])
   })
 
   it("transcribes audio and indexes the words for recall", async () => {

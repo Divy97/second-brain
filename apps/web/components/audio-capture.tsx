@@ -29,6 +29,7 @@ export function AudioCapture({
   const chunks = useRef<Blob[]>([])
   const recordedBytes = useRef(0)
   const tooLarge = useRef(false)
+  const recordingFailed = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -61,6 +62,7 @@ export function AudioCapture({
       chunks.current = []
       recordedBytes.current = 0
       tooLarge.current = false
+      recordingFailed.current = false
       next.ondataavailable = (event) => {
         recordedBytes.current += event.data.size
         if (recordedBytes.current > MAX_AUDIO_SIZE) {
@@ -77,6 +79,7 @@ export function AudioCapture({
         })
         stream.current = null
         recorder.current = null
+        if (recordingFailed.current) return
         if (tooLarge.current) {
           setError("Recording reached the 25 MB limit. Save a shorter clip.")
           return
@@ -90,6 +93,7 @@ export function AudioCapture({
         else setError("No audio was recorded. Try again.")
       }
       next.addEventListener("error", () => {
+        recordingFailed.current = true
         microphone.getTracks().forEach((track) => {
           track.stop()
         })

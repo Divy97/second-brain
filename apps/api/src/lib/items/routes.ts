@@ -9,6 +9,7 @@ import {
   findItemFile,
   InvalidCursorError,
   listItems,
+  queueFileDeletion,
   replaceItemText,
   requeueItem,
   softDeleteItem,
@@ -142,9 +143,20 @@ itemRoutes.post("/audio", async (c) => {
   const hash = await crypto.subtle.digest("SHA-256", bytes)
   const contentHash = `voice:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, "0")).join("")}`
   const fileKey = `${c.var.userId}/${crypto.randomUUID()}`
-  await c.env.ITEM_FILES.put(fileKey, bytes, {
-    httpMetadata: { contentType: file.type },
-  })
+  await queueFileDeletion(c.var.db, fileKey)
+  try {
+    await c.env.ITEM_FILES.put(fileKey, bytes, {
+      httpMetadata: { contentType: file.type },
+    })
+  } catch (error) {
+    console.error("audio storage failed", error)
+    return apiError(
+      c,
+      503,
+      "storage_unavailable",
+      "Audio could not be saved. Try again."
+    )
+  }
   let capture: Awaited<ReturnType<typeof captureFileItem>>
   try {
     capture = await captureFileItem(c.var.db, {
@@ -156,10 +168,22 @@ itemRoutes.post("/audio", async (c) => {
       fileSize: file.size,
     })
   } catch (error) {
-    await c.env.ITEM_FILES.delete(fileKey)
-    throw error
+    console.error("audio capture failed", error)
+    return apiError(
+      c,
+      503,
+      "storage_unavailable",
+      "Audio could not be saved. Try again."
+    )
   }
-  if (!capture.created) await c.env.ITEM_FILES.delete(fileKey)
+  if (!capture.created) {
+    try {
+      await c.env.ITEM_FILES.delete(fileKey)
+      await completeFileDeletion(c.var.db, fileKey)
+    } catch (error) {
+      console.error("duplicate file cleanup queued", fileKey, error)
+    }
+  }
   if (capture.item.status === "pending") {
     const refused = await enqueueOrRefuse(c, {
       itemId: capture.item.id,

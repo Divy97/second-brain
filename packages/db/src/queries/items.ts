@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm"
+import { and, desc, eq, isNull, lt, sql } from "drizzle-orm"
 
 import {
   chunks,
@@ -143,6 +143,9 @@ export async function captureFileItem(
     ), capture as (
       insert into ${itemCaptures} (id, item_id, captured_at)
       select ${generateId()}, id, captured_at from upserted
+    ), reservation_removed as (
+      delete from ${fileDeletions}
+      where file_key = ${input.fileKey} and exists (select 1 from upserted where created)
     )
     select * from upserted
   `)
@@ -335,10 +338,19 @@ export async function softDeleteItem(
   })
 }
 
-export async function listFileDeletions(db: Database, limit: number) {
+export async function queueFileDeletion(db: Database, fileKey: string) {
+  await db.insert(fileDeletions).values({ fileKey })
+}
+
+export async function listFileDeletions(
+  db: Database,
+  limit: number,
+  olderThan = new Date()
+) {
   return db
     .select({ fileKey: fileDeletions.fileKey })
     .from(fileDeletions)
+    .where(lt(fileDeletions.createdAt, olderThan))
     .limit(limit)
 }
 

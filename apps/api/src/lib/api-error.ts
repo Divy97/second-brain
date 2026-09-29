@@ -13,6 +13,7 @@ export type ApiErrorCode =
   | "model_unavailable"
   | "upstream_unavailable"
   | "queue_unavailable"
+  | "storage_unavailable"
 
 export function apiError(
   c: Context,

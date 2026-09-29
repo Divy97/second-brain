@@ -74,6 +74,7 @@ export {
   InvalidCursorError,
   listItems,
   listFileDeletions,
+  queueFileDeletion,
   replaceItemText,
   softDeleteItem,
   type CapturedItem,
