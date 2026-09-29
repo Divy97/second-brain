@@ -68,3 +68,41 @@ test("uploading audio shows a saved voice note and its player", async ({
   ).toBeVisible()
   await expect(page.locator("audio[controls]")).toBeVisible()
 })
+
+test("recording audio can be stopped and saved", async ({ page }) => {
+  const item = {
+    id: "b1137f23-699d-4dfb-a5dd-50b777670c28",
+    type: "voice",
+    status: "pending",
+    kind: null,
+    title: null,
+    excerpt: "",
+    capturedAt: "2026-09-29T00:00:00Z",
+  }
+  await page.route("**/api/auth/get-session", (route) =>
+    route.fulfill({
+      json: {
+        session: { id: "session-1", token: "test", userId: "user-1" },
+        user: { id: "user-1", email: "test@example.com", name: "Test" },
+      },
+    })
+  )
+  await page.route("**/keys", (route) =>
+    route.fulfill({ json: { openrouter: { set: true, last4: "1234" } } })
+  )
+  await page.route("**/items", (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } })
+  )
+  await page.route("**/items/audio", (route) =>
+    route.fulfill({ status: 201, json: item })
+  )
+
+  await page.goto("/home")
+  await page.getByRole("button", { name: "Record audio" }).click()
+  await expect(page.getByRole("status")).toHaveText("Recording…")
+  await page.waitForTimeout(300)
+  await page.getByRole("button", { name: "Stop recording" }).click()
+  await expect(page.getByText(/voice-note\.(webm|m4a)/)).toBeVisible()
+  await page.getByRole("button", { name: "Save audio" }).click()
+  await expect(page.getByRole("link", { name: /Voice note/ })).toBeVisible()
+})

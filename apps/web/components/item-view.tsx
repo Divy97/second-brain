@@ -127,6 +127,9 @@ export function ItemView({ id }: { id: string }) {
         </h1>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <StatusBadge status={item.status} />
+          {item.captureQuality && (
+            <span className="capitalize">{item.captureQuality} capture</span>
+          )}
           {item.kind && <span className="capitalize">{item.kind}</span>}
         </div>
       </header>

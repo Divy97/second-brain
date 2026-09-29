@@ -68,10 +68,12 @@ export {
 export {
   captureFileItem,
   captureTextItem,
+  completeFileDeletion,
   findItem,
   findItemFile,
   InvalidCursorError,
   listItems,
+  listFileDeletions,
   replaceItemText,
   softDeleteItem,
   type CapturedItem,

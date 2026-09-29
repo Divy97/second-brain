@@ -1,7 +1,10 @@
 import { Hono, type Context } from "hono"
 import { cors } from "hono/cors"
 
+import { connect } from "@workspace/db"
+
 import { healthRoutes } from "./lib/health.js"
+import { deletePendingFiles } from "./lib/items/delete-files.js"
 import { itemRoutes } from "./lib/items/index.js"
 import { itemsQueueConsumer } from "./lib/items-queue.js"
 import { type ProcessItemParams } from "./lib/process-item-workflow.js"
@@ -35,4 +38,12 @@ app.route("/threads", threadRoutes)
 export default {
   fetch: app.fetch,
   queue: itemsQueueConsumer,
+  scheduled: async (_event, env) => {
+    const connection = connect(env.HYPERDRIVE.connectionString)
+    try {
+      await deletePendingFiles(connection.db, env.ITEM_FILES)
+    } finally {
+      await connection.close()
+    }
+  },
 } satisfies ExportedHandler<Env, ProcessItemParams>

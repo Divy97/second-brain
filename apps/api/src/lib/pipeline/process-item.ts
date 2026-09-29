@@ -113,7 +113,7 @@ export async function processItem(
     )
     if (!claimed) return { outcome: "skipped" }
 
-    if (claimed.type === "voice") {
+    if (claimed.type === "voice" && !claimed.rawText) {
       const extracted = await runStep("extract audio", () =>
         inStep(context, async (db) => {
           if (!claimed.fileKey || !claimed.fileName || !claimed.mimeType) {

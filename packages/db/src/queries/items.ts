@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, sql } from "drizzle-orm"
 
 import {
   chunks,
+  fileDeletions,
   generateId,
   itemCaptures,
   itemEntities,
@@ -18,6 +19,7 @@ export interface ItemSummary {
   id: string
   type: "text" | "voice" | "image" | "pdf" | "url"
   status: ItemStatus
+  captureQuality: "full" | "partial" | null
   kind: ItemKind | null
   title: string | null
   excerpt: string
@@ -55,6 +57,7 @@ const summaryColumns = {
   id: items.id,
   type: items.type,
   status: items.status,
+  captureQuality: items.captureQuality,
   kind: items.kind,
   title: items.title,
   excerpt: sql<string>`left(${items.rawText}, ${EXCERPT_LENGTH})`,
@@ -72,6 +75,7 @@ interface CaptureRow extends Record<string, unknown> {
   id: string
   type: "text" | "voice" | "image" | "pdf" | "url"
   status: ItemStatus
+  capture_quality: "full" | "partial" | null
   kind: ItemKind | null
   title: string | null
   raw_text: string
@@ -93,7 +97,7 @@ export async function captureTextItem(
       values (${generateId()}, ${input.userId}, 'text', 'pending', ${input.contentHash}, ${input.text})
       on conflict (user_id, content_hash) where deleted_at is null do update
         set captured_at = now(), updated_at = now()
-      returning id, type, status, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
+      returning id, type, status, capture_quality, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
     ), capture as (
       insert into ${itemCaptures} (id, item_id, captured_at)
       select ${generateId()}, id, captured_at from upserted
@@ -108,6 +112,7 @@ export async function captureTextItem(
       id: row.id,
       type: row.type,
       status: row.status,
+      captureQuality: row.capture_quality,
       kind: row.kind,
       title: row.title,
       excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
@@ -134,7 +139,7 @@ export async function captureFileItem(
       values (${generateId()}, ${input.userId}, 'voice', 'pending', ${input.contentHash}, '', ${input.fileKey}, ${input.fileName}, ${input.mimeType}, ${input.fileSize})
       on conflict (user_id, content_hash) where deleted_at is null do update
         set captured_at = now(), updated_at = now()
-      returning id, type, status, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
+      returning id, type, status, capture_quality, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
     ), capture as (
       insert into ${itemCaptures} (id, item_id, captured_at)
       select ${generateId()}, id, captured_at from upserted
@@ -149,6 +154,7 @@ export async function captureFileItem(
       id: row.id,
       type: row.type,
       status: row.status,
+      captureQuality: row.capture_quality,
       kind: row.kind,
       title: row.title,
       excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
@@ -297,7 +303,7 @@ export async function replaceItemText(
           error: null,
           pipelineRun: sql`${items.pipelineRun} + 1`,
         })
-        .where(visibleItem(ref))
+        .where(and(visibleItem(ref), eq(items.type, "text")))
         .returning({ run: items.pipelineRun })
       const [row] = updated
       if (!row) return { outcome: "not_found" as const }
@@ -315,10 +321,27 @@ export async function softDeleteItem(
   db: Database,
   ref: ItemRef
 ): Promise<boolean> {
-  const deleted = await db
-    .update(items)
-    .set({ deletedAt: new Date() })
-    .where(visibleItem(ref))
-    .returning({ id: items.id })
-  return deleted.length > 0
+  return db.transaction(async (tx) => {
+    const [deleted] = await tx
+      .update(items)
+      .set({ deletedAt: new Date() })
+      .where(visibleItem(ref))
+      .returning({ fileKey: items.fileKey })
+    if (!deleted) return false
+    if (deleted.fileKey) {
+      await tx.insert(fileDeletions).values({ fileKey: deleted.fileKey })
+    }
+    return true
+  })
+}
+
+export async function listFileDeletions(db: Database, limit: number) {
+  return db
+    .select({ fileKey: fileDeletions.fileKey })
+    .from(fileDeletions)
+    .limit(limit)
+}
+
+export async function completeFileDeletion(db: Database, fileKey: string) {
+  await db.delete(fileDeletions).where(eq(fileDeletions.fileKey, fileKey))
 }

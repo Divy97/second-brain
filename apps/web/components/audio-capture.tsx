@@ -27,6 +27,8 @@ export function AudioCapture({
   const recorder = useRef<MediaRecorder | null>(null)
   const stream = useRef<MediaStream | null>(null)
   const chunks = useRef<Blob[]>([])
+  const recordedBytes = useRef(0)
+  const tooLarge = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -57,7 +59,16 @@ export function AudioCapture({
         type ? { mimeType: type } : undefined
       )
       chunks.current = []
+      recordedBytes.current = 0
+      tooLarge.current = false
       next.ondataavailable = (event) => {
+        recordedBytes.current += event.data.size
+        if (recordedBytes.current > MAX_AUDIO_SIZE) {
+          tooLarge.current = true
+          if (next.state === "recording") next.stop()
+          setRecording(false)
+          return
+        }
         if (event.data.size) chunks.current.push(event.data)
       }
       next.onstop = () => {
@@ -65,6 +76,11 @@ export function AudioCapture({
           track.stop()
         })
         stream.current = null
+        recorder.current = null
+        if (tooLarge.current) {
+          setError("Recording reached the 25 MB limit. Save a shorter clip.")
+          return
+        }
         const mimeType = next.mimeType.split(";")[0] ?? "audio/webm"
         const extension = mimeType === "audio/mp4" ? "m4a" : "webm"
         const recorded = new File(chunks.current, `voice-note.${extension}`, {
@@ -73,10 +89,17 @@ export function AudioCapture({
         if (recorded.size) setFile(recorded)
         else setError("No audio was recorded. Try again.")
       }
+      next.addEventListener("error", () => {
+        microphone.getTracks().forEach((track) => {
+          track.stop()
+        })
+        setRecording(false)
+        setError("Recording stopped unexpectedly. Try again or upload audio.")
+      })
       recorder.current = next
       setFile(null)
       setError(null)
-      next.start()
+      next.start(1000)
       setRecording(true)
     } catch {
       stream.current?.getTracks().forEach((track) => {

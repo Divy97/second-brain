@@ -79,7 +79,7 @@ export async function saveExtractedText(
 ): Promise<boolean> {
   const rows = await db
     .update(items)
-    .set({ rawText: text })
+    .set({ rawText: text, captureQuality: "full" })
     .where(currentRun(job))
     .returning({ id: items.id })
   return rows.length > 0
@@ -246,7 +246,8 @@ export async function requeueItem(
   db: Database,
   ref: ItemRef,
   allowedFrom: ("pending" | "ready" | "failed")[],
-  stalledBefore?: Date
+  stalledBefore?: Date,
+  resetExtraction = false
 ): Promise<RequeueResult> {
   const [row] = await db
     .update(items)
@@ -255,6 +256,12 @@ export async function requeueItem(
       pipelineRun: sql`${items.pipelineRun} + 1`,
       failureReason: null,
       error: null,
+      ...(resetExtraction
+        ? {
+            rawText: sql`case when ${items.type} = 'voice' then '' else ${items.rawText} end`,
+            captureQuality: sql`case when ${items.type} = 'voice' then null else ${items.captureQuality} end`,
+          }
+        : {}),
     })
     .where(
       and(

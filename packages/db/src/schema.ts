@@ -72,6 +72,8 @@ export const itemStatusEnum = pgEnum("item_status", [
   "failed",
 ])
 
+export const captureQualityEnum = pgEnum("capture_quality", ["full", "partial"])
+
 export const keyProviderEnum = pgEnum("key_provider", [
   "openrouter",
   "transcript",
@@ -171,6 +173,7 @@ export const items = pgTable(
     type: itemTypeEnum("type").notNull(),
     kind: itemKindEnum("kind"),
     status: itemStatusEnum("status").notNull().default("pending"),
+    captureQuality: captureQualityEnum("capture_quality"),
     failureReason: text("failure_reason"),
     error: text("error"),
     contentHash: text("content_hash").notNull(),
@@ -213,6 +216,12 @@ export const itemCaptures = pgTable(
   },
   (t) => [index("item_captures_item_id_idx").on(t.itemId)]
 )
+
+export const fileDeletions = pgTable("file_deletions", {
+  id: id(),
+  fileKey: text("file_key").notNull().unique(),
+  createdAt: createdAt(),
+})
 
 // search_text is denormalised by the pipeline (chunk text + title + entities + tags):
 // a generated column cannot read other tables.

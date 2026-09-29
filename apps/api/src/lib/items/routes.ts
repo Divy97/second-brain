@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono"
 import { z } from "zod"
 
 import {
+  completeFileDeletion,
   captureTextItem,
   captureFileItem,
   findItem,
@@ -216,7 +217,12 @@ itemRoutes.patch("/:id", async (c) => {
     text: parsed.text,
     contentHash: await contentHash(parsed.text),
   })
-  if (result.outcome === "not_found") return notFound(c)
+  if (result.outcome === "not_found") {
+    const item = await findItem(c.var.db, ref)
+    return item
+      ? apiError(c, 409, "conflict", "Only typed notes can be edited.")
+      : notFound(c)
+  }
   if (result.outcome === "duplicate") {
     return apiError(
       c,
@@ -238,14 +244,21 @@ itemRoutes.delete("/:id", async (c) => {
   const ref = itemRef(c)
   const file = ref && (await findItemFile(c.var.db, ref))
   const deleted = ref && (await softDeleteItem(c.var.db, ref))
-  if (deleted && file) await c.env.ITEM_FILES.delete(file.key)
+  if (deleted && file) {
+    try {
+      await c.env.ITEM_FILES.delete(file.key)
+      await completeFileDeletion(c.var.db, file.key)
+    } catch (error) {
+      console.error("file deletion queued for retry", file.key, error)
+    }
+  }
   return deleted ? c.body(null, 204) : notFound(c)
 })
 
 function requeueRoute(
   allowedFrom: ("pending" | "ready" | "failed")[],
   conflictMessage: string,
-  options: { recoverStalled?: boolean } = {}
+  options: { recoverStalled?: boolean; resetExtraction?: boolean } = {}
 ) {
   return async (c: Context<AppEnv>) => {
     const ref = itemRef(c)
@@ -256,7 +269,8 @@ function requeueRoute(
       allowedFrom,
       options.recoverStalled
         ? new Date(Date.now() - stalledRunAfterMs)
-        : undefined
+        : undefined,
+      options.resetExtraction
     )
     if (result.outcome === "not_found") return notFound(c)
     if (result.outcome === "conflict") {
@@ -282,6 +296,7 @@ itemRoutes.post(
   "/:id/reprocess",
   requeueRoute(
     ["ready", "failed"],
-    "This note is still being processed. Try again when it is ready."
+    "This note is still being processed. Try again when it is ready.",
+    { resetExtraction: true }
   )
 )
