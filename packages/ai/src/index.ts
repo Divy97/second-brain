@@ -2,7 +2,12 @@ import { z } from "zod"
 
 import { OpenRouterError, toOpenRouterError } from "./lib/errors.js"
 
+import type { KeyVerification } from "./lib/key-verification.js"
+
 export { OpenRouterError, type OpenRouterErrorKind } from "./lib/errors.js"
+export { type KeyVerification } from "./lib/key-verification.js"
+export { createSupadata, SupadataError, type Supadata } from "./supadata.js"
+export { createJina, JinaError, type Jina, type JinaArticle } from "./jina.js"
 
 export interface OpenRouterOptions {
   apiKey: string
@@ -56,10 +61,6 @@ export interface EmbedResult {
   model: string
   usage: Usage
 }
-
-export type KeyVerification =
-  | { valid: true; limitRemaining: number | null }
-  | { valid: false; reason: "invalid_key" }
 
 export interface OpenRouter {
   chat: <T>(request: ChatRequest<T>) => Promise<ChatResult<T>>

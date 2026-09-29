@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
 
+import {
+  stubExtractionProviders,
+  testReaderKey,
+} from "./support/extraction-stub.js"
 import { request, saveOpenRouterKey, signUp } from "./support/http.js"
 import {
   defaultRewrite,
@@ -218,6 +222,122 @@ describe("URL capture", () => {
       expect(retried.rawText).toContain("Kyoto ramen")
     } finally {
       queue.restore()
+      model.restore()
+    }
+  })
+
+  it("completes a walled page through the reader key and keeps the capture when the key is removed", async () => {
+    const paywall = "https://example.com/walled"
+    const fetchPage = articleFetch({
+      [paywall]: html(`
+        <html><head><title>Members only</title><meta name="description" content="Subscribe to read."></head><body>Log in to continue.</body></html>
+      `),
+    })
+    const model = stubOpenRouter()
+    const providers = stubExtractionProviders()
+    providers.acceptKeys([testReaderKey])
+    providers.readerReturns(
+      paywall,
+      "The full text names the Dia agentic browser."
+    )
+    const queue = recordQueue({
+      fetchPage: (input, init) => {
+        const url = new Request(input, init).url
+        return url.startsWith("https://r.jina.ai/")
+          ? globalThis.fetch(input, init)
+          : fetchPage(input, init)
+      },
+    })
+    try {
+      const session = await signUp()
+      await saveOpenRouterKey(session)
+
+      const { id } = await (
+        await saveUrl(session, paywall, "Read later")
+      ).json<{ id: string }>()
+      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
+      const walled = await (
+        await request(`/items/${id}`, { session })
+      ).json<ItemBody>()
+      expect(walled.captureQuality).toBe("partial")
+      expect(walled.rawText).not.toContain("Dia agentic browser")
+
+      expect(
+        (
+          await request("/keys/reader", {
+            method: "PUT",
+            session,
+            json: { key: testReaderKey },
+          })
+        ).status
+      ).toBe(200)
+
+      expect(
+        (await request(`/items/${id}/reprocess`, { session, method: "POST" }))
+          .status
+      ).toBe(200)
+      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
+      const completed = await (
+        await request(`/items/${id}`, { session })
+      ).json<ItemBody>()
+      expect(completed.captureQuality).toBe("full")
+      expect(completed.rawText).toContain("Dia agentic browser")
+
+      expect(
+        (await request("/keys/reader", { method: "DELETE", session })).status
+      ).toBe(200)
+      const afterRemoval = await (
+        await request(`/items/${id}`, { session })
+      ).json<ItemBody>()
+      expect(afterRemoval.rawText).toBe(completed.rawText)
+      expect(afterRemoval.captureQuality).toBe("full")
+    } finally {
+      queue.restore()
+      providers.restore()
+      model.restore()
+    }
+  })
+
+  it("leaves a walled page partial when the reader key is rejected", async () => {
+    const paywall = "https://example.com/still-walled"
+    const fetchPage = articleFetch({
+      [paywall]: html(`
+        <html><head><title>Members only</title></head><body>Subscribe to continue.</body></html>
+      `),
+    })
+    const model = stubOpenRouter()
+    const providers = stubExtractionProviders()
+    providers.acceptKeys([testReaderKey])
+    const queue = recordQueue({
+      fetchPage: (input, init) => {
+        const url = new Request(input, init).url
+        return url.startsWith("https://r.jina.ai/")
+          ? globalThis.fetch(input, init)
+          : fetchPage(input, init)
+      },
+    })
+    try {
+      const session = await signUp()
+      await saveOpenRouterKey(session)
+      await request("/keys/reader", {
+        method: "PUT",
+        session,
+        json: { key: testReaderKey },
+      })
+      providers.breakProvider("jina")
+
+      const { id } = await (
+        await saveUrl(session, paywall, "Check this")
+      ).json<{ id: string }>()
+      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
+      const item = await (
+        await request(`/items/${id}`, { session })
+      ).json<ItemBody>()
+      expect(item.captureQuality).toBe("partial")
+      expect(item.rawText).toContain("Check this")
+    } finally {
+      queue.restore()
+      providers.restore()
       model.restore()
     }
   })

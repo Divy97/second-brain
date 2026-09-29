@@ -1,9 +1,18 @@
+import { createJina, JinaError } from "@workspace/ai"
+
 import { safeArticleUrl } from "../article-url.js"
 import { PipelineFailure } from "./failures.js"
 
 export interface ArticleExtraction {
   text: string
   quality: "full" | "partial"
+}
+
+export interface ArticleRequest {
+  sourceUrl: string
+  note: string | null
+  readerKey?: string | null
+  fetchPage?: typeof fetch
 }
 
 const blockedWords =
@@ -94,11 +103,14 @@ async function fetchSafe(
   )
 }
 
-export async function extractArticle(
-  sourceUrl: string,
-  note: string | null,
-  fetchPage: typeof fetch = fetch
-): Promise<ArticleExtraction> {
+// Ladder: markdown response, then parsed HTML, then the reader API on the user's
+// optional key. A page still walled after all three is kept partial, never invented.
+export async function extractArticle({
+  sourceUrl,
+  note,
+  readerKey = null,
+  fetchPage = fetch,
+}: ArticleRequest): Promise<ArticleExtraction> {
   let response: Response
   try {
     response = await fetchSafe(sourceUrl, fetchPage)
@@ -129,14 +141,49 @@ export async function extractArticle(
   const { title, description, text } = await parseHtml(response)
   const blocked =
     !response.ok || blockedWords.test([title, description, text].join(" "))
+  if (!blocked) {
+    return {
+      text: assemble([note, sourceUrl, title, description, text]),
+      quality: "full",
+    }
+  }
+
+  const viaReader = await readWithReader(sourceUrl, readerKey, fetchPage)
+  if (viaReader) {
+    return {
+      text: assemble([
+        note,
+        sourceUrl,
+        viaReader.title || title,
+        viaReader.description || description,
+        viaReader.content,
+      ]),
+      quality: "full",
+    }
+  }
+
   return {
-    text: assemble([
-      note,
-      sourceUrl,
-      title,
-      description,
-      blocked ? null : text,
-    ]),
-    quality: blocked ? "partial" : "full",
+    text: assemble([note, sourceUrl, title, description]),
+    quality: "partial",
+  }
+}
+
+async function readWithReader(
+  sourceUrl: string,
+  readerKey: string | null,
+  fetchPage: typeof fetch
+) {
+  if (!readerKey) return null
+  try {
+    const article = await createJina({
+      apiKey: readerKey,
+      fetch: fetchPage,
+    }).read(sourceUrl)
+    return article.content.trim() ? article : null
+  } catch (error) {
+    // A reader that is down or rejects the key leaves the item partial and retryable,
+    // rather than failing a capture that already has a title to show.
+    if (error instanceof JinaError) return null
+    throw error
   }
 }
