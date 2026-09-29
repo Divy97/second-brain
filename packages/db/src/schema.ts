@@ -181,6 +181,8 @@ export const items = pgTable(
     fileName: text("file_name"),
     mimeType: text("mime_type"),
     fileSize: integer("file_size"),
+    sourceUrl: text("source_url"),
+    sourceNote: text("source_note"),
     pipelineRun: integer("pipeline_run").notNull().default(0),
     rawText: text("raw_text").notNull(),
     cleanText: text("clean_text"),

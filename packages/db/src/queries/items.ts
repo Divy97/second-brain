@@ -30,6 +30,8 @@ export interface ItemDetail extends ItemSummary {
   fileName: string | null
   mimeType: string | null
   fileSize: number | null
+  sourceUrl: string | null
+  sourceNote: string | null
   rawText: string
   cleanText: string | null
   summary: string | null
@@ -168,6 +170,47 @@ export async function captureFileItem(
   }
 }
 
+export async function captureUrlItem(
+  db: Database,
+  input: {
+    userId: string
+    sourceUrl: string
+    sourceNote: string | null
+    contentHash: string
+  }
+): Promise<CapturedItem> {
+  const rawText = input.sourceNote ?? input.sourceUrl
+  const [row] = await db.execute<CaptureRow>(sql`
+    with upserted as (
+      insert into ${items} (id, user_id, type, status, content_hash, raw_text, source_url, source_note)
+      values (${generateId()}, ${input.userId}, 'url', 'pending', ${input.contentHash}, ${rawText}, ${input.sourceUrl}, ${input.sourceNote})
+      on conflict (user_id, content_hash) where deleted_at is null do update
+        set captured_at = now(), updated_at = now(), status = 'pending', raw_text = coalesce(${input.sourceNote}, ${items.sourceNote}, ${items.rawText}), source_note = coalesce(${input.sourceNote}, ${items.sourceNote}), capture_quality = null, pipeline_run = ${items.pipelineRun} + 1
+      returning id, type, status, capture_quality, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
+    ), capture as (
+      insert into ${itemCaptures} (id, item_id, captured_at)
+      select ${generateId()}, id, captured_at from upserted
+    )
+    select * from upserted
+  `)
+  if (!row) throw new Error("capture did not return a row")
+  return {
+    created: row.created,
+    run: row.run,
+    item: {
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      captureQuality: row.capture_quality,
+      kind: row.kind,
+      title: row.title,
+      excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
+      rawText: row.raw_text,
+      capturedAt: new Date(row.captured_at),
+    },
+  }
+}
+
 // The cursor keeps captured_at at full microsecond precision; a JS Date would truncate it to
 // milliseconds and skip rows on the next page.
 const cursorKey = sql<string>`to_char(${items.capturedAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') || '_' || ${items.id}`
@@ -224,6 +267,8 @@ export async function findItem(
       fileName: items.fileName,
       mimeType: items.mimeType,
       fileSize: items.fileSize,
+      sourceUrl: items.sourceUrl,
+      sourceNote: items.sourceNote,
       cleanText: items.cleanText,
       summary: items.summary,
       language: items.language,

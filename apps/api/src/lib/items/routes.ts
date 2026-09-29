@@ -5,6 +5,7 @@ import {
   completeFileDeletion,
   captureTextItem,
   captureFileItem,
+  captureUrlItem,
   findItem,
   findItemFile,
   InvalidCursorError,
@@ -18,6 +19,7 @@ import {
 } from "@workspace/db"
 
 import { apiError } from "../api-error.js"
+import { safeArticleUrl } from "../article-url.js"
 import { contentHash } from "./content-hash.js"
 import { stalledRunAfterMs } from "../config.js"
 
@@ -37,7 +39,16 @@ const textBody = z.object({
     .min(1, "Write something before saving."),
 })
 
+const urlBody = z.object({
+  url: z.string().trim().min(1, "Paste a URL before saving."),
+  note: z.string().trim().max(MAX_TEXT_LENGTH).optional(),
+})
+
 type ParsedText = { ok: true; text: string } | { ok: false; message: string }
+
+type ParsedUrl =
+  | { ok: true; url: string; note: string | null }
+  | { ok: false; message: string }
 
 async function parseText(c: Context<AppEnv>): Promise<ParsedText> {
   const parsed = textBody.safeParse(await c.req.json().catch(() => ({})))
@@ -47,6 +58,19 @@ async function parseText(c: Context<AppEnv>): Promise<ParsedText> {
         ok: false,
         message: parsed.error.issues[0]?.message ?? "Invalid note.",
       }
+}
+
+async function parseUrl(c: Context<AppEnv>): Promise<ParsedUrl> {
+  const parsed = urlBody.safeParse(await c.req.json().catch(() => ({})))
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid URL.",
+    }
+  }
+  const url = safeArticleUrl(parsed.data.url)
+  if (!url) return { ok: false, message: "Paste a public HTTP or HTTPS URL." }
+  return { ok: true, url, note: parsed.data.note ?? null }
 }
 
 function itemRef(c: Context<AppEnv>): ItemRef | null {
@@ -92,6 +116,23 @@ itemRoutes.post("/", async (c) => {
     contentHash: await contentHash(parsed.text),
   })
   // Re-queue a repeat capture that is still pending, so a lost queue send heals on retry.
+  if (item.status === "pending") {
+    const refused = await enqueueOrRefuse(c, { itemId: item.id, run })
+    if (refused) return refused
+  }
+  return c.json(item, created ? 201 : 200)
+})
+
+itemRoutes.post("/url", async (c) => {
+  const parsed = await parseUrl(c)
+  if (!parsed.ok) return invalidText(c, parsed.message)
+
+  const { item, created, run } = await captureUrlItem(c.var.db, {
+    userId: c.var.userId,
+    sourceUrl: parsed.url,
+    sourceNote: parsed.note,
+    contentHash: await contentHash(`url:${parsed.url}`),
+  })
   if (item.status === "pending") {
     const refused = await enqueueOrRefuse(c, { itemId: item.id, run })
     if (refused) return refused

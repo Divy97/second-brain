@@ -29,6 +29,8 @@ export interface ItemDetail extends ItemSummary {
   fileName: string | null
   mimeType: string | null
   fileSize: number | null
+  sourceUrl: string | null
+  sourceNote: string | null
   rawText: string
   cleanText: string | null
   summary: string | null
@@ -87,6 +89,12 @@ export const savePdf = (file: File) => {
   body.set("file", file)
   return apiRequest<ItemSummary>("/items/pdf", { method: "POST", body })
 }
+
+export const saveUrl = (url: string, note?: string) =>
+  apiRequest<ItemSummary>("/items/url", {
+    method: "POST",
+    json: { url, note },
+  })
 
 export const editItem = (id: string, text: string) =>
   apiRequest<ItemDetail>(itemPath(id), { method: "PATCH", json: { text } })

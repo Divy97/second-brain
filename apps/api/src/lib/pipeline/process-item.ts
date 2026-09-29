@@ -18,6 +18,7 @@ import {
   chatModel,
   enrichment as enrichmentLimits,
 } from "../config.js"
+import { extractArticle } from "./article.js"
 import { chunkText } from "./chunk-text.js"
 import { enrichNote } from "./enrich.js"
 import {
@@ -40,6 +41,7 @@ export type ProcessItemOutcome =
 
 export interface PipelineContext {
   env: Env
+  fetchPage?: typeof fetch
   // Called once per step: Hyperdrive wants a fresh connection inside every Workflow step.
   // Clients are not closed; the runtime reclaims them when the invocation ends.
   openDb: () => Database
@@ -214,13 +216,35 @@ export async function processItem(
       if (!extracted) return { outcome: "skipped" }
     }
 
+    if (claimed.type === "url" && claimed.captureQuality === null) {
+      const extracted = await runStep("extract article", () =>
+        inStep(context, async (db) => {
+          if (!claimed.sourceUrl) {
+            throw new PipelineFailure(
+              "processing_error",
+              "Article URL is missing.",
+              true
+            )
+          }
+          const article = await extractArticle(
+            claimed.sourceUrl,
+            claimed.sourceNote,
+            context.fetchPage
+          )
+          return saveExtractedText(db, job, article.text, article.quality)
+        })
+      )
+      if (!extracted) return { outcome: "skipped" }
+    }
+
     const enrichment = await runStep("enrich", () =>
       inStep(context, async (db) => {
         const openRouter = await openRouterFor(db, env, claimed.userId)
         const rawText =
           claimed.type === "voice" ||
           claimed.type === "image" ||
-          claimed.type === "pdf"
+          claimed.type === "pdf" ||
+          claimed.type === "url"
             ? await loadExtractedText(db, job)
             : claimed.rawText
         if (!rawText) {

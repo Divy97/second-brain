@@ -9,6 +9,7 @@ import { ImageCapture } from "@/components/image-capture"
 import { ItemList } from "@/components/item-list"
 import { KeyReminder } from "@/components/key-reminder"
 import { PdfCapture } from "@/components/pdf-capture"
+import { UrlCapture } from "@/components/url-capture"
 import { useItemFeed } from "@/lib/use-item-feed"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
@@ -45,6 +46,9 @@ export function HomeFeed() {
           </div>
           <div className="mt-3">
             <PdfCapture onSaved={feed.prepend} />
+          </div>
+          <div className="mt-3">
+            <UrlCapture onSaved={feed.prepend} />
           </div>
         </div>
       </section>
