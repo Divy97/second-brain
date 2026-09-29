@@ -1,3 +1,9 @@
-# Generate each with: openssl rand -base64 32
+# Worker secrets for local dev. Copy to .dev.vars and fill in.
+# Deployed values are set with: bunx wrangler secret put <NAME>
+
 BETTER_AUTH_SECRET=
 KEY_ENCRYPTION_SECRET=
+
+# Operator-level YouTube Data API v3 key. Optional: without it, YouTube captures
+# fall back to the user's transcript key, then to a partial item.
+YOUTUBE_API_KEY=

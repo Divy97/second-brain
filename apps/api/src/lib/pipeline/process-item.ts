@@ -26,7 +26,9 @@ import {
   PipelineFailure,
   toPipelineFailure,
 } from "./failures.js"
+import { extractVideo } from "./video.js"
 import { resolveOptionalKey, resolveUserKey } from "../user-keys/index.js"
+import { parseVideoLink } from "../video-url.js"
 
 // Step results are persisted by the Workflow engine, so they must be serialisable.
 export type StepRunner = <T extends Rpc.Serializable<T>>(
@@ -226,18 +228,32 @@ export async function processItem(
               true
             )
           }
-          const article = await extractArticle({
-            sourceUrl: claimed.sourceUrl,
-            note: claimed.sourceNote,
-            readerKey: await resolveOptionalKey(
-              db,
-              env,
-              claimed.userId,
-              "reader"
-            ),
-            fetchPage: context.fetchPage,
-          })
-          return saveExtractedText(db, job, article.text, article.quality)
+          const link = parseVideoLink(claimed.sourceUrl)
+          const extracted = link
+            ? await extractVideo({
+                link,
+                note: claimed.sourceNote,
+                youtubeApiKey: env.YOUTUBE_API_KEY || null,
+                transcriptKey: await resolveOptionalKey(
+                  db,
+                  env,
+                  claimed.userId,
+                  "transcript"
+                ),
+                fetchPage: context.fetchPage,
+              })
+            : await extractArticle({
+                sourceUrl: claimed.sourceUrl,
+                note: claimed.sourceNote,
+                readerKey: await resolveOptionalKey(
+                  db,
+                  env,
+                  claimed.userId,
+                  "reader"
+                ),
+                fetchPage: context.fetchPage,
+              })
+          return saveExtractedText(db, job, extracted.text, extracted.quality)
         })
       )
       if (!extracted) return { outcome: "skipped" }
