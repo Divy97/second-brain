@@ -7,7 +7,19 @@ import type { KeyVerification } from "./lib/key-verification.js"
 export { OpenRouterError, type OpenRouterErrorKind } from "./lib/errors.js"
 export { type KeyVerification } from "./lib/key-verification.js"
 export { ProviderError } from "./lib/provider-error.js"
-export { createSupadata, SupadataError, type Supadata } from "./supadata.js"
+export {
+  createSupadata,
+  SupadataError,
+  type Supadata,
+  type Transcript,
+} from "./supadata.js"
+export {
+  createYouTube,
+  YouTubeError,
+  type VideoMetadata,
+  type YouTube,
+  type YouTubeFailure,
+} from "./youtube.js"
 export { createJina, JinaError, type Jina, type JinaArticle } from "./jina.js"
 
 export interface OpenRouterOptions {

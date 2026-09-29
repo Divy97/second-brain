@@ -1,3 +1,10 @@
+export interface VideoStub {
+  title: string
+  channel: string
+  description: string
+  duration?: string
+}
+
 export interface ExtractionStub {
   calls: Request[]
   acceptKeys: (keys: string[]) => void
@@ -5,10 +12,17 @@ export interface ExtractionStub {
   revokeKeys: (keys: string[]) => void
   breakProvider: (provider: "transcript" | "reader") => void
   readerReturns: (url: string, content: string) => void
+  videoReturns: (videoId: string, video: VideoStub) => void
+  transcriptReturns: (url: string, text: string) => void
+  exhaustYouTubeQuota: () => void
   restore: () => void
 }
 
-const HOSTS = { transcript: "api.supadata.ai", reader: "r.jina.ai" } as const
+const HOSTS = {
+  transcript: "api.supadata.ai",
+  reader: "r.jina.ai",
+  youtube: "www.googleapis.com",
+} as const
 
 const json = (status: number, body: unknown): Response =>
   new Response(JSON.stringify(body), {
@@ -25,7 +39,48 @@ export function stubExtractionProviders(): ExtractionStub {
   const accepted = new Set<string>()
   const broken = new Set<string>()
   const readerContent = new Map<string, string>()
+  const videos = new Map<string, VideoStub>()
+  const transcripts = new Map<string, string>()
+  let youTubeQuotaGone = false
   const innerFetch = globalThis.fetch
+
+  function answerYouTube(outgoing: Request): Response {
+    if (youTubeQuotaGone) {
+      return json(403, {
+        error: {
+          code: 403,
+          message:
+            "The request cannot be completed because you have exceeded your quota.",
+          errors: [{ reason: "quotaExceeded" }],
+        },
+      })
+    }
+    const url = new URL(outgoing.url)
+    if (url.searchParams.get("key") !== "test-youtube-key") {
+      return json(400, {
+        error: {
+          code: 400,
+          message: "API key not valid. Please pass a valid API key.",
+          errors: [{ reason: "badRequest" }],
+          details: [{ reason: "API_KEY_INVALID" }],
+        },
+      })
+    }
+    const video = videos.get(url.searchParams.get("id") ?? "")
+    if (!video) return json(200, { items: [], pageInfo: { totalResults: 0 } })
+    return json(200, {
+      items: [
+        {
+          snippet: {
+            title: video.title,
+            channelTitle: video.channel,
+            description: video.description,
+          },
+          contentDetails: { duration: video.duration ?? "PT10M" },
+        },
+      ],
+    })
+  }
 
   function answerTranscript(outgoing: Request): Response {
     if (broken.has("transcript")) return json(500, { error: "server-error" })
@@ -33,12 +88,24 @@ export function stubExtractionProviders(): ExtractionStub {
     if (!key || !accepted.has(key)) {
       return json(401, { error: "unauthorized", message: "Unauthorized" })
     }
-    return json(200, {
-      organizationId: "org-stub",
-      plan: "free",
-      maxCredits: 100,
-      usedCredits: 7,
-    })
+    const url = new URL(outgoing.url)
+    if (url.pathname === "/v1/me") {
+      return json(200, {
+        organizationId: "org-stub",
+        plan: "free",
+        maxCredits: 100,
+        usedCredits: 7,
+      })
+    }
+    const target = url.searchParams.get("url") ?? ""
+    const text = transcripts.get(target)
+    if (!text) {
+      return json(206, {
+        error: "transcript-unavailable",
+        message: "No transcript available",
+      })
+    }
+    return json(200, { content: text, lang: "en", availableLangs: ["en"] })
   }
 
   function answerReader(outgoing: Request): Response {
@@ -69,10 +136,15 @@ export function stubExtractionProviders(): ExtractionStub {
   globalThis.fetch = async (input, init) => {
     const outgoing = new Request(input, init)
     const { hostname } = new URL(outgoing.url)
-    if (hostname !== HOSTS.transcript && hostname !== HOSTS.reader) {
+    if (
+      hostname !== HOSTS.transcript &&
+      hostname !== HOSTS.reader &&
+      hostname !== HOSTS.youtube
+    ) {
       return innerFetch(input, init)
     }
     calls.push(outgoing.clone())
+    if (hostname === HOSTS.youtube) return answerYouTube(outgoing)
     return hostname === HOSTS.transcript
       ? answerTranscript(outgoing)
       : answerReader(outgoing)
@@ -88,6 +160,11 @@ export function stubExtractionProviders(): ExtractionStub {
     },
     breakProvider: (provider) => broken.add(provider),
     readerReturns: (url, content) => readerContent.set(url, content),
+    videoReturns: (videoId, video) => videos.set(videoId, video),
+    transcriptReturns: (url, text) => transcripts.set(url, text),
+    exhaustYouTubeQuota: () => {
+      youTubeQuotaGone = true
+    },
     restore: () => {
       globalThis.fetch = innerFetch
     },

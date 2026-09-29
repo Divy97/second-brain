@@ -20,8 +20,9 @@ import {
 
 import { apiError } from "../api-error.js"
 import { safeArticleUrl } from "../article-url.js"
-import { contentHash } from "./content-hash.js"
 import { stalledRunAfterMs } from "../config.js"
+import { parseVideoLink } from "../video-url.js"
+import { contentHash } from "./content-hash.js"
 
 import type { AppEnv } from "../app-env.js"
 
@@ -127,11 +128,13 @@ itemRoutes.post("/url", async (c) => {
   const parsed = await parseUrl(c)
   if (!parsed.ok) return invalidText(c, parsed.message)
 
+  // A video saved from any of its link forms is one item with many captures.
+  const sourceUrl = parseVideoLink(parsed.url)?.canonicalUrl ?? parsed.url
   const { item, created, run } = await captureUrlItem(c.var.db, {
     userId: c.var.userId,
-    sourceUrl: parsed.url,
+    sourceUrl,
     sourceNote: parsed.note,
-    contentHash: await contentHash(`url:${parsed.url}`),
+    contentHash: await contentHash(`url:${sourceUrl}`),
   })
   if (item.status === "pending") {
     const refused = await enqueueOrRefuse(c, { itemId: item.id, run })
