@@ -16,6 +16,13 @@
       "id": "00000000000000000000000000000000"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "ITEM_FILES",
+      "bucket_name": "second-brain-item-files"
+    }
+  ],
+  "triggers": { "crons": ["0 * * * *"] },
   "queues": {
     "producers": [{ "binding": "ITEMS_QUEUE", "queue": "second-brain-items" }],
     "consumers": [

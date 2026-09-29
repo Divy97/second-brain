@@ -59,16 +59,16 @@ function isApiErrorBody(body: unknown): body is ApiErrorBody {
 
 export async function apiRequest<T>(
   path: string,
-  init: Omit<RequestInit, "body"> & { json?: unknown } = {}
+  init: RequestInit & { json?: unknown } = {}
 ): Promise<T> {
-  const { json, headers, ...rest } = init
+  const { json, headers, body: requestBody, ...rest } = init
   const mergedHeaders = new Headers(headers)
   if (json !== undefined) mergedHeaders.set("content-type", "application/json")
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...rest,
     credentials: "include",
     headers: mergedHeaders,
-    body: json === undefined ? undefined : JSON.stringify(json),
+    body: json === undefined ? requestBody : JSON.stringify(json),
   })
   const body: unknown =
     response.status === 204 ? null : await response.json().catch(() => null)

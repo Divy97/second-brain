@@ -16,7 +16,9 @@ export type ItemKind =
 
 export interface ItemSummary {
   id: string
+  type: "text" | "voice" | "image" | "pdf" | "url"
   status: ItemStatus
+  captureQuality: "full" | "partial" | null
   kind: ItemKind | null
   title: string | null
   excerpt: string
@@ -24,6 +26,9 @@ export interface ItemSummary {
 }
 
 export interface ItemDetail extends ItemSummary {
+  fileName: string | null
+  mimeType: string | null
+  fileSize: number | null
   rawText: string
   cleanText: string | null
   summary: string | null
@@ -64,6 +69,12 @@ export const itemPath = (id: string) => `/items/${id}`
 
 export const saveItem = (text: string) =>
   apiRequest<ItemSummary>("/items", { method: "POST", json: { text } })
+
+export const saveAudio = (file: File) => {
+  const body = new FormData()
+  body.set("file", file)
+  return apiRequest<ItemSummary>("/items/audio", { method: "POST", body })
+}
 
 export const editItem = (id: string, text: string) =>
   apiRequest<ItemDetail>(itemPath(id), { method: "PATCH", json: { text } })

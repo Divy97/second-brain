@@ -2,10 +2,14 @@ import { Hono, type Context } from "hono"
 import { z } from "zod"
 
 import {
+  completeFileDeletion,
   captureTextItem,
+  captureFileItem,
   findItem,
+  findItemFile,
   InvalidCursorError,
   listItems,
+  queueFileDeletion,
   replaceItemText,
   requeueItem,
   softDeleteItem,
@@ -20,6 +24,7 @@ import { stalledRunAfterMs } from "../config.js"
 import type { AppEnv } from "../app-env.js"
 
 const MAX_TEXT_LENGTH = 100_000
+const MAX_AUDIO_SIZE = 25 * 1024 * 1024
 const PAGE_SIZE = 50
 const itemId = z.uuid()
 
@@ -93,6 +98,117 @@ itemRoutes.post("/", async (c) => {
   return c.json(item, created ? 201 : 200)
 })
 
+const audioTypes = new Set([
+  "audio/wav",
+  "audio/x-wav",
+  "audio/webm",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/ogg",
+])
+
+function validAudioSignature(bytes: Uint8Array, type: string): boolean {
+  const text = (start: number, end: number) =>
+    String.fromCharCode(...bytes.slice(start, end))
+  if (type === "audio/wav" || type === "audio/x-wav") {
+    return text(0, 4) === "RIFF" && text(8, 12) === "WAVE"
+  }
+  if (type === "audio/webm") return bytes[0] === 0x1a && bytes[1] === 0x45
+  if (type === "audio/ogg") return text(0, 4) === "OggS"
+  if (type === "audio/mp4" || type === "audio/x-m4a") {
+    return text(4, 8) === "ftyp"
+  }
+  return text(0, 3) === "ID3" || (bytes[0] === 0xff && (bytes[1] ?? 0) >= 0xe0)
+}
+
+itemRoutes.post("/audio", async (c) => {
+  const size = Number(c.req.header("content-length"))
+  if (size > MAX_AUDIO_SIZE + 4096) {
+    return invalidText(c, "Audio files can be at most 25 MB.")
+  }
+  const form = await c.req.raw.formData().catch(() => null)
+  const file = form?.get("file")
+  if (!(file instanceof File)) return invalidText(c, "Choose an audio file.")
+  if (!file.size || file.size > MAX_AUDIO_SIZE) {
+    return invalidText(c, "Audio files must be between 1 byte and 25 MB.")
+  }
+  if (!audioTypes.has(file.type)) {
+    return invalidText(c, "Choose a WAV, WebM, MP3, M4A, or Ogg audio file.")
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  if (!validAudioSignature(bytes, file.type)) {
+    return invalidText(c, "That file does not appear to be valid audio.")
+  }
+  const hash = await crypto.subtle.digest("SHA-256", bytes)
+  const contentHash = `voice:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, "0")).join("")}`
+  const fileKey = `${c.var.userId}/${crypto.randomUUID()}`
+  await queueFileDeletion(c.var.db, fileKey)
+  try {
+    await c.env.ITEM_FILES.put(fileKey, bytes, {
+      httpMetadata: { contentType: file.type },
+    })
+  } catch (error) {
+    console.error("audio storage failed", error)
+    return apiError(
+      c,
+      503,
+      "storage_unavailable",
+      "Audio could not be saved. Try again."
+    )
+  }
+  let capture: Awaited<ReturnType<typeof captureFileItem>>
+  try {
+    capture = await captureFileItem(c.var.db, {
+      userId: c.var.userId,
+      contentHash,
+      fileKey,
+      fileName: file.name.slice(0, 255),
+      mimeType: file.type,
+      fileSize: file.size,
+    })
+  } catch (error) {
+    console.error("audio capture failed", error)
+    return apiError(
+      c,
+      503,
+      "storage_unavailable",
+      "Audio could not be saved. Try again."
+    )
+  }
+  if (!capture.created) {
+    try {
+      await c.env.ITEM_FILES.delete(fileKey)
+      await completeFileDeletion(c.var.db, fileKey)
+    } catch (error) {
+      console.error("duplicate file cleanup queued", fileKey, error)
+    }
+  }
+  if (capture.item.status === "pending") {
+    const refused = await enqueueOrRefuse(c, {
+      itemId: capture.item.id,
+      run: capture.run,
+    })
+    if (refused) return refused
+  }
+  return c.json(capture.item, capture.created ? 201 : 200)
+})
+
+itemRoutes.get("/:id/file", async (c) => {
+  const ref = itemRef(c)
+  const file = ref && (await findItemFile(c.var.db, ref))
+  if (!file) return notFound(c)
+  const object = await c.env.ITEM_FILES.get(file.key)
+  if (!object) return notFound(c)
+  return new Response(object.body, {
+    headers: {
+      "content-type": file.mimeType,
+      "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+      "cache-control": "private, no-store",
+    },
+  })
+})
+
 itemRoutes.get("/", async (c) => {
   try {
     const page = await listItems(c.var.db, {
@@ -125,7 +241,12 @@ itemRoutes.patch("/:id", async (c) => {
     text: parsed.text,
     contentHash: await contentHash(parsed.text),
   })
-  if (result.outcome === "not_found") return notFound(c)
+  if (result.outcome === "not_found") {
+    const item = await findItem(c.var.db, ref)
+    return item
+      ? apiError(c, 409, "conflict", "Only typed notes can be edited.")
+      : notFound(c)
+  }
   if (result.outcome === "duplicate") {
     return apiError(
       c,
@@ -145,14 +266,23 @@ itemRoutes.patch("/:id", async (c) => {
 
 itemRoutes.delete("/:id", async (c) => {
   const ref = itemRef(c)
+  const file = ref && (await findItemFile(c.var.db, ref))
   const deleted = ref && (await softDeleteItem(c.var.db, ref))
+  if (deleted && file) {
+    try {
+      await c.env.ITEM_FILES.delete(file.key)
+      await completeFileDeletion(c.var.db, file.key)
+    } catch (error) {
+      console.error("file deletion queued for retry", file.key, error)
+    }
+  }
   return deleted ? c.body(null, 204) : notFound(c)
 })
 
 function requeueRoute(
   allowedFrom: ("pending" | "ready" | "failed")[],
   conflictMessage: string,
-  options: { recoverStalled?: boolean } = {}
+  options: { recoverStalled?: boolean; resetExtraction?: boolean } = {}
 ) {
   return async (c: Context<AppEnv>) => {
     const ref = itemRef(c)
@@ -163,7 +293,8 @@ function requeueRoute(
       allowedFrom,
       options.recoverStalled
         ? new Date(Date.now() - stalledRunAfterMs)
-        : undefined
+        : undefined,
+      options.resetExtraction
     )
     if (result.outcome === "not_found") return notFound(c)
     if (result.outcome === "conflict") {
@@ -189,6 +320,7 @@ itemRoutes.post(
   "/:id/reprocess",
   requeueRoute(
     ["ready", "failed"],
-    "This note is still being processed. Try again when it is ready."
+    "This note is still being processed. Try again when it is ready.",
+    { resetExtraction: true }
   )
 )

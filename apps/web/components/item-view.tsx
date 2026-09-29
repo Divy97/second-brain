@@ -12,7 +12,7 @@ import { ItemEditor } from "@/components/item-editor"
 import { ItemFailure } from "@/components/item-failure"
 import { ItemInsights } from "@/components/item-insights"
 import { StatusBadge } from "@/components/status-badge"
-import { ApiError, fetchJson } from "@/lib/api"
+import { ApiError, apiBaseUrl, fetchJson } from "@/lib/api"
 import { describeApiError, emptyNoteMessage } from "@/lib/describe-api-error"
 import {
   deleteItem,
@@ -122,10 +122,14 @@ export function ItemView({ id }: { id: string }) {
       {backLink}
       <header className="flex flex-col gap-3">
         <h1 className="max-w-3xl font-heading text-3xl leading-tight tracking-tight break-words sm:text-4xl">
-          {item.title ?? "Untitled note"}
+          {item.title ??
+            (item.type === "voice" ? "Voice note" : "Untitled note")}
         </h1>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <StatusBadge status={item.status} />
+          {item.captureQuality && (
+            <span className="capitalize">{item.captureQuality} capture</span>
+          )}
           {item.kind && <span className="capitalize">{item.kind}</span>}
         </div>
       </header>
@@ -169,8 +173,24 @@ export function ItemView({ id }: { id: string }) {
         aria-labelledby="original-heading"
       >
         <h2 id="original-heading" className="font-heading text-2xl">
-          Original
+          {item.type === "voice" ? "Recording and transcript" : "Original"}
         </h2>
+        {item.type === "voice" && (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">
+              {item.fileName ?? "Voice note"}
+            </p>
+            <audio
+              controls
+              crossOrigin="use-credentials"
+              preload="metadata"
+              className="w-full max-w-xl"
+              src={`${apiBaseUrl}/items/${item.id}/file`}
+            >
+              Your browser cannot play this recording.
+            </audio>
+          </div>
+        )}
         {editing ? (
           <ItemEditor
             initialText={item.rawText}
@@ -183,7 +203,8 @@ export function ItemView({ id }: { id: string }) {
           />
         ) : (
           <p className="max-w-[65ch] text-lg leading-relaxed break-words whitespace-pre-wrap">
-            {item.rawText}
+            {item.rawText ||
+              (item.type === "voice" ? "Transcript is being prepared." : "")}
           </p>
         )}
       </section>
@@ -203,6 +224,7 @@ export function ItemView({ id }: { id: string }) {
         <ItemActions
           pending={pending}
           canReprocess={item.status === "ready"}
+          canEdit={item.type === "text"}
           onEdit={() => {
             setEditing(true)
           }}

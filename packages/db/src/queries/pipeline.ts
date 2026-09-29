@@ -13,6 +13,10 @@ export interface PipelineJob {
 export interface ClaimedItem {
   userId: string
   rawText: string
+  type: "text" | "voice" | "image" | "pdf" | "url"
+  fileKey: string | null
+  fileName: string | null
+  mimeType: string | null
 }
 
 export interface Enrichment {
@@ -57,8 +61,39 @@ export async function claimItemRun(
     .where(
       and(currentRun(job), inArray(items.status, ["pending", "processing"]))
     )
-    .returning({ userId: items.userId, rawText: items.rawText })
+    .returning({
+      userId: items.userId,
+      rawText: items.rawText,
+      type: items.type,
+      fileKey: items.fileKey,
+      fileName: items.fileName,
+      mimeType: items.mimeType,
+    })
   return row
+}
+
+export async function saveExtractedText(
+  db: Database,
+  job: PipelineJob,
+  text: string
+): Promise<boolean> {
+  const rows = await db
+    .update(items)
+    .set({ rawText: text, captureQuality: "full" })
+    .where(currentRun(job))
+    .returning({ id: items.id })
+  return rows.length > 0
+}
+
+export async function loadExtractedText(
+  db: Database,
+  job: PipelineJob
+): Promise<string | undefined> {
+  const [row] = await db
+    .select({ rawText: items.rawText })
+    .from(items)
+    .where(currentRun(job))
+  return row?.rawText
 }
 
 // Nearest chunks first (index-ordered and bounded), then the closest distinct items.
@@ -211,7 +246,8 @@ export async function requeueItem(
   db: Database,
   ref: ItemRef,
   allowedFrom: ("pending" | "ready" | "failed")[],
-  stalledBefore?: Date
+  stalledBefore?: Date,
+  resetExtraction = false
 ): Promise<RequeueResult> {
   const [row] = await db
     .update(items)
@@ -220,6 +256,12 @@ export async function requeueItem(
       pipelineRun: sql`${items.pipelineRun} + 1`,
       failureReason: null,
       error: null,
+      ...(resetExtraction
+        ? {
+            rawText: sql`case when ${items.type} = 'voice' then '' else ${items.rawText} end`,
+            captureQuality: sql`case when ${items.type} = 'voice' then null else ${items.captureQuality} end`,
+          }
+        : {}),
     })
     .where(
       and(

@@ -1,7 +1,8 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm"
+import { and, desc, eq, isNull, lt, sql } from "drizzle-orm"
 
 import {
   chunks,
+  fileDeletions,
   generateId,
   itemCaptures,
   itemEntities,
@@ -16,7 +17,9 @@ const EXCERPT_LENGTH = 200
 
 export interface ItemSummary {
   id: string
+  type: "text" | "voice" | "image" | "pdf" | "url"
   status: ItemStatus
+  captureQuality: "full" | "partial" | null
   kind: ItemKind | null
   title: string | null
   excerpt: string
@@ -24,6 +27,9 @@ export interface ItemSummary {
 }
 
 export interface ItemDetail extends ItemSummary {
+  fileName: string | null
+  mimeType: string | null
+  fileSize: number | null
   rawText: string
   cleanText: string | null
   summary: string | null
@@ -49,7 +55,9 @@ export interface ItemPage {
 
 const summaryColumns = {
   id: items.id,
+  type: items.type,
   status: items.status,
+  captureQuality: items.captureQuality,
   kind: items.kind,
   title: items.title,
   excerpt: sql<string>`left(${items.rawText}, ${EXCERPT_LENGTH})`,
@@ -65,7 +73,9 @@ const visibleItem = (ref: ItemRef) =>
 
 interface CaptureRow extends Record<string, unknown> {
   id: string
+  type: "text" | "voice" | "image" | "pdf" | "url"
   status: ItemStatus
+  capture_quality: "full" | "partial" | null
   kind: ItemKind | null
   title: string | null
   raw_text: string
@@ -87,7 +97,7 @@ export async function captureTextItem(
       values (${generateId()}, ${input.userId}, 'text', 'pending', ${input.contentHash}, ${input.text})
       on conflict (user_id, content_hash) where deleted_at is null do update
         set captured_at = now(), updated_at = now()
-      returning id, status, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
+      returning id, type, status, capture_quality, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
     ), capture as (
       insert into ${itemCaptures} (id, item_id, captured_at)
       select ${generateId()}, id, captured_at from upserted
@@ -100,7 +110,54 @@ export async function captureTextItem(
     run: row.run,
     item: {
       id: row.id,
+      type: row.type,
       status: row.status,
+      captureQuality: row.capture_quality,
+      kind: row.kind,
+      title: row.title,
+      excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
+      rawText: row.raw_text,
+      capturedAt: new Date(row.captured_at),
+    },
+  }
+}
+
+export async function captureFileItem(
+  db: Database,
+  input: {
+    userId: string
+    contentHash: string
+    fileKey: string
+    fileName: string
+    mimeType: string
+    fileSize: number
+  }
+): Promise<CapturedItem> {
+  const [row] = await db.execute<CaptureRow>(sql`
+    with upserted as (
+      insert into ${items} (id, user_id, type, status, content_hash, raw_text, file_key, file_name, mime_type, file_size)
+      values (${generateId()}, ${input.userId}, 'voice', 'pending', ${input.contentHash}, '', ${input.fileKey}, ${input.fileName}, ${input.mimeType}, ${input.fileSize})
+      on conflict (user_id, content_hash) where deleted_at is null do update
+        set captured_at = now(), updated_at = now()
+      returning id, type, status, capture_quality, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
+    ), capture as (
+      insert into ${itemCaptures} (id, item_id, captured_at)
+      select ${generateId()}, id, captured_at from upserted
+    ), reservation_removed as (
+      delete from ${fileDeletions}
+      where file_key = ${input.fileKey} and exists (select 1 from upserted where created)
+    )
+    select * from upserted
+  `)
+  if (!row) throw new Error("capture did not return a row")
+  return {
+    created: row.created,
+    run: row.run,
+    item: {
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      captureQuality: row.capture_quality,
       kind: row.kind,
       title: row.title,
       excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
@@ -163,6 +220,9 @@ export async function findItem(
     .select({
       ...summaryColumns,
       rawText: items.rawText,
+      fileName: items.fileName,
+      mimeType: items.mimeType,
+      fileSize: items.fileSize,
       cleanText: items.cleanText,
       summary: items.summary,
       language: items.language,
@@ -187,6 +247,23 @@ export async function findItem(
     entities: itemEntityRows,
     captures: captures.map((capture) => capture.capturedAt),
   }
+}
+
+export async function findItemFile(
+  db: Database,
+  ref: ItemRef
+): Promise<{ key: string; mimeType: string; fileName: string } | undefined> {
+  const [row] = await db
+    .select({
+      key: items.fileKey,
+      mimeType: items.mimeType,
+      fileName: items.fileName,
+    })
+    .from(items)
+    .where(visibleItem(ref))
+  return row?.key && row.mimeType && row.fileName
+    ? { key: row.key, mimeType: row.mimeType, fileName: row.fileName }
+    : undefined
 }
 
 export type ReplaceTextResult =
@@ -229,7 +306,7 @@ export async function replaceItemText(
           error: null,
           pipelineRun: sql`${items.pipelineRun} + 1`,
         })
-        .where(visibleItem(ref))
+        .where(and(visibleItem(ref), eq(items.type, "text")))
         .returning({ run: items.pipelineRun })
       const [row] = updated
       if (!row) return { outcome: "not_found" as const }
@@ -247,10 +324,36 @@ export async function softDeleteItem(
   db: Database,
   ref: ItemRef
 ): Promise<boolean> {
-  const deleted = await db
-    .update(items)
-    .set({ deletedAt: new Date() })
-    .where(visibleItem(ref))
-    .returning({ id: items.id })
-  return deleted.length > 0
+  return db.transaction(async (tx) => {
+    const [deleted] = await tx
+      .update(items)
+      .set({ deletedAt: new Date() })
+      .where(visibleItem(ref))
+      .returning({ fileKey: items.fileKey })
+    if (!deleted) return false
+    if (deleted.fileKey) {
+      await tx.insert(fileDeletions).values({ fileKey: deleted.fileKey })
+    }
+    return true
+  })
+}
+
+export async function queueFileDeletion(db: Database, fileKey: string) {
+  await db.insert(fileDeletions).values({ fileKey })
+}
+
+export async function listFileDeletions(
+  db: Database,
+  limit: number,
+  olderThan = new Date()
+) {
+  return db
+    .select({ fileKey: fileDeletions.fileKey })
+    .from(fileDeletions)
+    .where(lt(fileDeletions.createdAt, olderThan))
+    .limit(limit)
+}
+
+export async function completeFileDeletion(db: Database, fileKey: string) {
+  await db.delete(fileDeletions).where(eq(fileDeletions.fileKey, fileKey))
 }

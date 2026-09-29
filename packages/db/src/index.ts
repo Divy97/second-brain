@@ -66,10 +66,15 @@ export {
   type UserKeyRef,
 } from "./queries/user-keys.js"
 export {
+  captureFileItem,
   captureTextItem,
+  completeFileDeletion,
   findItem,
+  findItemFile,
   InvalidCursorError,
   listItems,
+  listFileDeletions,
+  queueFileDeletion,
   replaceItemText,
   softDeleteItem,
   type CapturedItem,
@@ -87,6 +92,8 @@ export type {
 } from "./queries/item-types.js"
 export {
   claimItemRun,
+  loadExtractedText,
+  saveExtractedText,
   findNeighbourTags,
   markItemFailed,
   requeueItem,

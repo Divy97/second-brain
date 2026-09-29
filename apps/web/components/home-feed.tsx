@@ -3,6 +3,7 @@
 import { ArrowUpRightIcon, WarningCircleIcon } from "@phosphor-icons/react"
 import Link from "next/link"
 
+import { AudioCapture } from "@/components/audio-capture"
 import { CaptureBox } from "@/components/capture-box"
 import { ItemList } from "@/components/item-list"
 import { KeyReminder } from "@/components/key-reminder"
@@ -34,6 +35,9 @@ export function HomeFeed() {
         </div>
         <div className="rounded-2xl bg-lilac p-3 sm:p-5">
           <CaptureBox onSaved={feed.prepend} />
+          <div className="mt-3">
+            <AudioCapture onSaved={feed.prepend} />
+          </div>
         </div>
       </section>
       <KeyReminder />

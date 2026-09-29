@@ -268,6 +268,8 @@ export function stubOpenRouter(): OpenRouterStub {
           return answerChat(outgoing)
         case "/api/v1/embeddings":
           return answerEmbeddings(outgoing)
+        case "/api/v1/audio/transcriptions":
+          return json(200, { text: "Remember to buy tulips on Friday." })
         default:
           return json(404, { error: { message: `unstubbed ${url.pathname}` } })
       }

@@ -36,6 +36,20 @@
       "when": 1790466854644,
       "tag": "0004_items_pipeline_run",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790630000000,
+      "tag": "0005_item_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790631000000,
+      "tag": "0006_capture_quality_file_cleanup",
+      "breakpoints": true
     }
   ]
 }
