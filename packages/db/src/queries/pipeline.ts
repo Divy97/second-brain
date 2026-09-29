@@ -258,8 +258,8 @@ export async function requeueItem(
       error: null,
       ...(resetExtraction
         ? {
-            rawText: sql`case when ${items.type} = 'voice' then '' else ${items.rawText} end`,
-            captureQuality: sql`case when ${items.type} = 'voice' then null else ${items.captureQuality} end`,
+            rawText: sql`case when ${items.type} in ('voice', 'image') then '' else ${items.rawText} end`,
+            captureQuality: sql`case when ${items.type} in ('voice', 'image') then null else ${items.captureQuality} end`,
           }
         : {}),
     })

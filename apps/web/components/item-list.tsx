@@ -30,7 +30,7 @@ export function ItemList({
           Your first memory starts here.
         </h3>
         <p className="mt-2 text-muted-foreground">
-          Write or record above. We&apos;ll keep it safe.
+          Write, record, or add a photo above. We&apos;ll keep it safe.
         </p>
       </div>
     )
@@ -52,11 +52,23 @@ export function ItemList({
                 />
               </div>
               <h3 className="my-5 line-clamp-4 font-heading text-xl leading-snug break-words">
-                {item.title ?? (item.excerpt ? item.excerpt : "Voice note")}
+                {item.title ??
+                  (item.excerpt
+                    ? item.excerpt
+                    : item.type === "voice"
+                      ? "Voice note"
+                      : item.type === "image"
+                        ? "Photo"
+                        : "Untitled note")}
               </h3>
               <div className="flex items-center justify-between gap-2 border-t border-foreground/15 pt-4 text-xs font-medium text-muted-foreground">
                 <span className="capitalize">
-                  {item.kind ?? (item.type === "voice" ? "Voice" : "Note")}
+                  {item.kind ??
+                    (item.type === "voice"
+                      ? "Voice"
+                      : item.type === "image"
+                        ? "Photo"
+                        : "Note")}
                 </span>
                 <time dateTime={item.capturedAt}>
                   {formatListDate(item.capturedAt)}

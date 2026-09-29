@@ -15,6 +15,7 @@ import {
 import {
   embeddingDimensions,
   embeddingModel,
+  chatModel,
   enrichment as enrichmentLimits,
 } from "../config.js"
 import { chunkText } from "./chunk-text.js"
@@ -146,11 +147,47 @@ export async function processItem(
       if (!extracted) return { outcome: "skipped" }
     }
 
+    if (claimed.type === "image" && !claimed.rawText) {
+      const extracted = await runStep("extract image", () =>
+        inStep(context, async (db) => {
+          if (!claimed.fileKey || !claimed.mimeType) {
+            throw new PipelineFailure(
+              "processing_error",
+              "Image file is missing.",
+              true
+            )
+          }
+          const object = await env.ITEM_FILES.get(claimed.fileKey)
+          if (!object) {
+            throw new PipelineFailure(
+              "processing_error",
+              "Image file is missing.",
+              true
+            )
+          }
+          const openRouter = await openRouterFor(db, env, claimed.userId)
+          const { visibleText, description } = await openRouter.extractImage(
+            new Uint8Array(await object.arrayBuffer()),
+            claimed.mimeType,
+            chatModel
+          )
+          return saveExtractedText(
+            db,
+            job,
+            [visibleText.trim(), description.trim()]
+              .filter(Boolean)
+              .join("\n\n")
+          )
+        })
+      )
+      if (!extracted) return { outcome: "skipped" }
+    }
+
     const enrichment = await runStep("enrich", () =>
       inStep(context, async (db) => {
         const openRouter = await openRouterFor(db, env, claimed.userId)
         const rawText =
-          claimed.type === "voice"
+          claimed.type === "voice" || claimed.type === "image"
             ? await loadExtractedText(db, job)
             : claimed.rawText
         if (!rawText) {

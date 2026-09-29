@@ -126,6 +126,7 @@ export async function captureFileItem(
   db: Database,
   input: {
     userId: string
+    type: "voice" | "image"
     contentHash: string
     fileKey: string
     fileName: string
@@ -136,7 +137,7 @@ export async function captureFileItem(
   const [row] = await db.execute<CaptureRow>(sql`
     with upserted as (
       insert into ${items} (id, user_id, type, status, content_hash, raw_text, file_key, file_name, mime_type, file_size)
-      values (${generateId()}, ${input.userId}, 'voice', 'pending', ${input.contentHash}, '', ${input.fileKey}, ${input.fileName}, ${input.mimeType}, ${input.fileSize})
+      values (${generateId()}, ${input.userId}, ${input.type}, 'pending', ${input.contentHash}, '', ${input.fileKey}, ${input.fileName}, ${input.mimeType}, ${input.fileSize})
       on conflict (user_id, content_hash) where deleted_at is null do update
         set captured_at = now(), updated_at = now()
       returning id, type, status, capture_quality, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created

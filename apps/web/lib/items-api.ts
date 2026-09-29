@@ -76,6 +76,12 @@ export const saveAudio = (file: File) => {
   return apiRequest<ItemSummary>("/items/audio", { method: "POST", body })
 }
 
+export const saveImage = (file: File) => {
+  const body = new FormData()
+  body.set("file", file)
+  return apiRequest<ItemSummary>("/items/image", { method: "POST", body })
+}
+
 export const editItem = (id: string, text: string) =>
   apiRequest<ItemDetail>(itemPath(id), { method: "PATCH", json: { text } })
 

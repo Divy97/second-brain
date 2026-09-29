@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowLeftIcon, WarningCircleIcon } from "@phosphor-icons/react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -123,7 +124,11 @@ export function ItemView({ id }: { id: string }) {
       <header className="flex flex-col gap-3">
         <h1 className="max-w-3xl font-heading text-3xl leading-tight tracking-tight break-words sm:text-4xl">
           {item.title ??
-            (item.type === "voice" ? "Voice note" : "Untitled note")}
+            (item.type === "voice"
+              ? "Voice note"
+              : item.type === "image"
+                ? "Photo"
+                : "Untitled note")}
         </h1>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <StatusBadge status={item.status} />
@@ -173,7 +178,11 @@ export function ItemView({ id }: { id: string }) {
         aria-labelledby="original-heading"
       >
         <h2 id="original-heading" className="font-heading text-2xl">
-          {item.type === "voice" ? "Recording and transcript" : "Original"}
+          {item.type === "voice"
+            ? "Recording and transcript"
+            : item.type === "image"
+              ? "Photo and extracted text"
+              : "Original"}
         </h2>
         {item.type === "voice" && (
           <div className="flex flex-col gap-2">
@@ -191,6 +200,27 @@ export function ItemView({ id }: { id: string }) {
             </audio>
           </div>
         )}
+        {item.type === "image" && (
+          <div className="flex flex-col gap-3">
+            <Image
+              unoptimized
+              src={`${apiBaseUrl}/items/${item.id}/file`}
+              alt={item.fileName ?? "Saved photo"}
+              width={800}
+              height={600}
+              crossOrigin="use-credentials"
+              className="h-auto max-h-[36rem] w-full rounded-xl object-contain"
+            />
+            <a
+              href={`${apiBaseUrl}/items/${item.id}/file`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-fit text-sm font-semibold underline underline-offset-4"
+            >
+              Open original photo
+            </a>
+          </div>
+        )}
         {editing ? (
           <ItemEditor
             initialText={item.rawText}
@@ -204,7 +234,9 @@ export function ItemView({ id }: { id: string }) {
         ) : (
           <p className="max-w-[65ch] text-lg leading-relaxed break-words whitespace-pre-wrap">
             {item.rawText ||
-              (item.type === "voice" ? "Transcript is being prepared." : "")}
+              (item.type === "voice" || item.type === "image"
+                ? "Extracted text is being prepared."
+                : "")}
           </p>
         )}
       </section>

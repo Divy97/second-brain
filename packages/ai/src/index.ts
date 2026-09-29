@@ -11,7 +11,12 @@ export interface OpenRouterOptions {
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant"
-  content: string
+  content:
+    | string
+    | (
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string } }
+      )[]
 }
 
 export interface StructuredOutput<T> {
@@ -59,9 +64,18 @@ export interface OpenRouter {
   embed: (request: EmbedRequest) => Promise<EmbedResult>
   verifyKey: () => Promise<KeyVerification>
   transcribe: (file: File) => Promise<string>
+  extractImage: (
+    bytes: Uint8Array,
+    mimeType: string,
+    model: string
+  ) => Promise<{ visibleText: string; description: string }>
 }
 
 const BASE_URL = "https://openrouter.ai/api/v1"
+const imageExtractionSchema = z.object({
+  visibleText: z.string(),
+  description: z.string().min(1),
+})
 
 const usageSchema = z.object({
   prompt_tokens: z.number(),
@@ -127,7 +141,33 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
     return payload
   }
 
-  return {
+  const client: OpenRouter = {
+    async extractImage(bytes, mimeType, model) {
+      let binary = ""
+      for (let offset = 0; offset < bytes.length; offset += 32766) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 32766))
+      }
+      const result = await client.chat({
+        model,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Copy every visible word exactly. Then briefly describe the scene. Do not guess text you cannot read. Use an empty visibleText when there are no readable words.",
+              },
+              {
+                type: "image_url",
+                image_url: { url: `data:${mimeType};base64,${btoa(binary)}` },
+              },
+            ],
+          },
+        ],
+        output: { name: "image_extract", schema: imageExtractionSchema },
+      })
+      return result.content
+    },
     async transcribe(file: File): Promise<string> {
       const body = new FormData()
       body.set("model", "openai/whisper-1")
@@ -228,4 +268,5 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
       }
     },
   }
+  return client
 }

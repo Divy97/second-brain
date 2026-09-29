@@ -5,7 +5,7 @@ export const STUB_EMBEDDING_DIMENSIONS = 1024
 export interface ChatCall {
   schemaName: string
   model: string
-  messages: { role: string; content: string }[]
+  messages: { role: string; content: string | unknown[] }[]
 }
 
 export type ChatHandler = (call: ChatCall) => unknown
@@ -58,7 +58,7 @@ interface EnrichmentInput {
 }
 
 export function parseEnrichmentInput(call: ChatCall): EnrichmentInput {
-  const content = call.messages.at(-1)?.content ?? ""
+  const content = lastContent(call)
   return JSON.parse(content) as EnrichmentInput
 }
 
@@ -84,7 +84,10 @@ export function defaultEnrichment(note: string) {
   }
 }
 
-const lastContent = (call: ChatCall) => call.messages.at(-1)?.content ?? ""
+const lastContent = (call: ChatCall) => {
+  const content = call.messages.at(-1)?.content
+  return typeof content === "string" ? content : ""
+}
 
 export interface RewriteInput {
   question: string

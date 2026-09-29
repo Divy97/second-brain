@@ -25,6 +25,7 @@ import type { AppEnv } from "../app-env.js"
 
 const MAX_TEXT_LENGTH = 100_000
 const MAX_AUDIO_SIZE = 25 * 1024 * 1024
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024
 const PAGE_SIZE = 50
 const itemId = z.uuid()
 
@@ -107,6 +108,7 @@ const audioTypes = new Set([
   "audio/x-m4a",
   "audio/ogg",
 ])
+const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"])
 
 function validAudioSignature(bytes: Uint8Array, type: string): boolean {
   const text = (start: number, end: number) =>
@@ -122,26 +124,69 @@ function validAudioSignature(bytes: Uint8Array, type: string): boolean {
   return text(0, 3) === "ID3" || (bytes[0] === 0xff && (bytes[1] ?? 0) >= 0xe0)
 }
 
-itemRoutes.post("/audio", async (c) => {
+function validImageSignature(bytes: Uint8Array, type: string): boolean {
+  const text = (start: number, end: number) =>
+    String.fromCharCode(...bytes.slice(start, end))
+  if (type === "image/png") {
+    return (
+      bytes
+        .slice(0, 8)
+        .every(
+          (byte, index) => byte === [137, 80, 78, 71, 13, 10, 26, 10][index]
+        ) && bytes.length >= 8
+    )
+  }
+  if (type === "image/webp") {
+    return text(0, 4) === "RIFF" && text(8, 12) === "WEBP"
+  }
+  return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+}
+
+async function uploadFile(c: Context<AppEnv>, type: "voice" | "image") {
+  const maxSize = type === "voice" ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE
+  const label = type === "voice" ? "Audio" : "Images"
   const size = Number(c.req.header("content-length"))
-  if (size > MAX_AUDIO_SIZE + 4096) {
-    return invalidText(c, "Audio files can be at most 25 MB.")
+  if (size > maxSize + 4096) {
+    return invalidText(
+      c,
+      `${label} can be at most ${maxSize / 1024 / 1024} MB.`
+    )
   }
   const form = await c.req.raw.formData().catch(() => null)
   const file = form?.get("file")
-  if (!(file instanceof File)) return invalidText(c, "Choose an audio file.")
-  if (!file.size || file.size > MAX_AUDIO_SIZE) {
-    return invalidText(c, "Audio files must be between 1 byte and 25 MB.")
+  if (!(file instanceof File))
+    return invalidText(
+      c,
+      `Choose ${type === "voice" ? "an audio file" : "a photo"}.`
+    )
+  if (!file.size || file.size > maxSize) {
+    return invalidText(
+      c,
+      `${label} must be between 1 byte and ${maxSize / 1024 / 1024} MB.`
+    )
   }
-  if (!audioTypes.has(file.type)) {
-    return invalidText(c, "Choose a WAV, WebM, MP3, M4A, or Ogg audio file.")
+  if (!(type === "voice" ? audioTypes : imageTypes).has(file.type)) {
+    return invalidText(
+      c,
+      type === "voice"
+        ? "Choose a WAV, WebM, MP3, M4A, or Ogg audio file."
+        : "Choose a JPEG, PNG, or WebP image."
+    )
   }
   const bytes = new Uint8Array(await file.arrayBuffer())
-  if (!validAudioSignature(bytes, file.type)) {
-    return invalidText(c, "That file does not appear to be valid audio.")
+  if (
+    !(type === "voice" ? validAudioSignature : validImageSignature)(
+      bytes,
+      file.type
+    )
+  ) {
+    return invalidText(
+      c,
+      `That file does not appear to be valid ${type === "voice" ? "audio" : "image"}.`
+    )
   }
   const hash = await crypto.subtle.digest("SHA-256", bytes)
-  const contentHash = `voice:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, "0")).join("")}`
+  const contentHash = `${type}:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, "0")).join("")}`
   const fileKey = `${c.var.userId}/${crypto.randomUUID()}`
   await queueFileDeletion(c.var.db, fileKey)
   try {
@@ -149,18 +194,19 @@ itemRoutes.post("/audio", async (c) => {
       httpMetadata: { contentType: file.type },
     })
   } catch (error) {
-    console.error("audio storage failed", error)
+    console.error("file storage failed", error)
     return apiError(
       c,
       503,
       "storage_unavailable",
-      "Audio could not be saved. Try again."
+      "File could not be saved. Try again."
     )
   }
   let capture: Awaited<ReturnType<typeof captureFileItem>>
   try {
     capture = await captureFileItem(c.var.db, {
       userId: c.var.userId,
+      type,
       contentHash,
       fileKey,
       fileName: file.name.slice(0, 255),
@@ -168,12 +214,12 @@ itemRoutes.post("/audio", async (c) => {
       fileSize: file.size,
     })
   } catch (error) {
-    console.error("audio capture failed", error)
+    console.error("file capture failed", error)
     return apiError(
       c,
       503,
       "storage_unavailable",
-      "Audio could not be saved. Try again."
+      "File could not be saved. Try again."
     )
   }
   if (!capture.created) {
@@ -192,7 +238,10 @@ itemRoutes.post("/audio", async (c) => {
     if (refused) return refused
   }
   return c.json(capture.item, capture.created ? 201 : 200)
-})
+}
+
+itemRoutes.post("/audio", (c) => uploadFile(c, "voice"))
+itemRoutes.post("/image", (c) => uploadFile(c, "image"))
 
 itemRoutes.get("/:id/file", async (c) => {
   const ref = itemRef(c)

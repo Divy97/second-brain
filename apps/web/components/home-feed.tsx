@@ -5,6 +5,7 @@ import Link from "next/link"
 
 import { AudioCapture } from "@/components/audio-capture"
 import { CaptureBox } from "@/components/capture-box"
+import { ImageCapture } from "@/components/image-capture"
 import { ItemList } from "@/components/item-list"
 import { KeyReminder } from "@/components/key-reminder"
 import { useItemFeed } from "@/lib/use-item-feed"
@@ -37,6 +38,9 @@ export function HomeFeed() {
           <CaptureBox onSaved={feed.prepend} />
           <div className="mt-3">
             <AudioCapture onSaved={feed.prepend} />
+          </div>
+          <div className="mt-3">
+            <ImageCapture onSaved={feed.prepend} />
           </div>
         </div>
       </section>
