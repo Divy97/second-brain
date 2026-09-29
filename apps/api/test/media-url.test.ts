@@ -99,6 +99,8 @@ describe("parseMediaLink: Instagram", () => {
     `https://www.instagram.com.evil.test/p/${shortcode}/`,
     `https://notinstagram.com/p/${shortcode}/`,
     "https://www.instagram.com/p/no!/",
+    `https://www.instagram.com/explore/p/${shortcode}/`,
+    `https://www.instagram.com/accounts/p/${shortcode}/`,
   ])("refuses %s rather than guessing", (url) => {
     expect(parseMediaLink(url)).toBeNull()
   })

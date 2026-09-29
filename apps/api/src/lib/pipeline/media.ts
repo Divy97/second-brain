@@ -1,8 +1,9 @@
 import {
   createSupadata,
-  SupadataError,
   createYouTube,
+  SupadataError,
   YouTubeError,
+  type Supadata,
 } from "@workspace/ai"
 
 import { assemble, type Extraction } from "./extraction.js"
@@ -37,11 +38,11 @@ async function extractYouTube({
     ? await fetchMetadata(link.mediaId, youtubeApiKey, fetchPage)
     : null
 
-  const transcript = await fetchTranscript(
-    link.canonicalUrl,
-    transcriptKey,
-    fetchPage
-  )
+  const transcript = transcriptKey
+    ? await callSupadata(transcriptKey, fetchPage, (client) =>
+        client.fetchTranscript(link.canonicalUrl)
+      )
+    : null
 
   const text = assemble([
     note,
@@ -71,7 +72,9 @@ async function extractInstagram({
   fetchPage = fetch,
 }: MediaRequest): Promise<Extraction> {
   const metadata = transcriptKey
-    ? await fetchInstagramMetadata(link.canonicalUrl, transcriptKey, fetchPage)
+    ? await callSupadata(transcriptKey, fetchPage, (client) =>
+        client.fetchMetadata(link.canonicalUrl)
+      )
     : null
 
   const text = assemble([
@@ -88,49 +91,26 @@ async function extractInstagram({
     : { text: assemble([note, link.canonicalUrl]), quality: "partial" }
 }
 
-async function fetchInstagramMetadata(
-  url: string,
-  transcriptKey: string,
-  fetchPage: typeof fetch
-) {
-  try {
-    return await createSupadata({
-      apiKey: transcriptKey,
-      fetch: fetchPage,
-    }).fetchMetadata(url)
-  } catch (error) {
-    if (error instanceof SupadataError) {
-      if (error.status === 401) throw rejectedTranscriptKey()
-      return null
-    }
-    throw error
-  }
-}
-
-function rejectedTranscriptKey() {
-  return new PipelineFailure(
-    "invalid_key",
-    "The transcript key was rejected. Update it in settings and retry.",
-    true
-  )
-}
-
 // A rejected key is the user's to fix, so it surfaces as a retryable failure with an
-// actionable message. A transcript service that is merely down leaves the item partial.
-async function fetchTranscript(
-  url: string,
-  transcriptKey: string | null,
-  fetchPage: typeof fetch
-) {
-  if (!transcriptKey) return null
+// actionable message. A service that is merely down leaves the item partial.
+async function callSupadata<T>(
+  transcriptKey: string,
+  fetchPage: typeof fetch,
+  call: (client: Supadata) => Promise<T>
+): Promise<T | null> {
   try {
-    return await createSupadata({
-      apiKey: transcriptKey,
-      fetch: fetchPage,
-    }).fetchTranscript(url)
+    return await call(
+      createSupadata({ apiKey: transcriptKey, fetch: fetchPage })
+    )
   } catch (error) {
     if (error instanceof SupadataError) {
-      if (error.status === 401) throw rejectedTranscriptKey()
+      if (error.status === 401) {
+        throw new PipelineFailure(
+          "invalid_key",
+          "The transcript key was rejected. Update it in settings and retry.",
+          true
+        )
+      }
       return null
     }
     throw error

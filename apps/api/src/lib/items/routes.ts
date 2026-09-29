@@ -131,12 +131,12 @@ itemRoutes.post("/url", async (c) => {
   // Dedupe on the media itself, so every link form for one video or post is one item.
   // The link the user actually saved is kept, so timestamps still open where they meant.
   const link = parseMediaLink(parsed.url)
-  const dedupeUrl = link ? dedupeKey(link) : parsed.url
+  const dedupeToken = link ? dedupeKey(link) : parsed.url
   const { item, created, run } = await captureUrlItem(c.var.db, {
     userId: c.var.userId,
     sourceUrl: parsed.url,
     sourceNote: parsed.note,
-    contentHash: await contentHash(`url:${dedupeUrl}`),
+    contentHash: await contentHash(`url:${dedupeToken}`),
   })
   if (item.status === "pending") {
     const refused = await enqueueOrRefuse(c, { itemId: item.id, run })

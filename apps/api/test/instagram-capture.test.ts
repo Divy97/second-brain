@@ -173,6 +173,33 @@ describe("Instagram capture", () => {
     }
   })
 
+  it("stays partial when the post is restricted", async () => {
+    const model = stubOpenRouter()
+    const providers = stubExtractionProviders()
+    providers.acceptKeys([testTranscriptKey])
+    providers.metadataRestricted(reel)
+    const queue = recordQueue()
+    try {
+      const session = await signUp()
+      await saveOpenRouterKey(session)
+      await saveTranscriptKey(session)
+
+      const { id } = await (
+        await saveUrl(session, reel, "Private account")
+      ).json<{ id: string }>()
+      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
+
+      const item = await getItem(session, id)
+      expect(item.status).toBe("ready")
+      expect(item.captureQuality).toBe("partial")
+      expect(item.rawText).toContain("Private account")
+    } finally {
+      queue.restore()
+      providers.restore()
+      model.restore()
+    }
+  })
+
   it("completes a partial post after the key is added", async () => {
     const model = stubOpenRouter()
     const providers = stubExtractionProviders()

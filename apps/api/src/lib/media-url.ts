@@ -54,8 +54,21 @@ function youtubeIdFrom(url: URL, segments: string[]): string | null {
   return null
 }
 
+// Instagram's own routes, which can never be a username in /{username}/p/{shortcode}.
+const INSTAGRAM_RESERVED = new Set([
+  "explore",
+  "stories",
+  "accounts",
+  "direct",
+  "about",
+])
+
 /** Instagram nests the same media under /{username}/p/{shortcode} as under /p/{shortcode}. */
 function instagramMediaFrom(segments: string[]): [string, string] | null {
+  const [owner] = segments
+  if (segments.length === 3 && (!owner || INSTAGRAM_RESERVED.has(owner))) {
+    return null
+  }
   const tail = segments.length === 3 ? segments.slice(1) : segments
   if (tail.length !== 2) return null
   const [prefix, shortcode] = tail

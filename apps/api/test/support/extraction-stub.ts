@@ -24,6 +24,8 @@ export interface ExtractionStub {
   /** Serves the transcript through the async 202 + jobId path instead of inline. */
   transcriptReturnsViaJob: (url: string, text: string) => void
   metadataReturns: (url: string, metadata: MediaStub) => void
+  /** Serves the media as access-restricted (403) rather than absent (404). */
+  metadataRestricted: (url: string) => void
   exhaustYouTubeQuota: () => void
   restore: () => void
 }
@@ -54,6 +56,7 @@ export function stubExtractionProviders(): ExtractionStub {
   const transcripts = new Map<string, string>()
   const jobTranscripts = new Map<string, string>()
   const metadata = new Map<string, MediaStub>()
+  const restricted = new Set<string>()
   let youTubeQuotaGone = false
   const innerFetch = globalThis.fetch
 
@@ -112,7 +115,14 @@ export function stubExtractionProviders(): ExtractionStub {
       })
     }
     if (url.pathname === "/v1/metadata") {
-      const found = metadata.get(url.searchParams.get("url") ?? "")
+      const target = url.searchParams.get("url") ?? ""
+      if (restricted.has(target)) {
+        return json(403, {
+          error: "forbidden",
+          message: "Video requires authentication or is restricted",
+        })
+      }
+      const found = metadata.get(target)
       if (!found) {
         return json(404, {
           error: "not-found",
@@ -210,6 +220,7 @@ export function stubExtractionProviders(): ExtractionStub {
     transcriptReturns: (url, text) => transcripts.set(url, text),
     transcriptReturnsViaJob: (url, text) => jobTranscripts.set(url, text),
     metadataReturns: (url, found) => metadata.set(url, found),
+    metadataRestricted: (url) => restricted.add(url),
     exhaustYouTubeQuota: () => {
       youTubeQuotaGone = true
     },
