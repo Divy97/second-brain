@@ -31,18 +31,19 @@ Test case: you save a video about an "agentic browser". Weeks later you ask "wha
 
 Rule: **a capture never fails.** Raw input is stored before any processing starts.
 
-| Type | Source | Extraction |
-|---|---|---|
-| Text | typed / pasted (thoughts, facts, quotes, meeting notes) | as-is |
-| Voice | browser mic, audio file | OpenRouter STT (Whisper / Qwen3 ASR, auto language). **Raw audio kept.** |
-| Photo | upload / camera (screenshots, calendar photos, book pages) | vision model: OCR text + scene description |
-| PDF | upload | text PDF → pure-JS extraction in Worker; scanned → vision OCR per page. Original kept. |
-| YouTube | URL | §4.2 ladder |
-| Instagram | URL | transcript API (BYOK) → transcript + caption. No key → link + oEmbed embed + user note, `partial`. |
-| Blog / web page | URL | §4.1 ladder. Cleaned markdown + raw HTML snapshot stored. |
-| Any URL | fetch failed | item saved, status `failed`, retryable |
+| Type            | Source                                                     | Extraction                                                                                         |
+| --------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Text            | typed / pasted (thoughts, facts, quotes, meeting notes)    | as-is                                                                                              |
+| Voice           | browser mic, audio file                                    | OpenRouter STT (Whisper / Qwen3 ASR, auto language). **Raw audio kept.**                           |
+| Photo           | upload / camera (screenshots, calendar photos, book pages) | vision model: OCR text + scene description                                                         |
+| PDF             | upload                                                     | text PDF → pure-JS extraction in Worker; scanned → vision OCR per page. Original kept.             |
+| YouTube         | URL                                                        | §4.2 ladder                                                                                        |
+| Instagram       | URL                                                        | transcript API (BYOK) → transcript + caption. No key → link + oEmbed embed + user note, `partial`. |
+| Blog / web page | URL                                                        | §4.1 ladder. Cleaned markdown + raw HTML snapshot stored.                                          |
+| Any URL         | fetch failed                                               | item saved, status `failed`, retryable                                                             |
 
 ### 4.1 Article ladder (pasted URL)
+
 1. `fetch()` with `Accept: text/markdown` (Cloudflare Markdown for Agents — free win when the site has it on).
 2. HTML → **Defuddle** on linkedom → markdown. Covers most public pages.
 3. Output thin for an article page → **Browser Run** `/content` (headless Chrome, free tier to start) → Defuddle again. Covers JS-rendered pages.
@@ -50,12 +51,17 @@ Rule: **a capture never fails.** Raw input is stored before any processing start
 5. Paywall / login wall / no key → `capture_quality = partial`: title, OpenGraph description, user note. No server-side fix exists. Extension completes it later (§11).
 
 ### 4.2 YouTube ladder
-1. **Metadata always**: official Data API `videos.list` (title, channel, description, duration, chapters). Free, 10k units/day, reliable.
-2. **Captions, free-first**: `youtubei.js` ANDROID Innertube client from the Worker. Works today without PO token; can break any week. Treat as opportunistic.
-3. **Fallback**: transcript API on the user's key (also handles uncaptioned videos via its own AI transcription).
-4. No key and step 2 failed → metadata-only item, `partial`.
 
-No yt-dlp, no ffmpeg, no Container anywhere. Datacenter IPs are blocked by YouTube regardless of platform; the hosted API carries that problem.
+1. **Metadata always**: official Data API `videos.list` (title, channel, description) on the **operator's** key. Free, 10k units/day, 1 unit per video, reliable. Chapters are _not_ available from this API; they exist only as timestamps people type into the description, so they arrive as description text and are not parsed.
+2. **Transcript**: transcript API on the user's optional key, pinned to `mode=native`. 1 credit per video.
+3. No transcript, or no key → metadata-only item, `partial`.
+
+Revised 2026-09-30 (see `docs/research/15-youtube-ingestion.md`):
+
+- The former step 2, opportunistic Innertube captions via `youtubei.js`, is **dropped**. YouTube now gates `/get_transcript` behind a BotGuard attestation the library does not implement; solving it needs `eval`, which Workers forbid; and the maintainers state server IPs are blocked with no known solution. Three independent blockers. Revisit only if `LuanRT/YouTube.js#1102` closes _and_ someone demonstrates it working from a Worker.
+- AI transcription of uncaptioned videos is **not** used. The transcript API's default `auto` mode bills 2 credits per minute, so one 40-minute uncaptioned video would consume 80 of a free plan's 100 monthly credits in a single save. `mode=native` keeps every video at 1 credit; an uncaptioned video stays `partial`, still searchable by title, channel and description.
+
+No yt-dlp, no ffmpeg, no Container anywhere.
 
 ## 5. Pipeline
 
@@ -67,6 +73,7 @@ ask → rewrite → retrieve (hybrid, RRF) → rerank → answer with citations
 Runs as a Cloudflare **Workflow** per item, triggered from a **Queue**. Each stage is a durable step with its own retry. Status visible per item: `pending | processing | ready | failed`, plus `capture_quality: full | partial`.
 
 ### 5.1 Enrich (one LLM call per item, user's chat model)
+
 - `title`
 - `summary` — 2–3 sentences, **always English** regardless of source language (cross-language recall)
 - `clean_text` — raw text with STT/OCR errors corrected in context ("Asian tech browser" → "agentic browser"). `raw_text` kept untouched.
@@ -76,24 +83,29 @@ Runs as a Cloudflare **Workflow** per item, triggered from a **Queue**. Each sta
 - `language`
 
 ### 5.2 Chunk
+
 - ≤ ~500 tokens → one chunk.
 - Longer → header-aware split (markdown headings / transcript timestamps), ~400 tokens, small fragments merged forward, ~15% overlap.
 - **Parent-child**: chunks are the search unit, the item is the answer unit. Retrieval returns chunks; answers cite items.
 - Every chunk is embedded as `"{title} — {summary}\n\n{chunk_text}"` (contextual retrieval).
 
 ### 5.3 Index
+
 Per chunk: `embedding` (pgvector) + `embedding_model` + `tsv` (Postgres full-text over chunk + title + entities + tags).
 
 Embedding model is **fixed per platform and versioned**: one multilingual model via OpenRouter for all users. Upgrading = platform-wide re-embed job. Users choose chat/enrich model only.
 
 ### 5.4 Facts layer (own words only)
+
 Runs on `kind ∈ {thought, fact, meeting, quote}` and voice notes — things the user said, not other people's content.
+
 - LLM extracts atomic facts ("dentist is Dr. Mehta", "prefers window seat").
 - Per fact: retrieve top-10 similar existing facts → LLM picks **ADD / UPDATE / DELETE / NOOP** (Mem0 loop).
 - Superseded facts are **invalidated, never deleted** (`valid_from`, `valid_to`), with provenance to the source item.
 - Facts are embedded and full-text indexed like chunks; retrieval queries both and fuses.
 
 ### 5.5 Ask
+
 1. **Rewrite** (LLM): fix typos, expand ("that browser that browses for you" → "agentic browser"), extract filters — date range ("recently" = 30d, "few days ago" = 14d), `kind`, type. Generate 2–3 query variants.
 2. Vector + full-text search over chunks **and** facts, filters applied in SQL, in parallel per variant.
 3. **RRF** (k = 60) → top 30.
@@ -106,6 +118,7 @@ Runs on `kind ∈ {thought, fact, meeting, quote}` and voice notes — things th
    - Below similarity floor → "I don't have anything saved about that." **Never invent.**
 
 ### 5.6 Threads
+
 Chat threads in V1. A thread holds prior questions + answers + cited item IDs; follow-ups ("tell me more about that one") resolve against the thread's cited items first, then run a fresh retrieval with the thread summary as context. Every answer in a thread still cites.
 
 ## 6. Data model
@@ -152,16 +165,16 @@ packages/db      Drizzle schema + queries (Neon via Hyperdrive)
 packages/ai      OpenRouter calls (STT, vision, enrich, embed, rerank, answer)
 ```
 
-| Layer | Choice | Why |
-|---|---|---|
-| Compute | Cloudflare Workers, **free plan to start** | No Container, no binary. Upgrade to Paid ($5/mo) only when a limit bites (10 MiB Worker size, Browser Run minutes, CPU ms). |
-| Pipeline | Cloudflare Queues + Workflows | durable per-step retries, no Redis, no server |
-| DB | Neon Postgres + pgvector via Hyperdrive, Drizzle | hybrid search in one DB; Hyperdrive = connection pool for Workers |
-| Files | Cloudflare R2 | 10 GB free, zero egress |
-| Auth | Better Auth | multi-user, TS-native, runs in the Worker |
-| Models | OpenRouter (chat, STT, embeddings) | single BYOK key covers the chain |
-| Articles | Defuddle → Browser Run → reader API → partial | §4.1 |
-| Video | Data API metadata + youtubei.js → transcript API | §4.2 |
+| Layer    | Choice                                                           | Why                                                                                                                         |
+| -------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Compute  | Cloudflare Workers, **free plan to start**                       | No Container, no binary. Upgrade to Paid ($5/mo) only when a limit bites (10 MiB Worker size, Browser Run minutes, CPU ms). |
+| Pipeline | Cloudflare Queues + Workflows                                    | durable per-step retries, no Redis, no server                                                                               |
+| DB       | Neon Postgres + pgvector via Hyperdrive, Drizzle                 | hybrid search in one DB; Hyperdrive = connection pool for Workers                                                           |
+| Files    | Cloudflare R2                                                    | 10 GB free, zero egress                                                                                                     |
+| Auth     | Better Auth                                                      | multi-user, TS-native, runs in the Worker                                                                                   |
+| Models   | OpenRouter (chat, STT, embeddings)                               | single BYOK key covers the chain                                                                                            |
+| Articles | Defuddle → Browser Run → reader API → partial                    | §4.1                                                                                                                        |
+| Video    | Data API metadata (operator key) → transcript API, `mode=native` | §4.2                                                                                                                        |
 
 Monthly cost at personal scale: **$0**. Model/API spend on the user's keys.
 

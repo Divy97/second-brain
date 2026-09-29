@@ -15,6 +15,7 @@ export default defineConfig({
         bindings: {
           BETTER_AUTH_SECRET: inject("betterAuthSecret"),
           KEY_ENCRYPTION_SECRET: inject("keyEncryptionSecret"),
+          YOUTUBE_API_KEY: "test-youtube-key",
           AUTH_RATE_LIMIT: "off",
         },
       },

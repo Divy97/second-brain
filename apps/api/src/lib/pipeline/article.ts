@@ -1,12 +1,8 @@
 import { createJina, JinaError, type JinaArticle } from "@workspace/ai"
 
+import { assemble, type Extraction } from "./extraction.js"
 import { safeArticleUrl } from "../article-url.js"
 import { PipelineFailure } from "./failures.js"
-
-export interface ArticleExtraction {
-  text: string
-  quality: "full" | "partial"
-}
 
 export interface ArticleRequest {
   sourceUrl: string
@@ -20,13 +16,6 @@ const blockedWords =
 
 function compact(text: string): string {
   return text.replace(/\s+/g, " ").trim()
-}
-
-function assemble(parts: (string | null | undefined)[]): string {
-  return parts
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join("\n\n")
 }
 
 async function parseHtml(response: Response) {
@@ -111,7 +100,7 @@ export async function extractArticle({
   note,
   readerKey = null,
   fetchPage = fetch,
-}: ArticleRequest): Promise<ArticleExtraction> {
+}: ArticleRequest): Promise<Extraction> {
   const read = (): Promise<JinaArticle | null> =>
     readWithReader(sourceUrl, readerKey, fetchPage)
 
@@ -169,7 +158,7 @@ function fullFromReader(
   article: JinaArticle,
   title = "",
   description = ""
-): ArticleExtraction {
+): Extraction {
   return {
     text: assemble([
       note,
