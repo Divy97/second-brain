@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { ProviderError } from "./lib/provider-error.js"
+
 import type { KeyVerification } from "./lib/key-verification.js"
 
 const BASE_URL = "https://r.jina.ai"
@@ -32,13 +34,9 @@ const readSchema = z.object({
   }),
 })
 
-export class JinaError extends Error {
-  readonly status: number
-
+export class JinaError extends ProviderError {
   constructor(message: string, status: number) {
-    super(message)
-    this.name = "JinaError"
-    this.status = status
+    super("Jina", message, status)
   }
 }
 
@@ -76,7 +74,14 @@ export function createJina(options: JinaOptions): Jina {
           response.status
         )
       }
-      return readSchema.parse(await response.json()).data
+      const parsed = readSchema.safeParse(await response.json())
+      if (!parsed.success) {
+        throw new JinaError(
+          "Jina Reader returned an unrecognised response",
+          response.status
+        )
+      }
+      return parsed.data.data
     },
   }
 }

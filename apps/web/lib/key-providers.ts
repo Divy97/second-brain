@@ -7,7 +7,7 @@ export interface KeyProviderCopy {
   requirement: "Required" | "Optional"
   emptyKeyError: string
   removeWarning: string
-  /** Shown once above the whole group when the provider sends content to a third party. */
+  /** Shown while the key is unset, to say what the app does without it. */
   withoutKey?: string
 }
 

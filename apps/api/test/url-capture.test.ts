@@ -12,6 +12,15 @@ import {
 } from "./support/openrouter-stub.js"
 import { recordQueue } from "./support/pipeline.js"
 
+// Article hosts are stubbed per test; the reader host is stubbed globally by
+// stubExtractionProviders, so reader calls fall through to whatever fetch is installed.
+function pageOrReader(fetchPage: typeof fetch): typeof fetch {
+  return (input, init) =>
+    new Request(input, init).url.startsWith("https://r.jina.ai/")
+      ? globalThis.fetch(input, init)
+      : fetchPage(input, init)
+}
+
 function articleFetch(routes: Record<string, Response | Error>): typeof fetch {
   return (input, init) => {
     const request = new Request(input, init)
@@ -240,14 +249,7 @@ describe("URL capture", () => {
       paywall,
       "The full text names the Dia agentic browser."
     )
-    const queue = recordQueue({
-      fetchPage: (input, init) => {
-        const url = new Request(input, init).url
-        return url.startsWith("https://r.jina.ai/")
-          ? globalThis.fetch(input, init)
-          : fetchPage(input, init)
-      },
-    })
+    const queue = recordQueue({ fetchPage: pageOrReader(fetchPage) })
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
@@ -298,7 +300,7 @@ describe("URL capture", () => {
     }
   })
 
-  it("leaves a walled page partial when the reader key is rejected", async () => {
+  it("leaves a walled page partial when the reader is unreachable", async () => {
     const paywall = "https://example.com/still-walled"
     const fetchPage = articleFetch({
       [paywall]: html(`
@@ -308,14 +310,7 @@ describe("URL capture", () => {
     const model = stubOpenRouter()
     const providers = stubExtractionProviders()
     providers.acceptKeys([testReaderKey])
-    const queue = recordQueue({
-      fetchPage: (input, init) => {
-        const url = new Request(input, init).url
-        return url.startsWith("https://r.jina.ai/")
-          ? globalThis.fetch(input, init)
-          : fetchPage(input, init)
-      },
-    })
+    const queue = recordQueue({ fetchPage: pageOrReader(fetchPage) })
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
@@ -324,7 +319,7 @@ describe("URL capture", () => {
         session,
         json: { key: testReaderKey },
       })
-      providers.breakProvider("jina")
+      providers.breakProvider("reader")
 
       const { id } = await (
         await saveUrl(session, paywall, "Check this")
@@ -335,6 +330,46 @@ describe("URL capture", () => {
       ).json<ItemBody>()
       expect(item.captureQuality).toBe("partial")
       expect(item.rawText).toContain("Check this")
+    } finally {
+      queue.restore()
+      providers.restore()
+      model.restore()
+    }
+  })
+
+  it("surfaces a rejected reader key as a retryable failure", async () => {
+    const paywall = "https://example.com/revoked"
+    const fetchPage = articleFetch({
+      [paywall]: html(`
+        <html><head><title>Members only</title></head><body>Subscribe to continue.</body></html>
+      `),
+    })
+    const model = stubOpenRouter()
+    const providers = stubExtractionProviders()
+    providers.acceptKeys([testReaderKey])
+    const queue = recordQueue({ fetchPage: pageOrReader(fetchPage) })
+    try {
+      const session = await signUp()
+      await saveOpenRouterKey(session)
+      await request("/keys/reader", {
+        method: "PUT",
+        session,
+        json: { key: testReaderKey },
+      })
+      providers.revokeKeys([testReaderKey])
+
+      const { id } = await (
+        await saveUrl(session, paywall, "Check this")
+      ).json<{ id: string }>()
+      expect(await queue.processLatest()).toMatchObject({
+        outcome: "failed",
+        reason: "invalid_key",
+      })
+      const item = await (
+        await request(`/items/${id}`, { session })
+      ).json<ItemBody & { status: string; error: string | null }>()
+      expect(item.status).toBe("failed")
+      expect(item.error).toContain("reader key was rejected")
     } finally {
       queue.restore()
       providers.restore()

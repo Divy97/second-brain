@@ -91,13 +91,13 @@ describe("optional extraction keys", () => {
   )
 
   it.each([
-    ["transcript", "supadata", testTranscriptKey],
-    ["reader", "jina", testReaderKey],
+    ["transcript", testTranscriptKey],
+    ["reader", testReaderKey],
   ] as const)(
     "reports %s as unavailable rather than invalid when the provider is down",
-    async (provider, host, key) => {
+    async (provider, key) => {
       const session = await signUp()
-      providers.breakProvider(host)
+      providers.breakProvider(provider)
 
       const response = await saveKey(session, provider, key)
 
@@ -133,20 +133,26 @@ describe("optional extraction keys", () => {
     }
   })
 
-  it("keeps each user's optional keys private to that user", async () => {
-    const owner = await signUp()
-    const other = await signUp()
-    await saveKey(owner, "transcript", testTranscriptKey)
+  it.each([
+    ["transcript", testTranscriptKey, "9999"],
+    ["reader", testReaderKey, "8888"],
+  ] as const)(
+    "keeps each user's %s key private to that user",
+    async (provider, key, last4) => {
+      const owner = await signUp()
+      const other = await signUp()
+      await saveKey(owner, provider, key)
 
-    expect((await keySettings(other)).transcript).toEqual({ set: false })
+      expect((await keySettings(other))[provider]).toEqual({ set: false })
 
-    await request("/keys/transcript", { method: "DELETE", session: other })
+      await request(`/keys/${provider}`, { method: "DELETE", session: other })
 
-    expect((await keySettings(owner)).transcript).toEqual({
-      set: true,
-      last4: "9999",
-    })
-  })
+      expect((await keySettings(owner))[provider]).toEqual({
+        set: true,
+        last4,
+      })
+    }
+  )
 
   it("requires a session for every optional key route", async () => {
     const responses = await Promise.all([

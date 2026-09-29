@@ -28,23 +28,25 @@ export const keyRef = (userId: string, provider: KeyProvider): UserKeyRef => ({
   provider,
 })
 
-export const openRouterKeyRef = (userId: string): UserKeyRef =>
-  keyRef(userId, "openrouter")
-
 const saveKeyBody = z.object({ key: z.string().trim().min(1).max(512) })
 
+async function statusOf(
+  c: Context<AppEnv>,
+  provider: KeyProvider
+): Promise<KeyStatus> {
+  const stored = await findUserKey(c.var.db, keyRef(c.var.userId, provider))
+  return stored ? { set: true, last4: stored.last4 } : { set: false }
+}
+
+// Spelled out rather than folded over keyProviderNames: a new provider should fail
+// typechecking here until its status is served.
 async function keySettings(c: Context<AppEnv>): Promise<KeySettings> {
-  const stored = await Promise.all(
-    keyProviderNames.map((provider) =>
-      findUserKey(c.var.db, keyRef(c.var.userId, provider))
-    )
-  )
-  return Object.fromEntries(
-    keyProviderNames.map((provider, index) => {
-      const key = stored[index]
-      return [provider, key ? { set: true, last4: key.last4 } : { set: false }]
-    })
-  ) as KeySettings
+  const [openrouter, transcript, reader] = await Promise.all([
+    statusOf(c, "openrouter"),
+    statusOf(c, "transcript"),
+    statusOf(c, "reader"),
+  ])
+  return { openrouter, transcript, reader }
 }
 
 export const userKeyRoutes = new Hono<AppEnv>()

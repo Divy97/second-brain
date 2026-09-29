@@ -1,12 +1,14 @@
 export interface ExtractionStub {
   calls: Request[]
   acceptKeys: (keys: string[]) => void
-  breakProvider: (provider: "supadata" | "jina") => void
+  /** Simulates a key revoked at the provider after it was saved here. */
+  revokeKeys: (keys: string[]) => void
+  breakProvider: (provider: "transcript" | "reader") => void
   readerReturns: (url: string, content: string) => void
   restore: () => void
 }
 
-const HOSTS = { supadata: "api.supadata.ai", jina: "r.jina.ai" } as const
+const HOSTS = { transcript: "api.supadata.ai", reader: "r.jina.ai" } as const
 
 const json = (status: number, body: unknown): Response =>
   new Response(JSON.stringify(body), {
@@ -25,8 +27,8 @@ export function stubExtractionProviders(): ExtractionStub {
   const readerContent = new Map<string, string>()
   const innerFetch = globalThis.fetch
 
-  function answerSupadata(outgoing: Request): Response {
-    if (broken.has("supadata")) return json(500, { error: "server-error" })
+  function answerTranscript(outgoing: Request): Response {
+    if (broken.has("transcript")) return json(500, { error: "server-error" })
     const key = outgoing.headers.get("x-api-key")
     if (!key || !accepted.has(key)) {
       return json(401, { error: "unauthorized", message: "Unauthorized" })
@@ -39,8 +41,8 @@ export function stubExtractionProviders(): ExtractionStub {
     })
   }
 
-  function answerJina(outgoing: Request): Response {
-    if (broken.has("jina")) return json(503, {})
+  function answerReader(outgoing: Request): Response {
+    if (broken.has("reader")) return json(503, {})
     const key = outgoing.headers.get("authorization")?.replace(/^Bearer /, "")
     if (!key || !accepted.has(key)) {
       return json(401, {
@@ -50,7 +52,7 @@ export function stubExtractionProviders(): ExtractionStub {
         message: "Invalid API key",
       })
     }
-    const target = outgoing.url.slice(`https://${HOSTS.jina}/`.length)
+    const target = outgoing.url.slice(`https://${HOSTS.reader}/`.length)
     return json(200, {
       code: 200,
       status: 20000,
@@ -67,19 +69,22 @@ export function stubExtractionProviders(): ExtractionStub {
   globalThis.fetch = async (input, init) => {
     const outgoing = new Request(input, init)
     const { hostname } = new URL(outgoing.url)
-    if (hostname !== HOSTS.supadata && hostname !== HOSTS.jina) {
+    if (hostname !== HOSTS.transcript && hostname !== HOSTS.reader) {
       return innerFetch(input, init)
     }
     calls.push(outgoing.clone())
-    return hostname === HOSTS.supadata
-      ? answerSupadata(outgoing)
-      : answerJina(outgoing)
+    return hostname === HOSTS.transcript
+      ? answerTranscript(outgoing)
+      : answerReader(outgoing)
   }
 
   return {
     calls,
     acceptKeys: (keys) => {
       for (const key of keys) accepted.add(key)
+    },
+    revokeKeys: (keys) => {
+      for (const key of keys) accepted.delete(key)
     },
     breakProvider: (provider) => broken.add(provider),
     readerReturns: (url, content) => readerContent.set(url, content),

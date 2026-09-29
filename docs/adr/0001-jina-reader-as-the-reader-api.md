@@ -26,4 +26,5 @@ Verification is a real Reader call against a fixed, tiny page, because Jina publ
 - A rejected reader key is detectable (`401`), but remaining quota is not. Users learn about exhausted quota when an extraction falls back to partial, not at save time. Firecrawl and Tavily would both have given a credit count.
 - `packages/ai/src/jina.ts` owns both `verifyKey` and `read`, so the article ladder and the settings route share one client.
 - A reader that is down or rejects the key leaves the item `partial` and retryable rather than failing the capture, since a partial capture still carries the title and the user's note.
+- Article-ladder step 3 (Browser Run, for JS-rendered pages) is still not built, so the ladder runs fetch, parsed HTML, reader. A thin-but-unwalled page has no rescue path yet.
 - Revisit if bot-walled pages turn out to need JS rendering as well, since Firecrawl would then cover ladder steps 3 and 4 in one call and remove the need for a Cloudflare Browser Run binding.

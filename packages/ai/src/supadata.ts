@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { ProviderError } from "./lib/provider-error.js"
+
 import type { KeyVerification } from "./lib/key-verification.js"
 
 const BASE_URL = "https://api.supadata.ai/v1"
@@ -18,13 +20,9 @@ const accountSchema = z.object({
   usedCredits: z.number(),
 })
 
-export class SupadataError extends Error {
-  readonly status: number
-
+export class SupadataError extends ProviderError {
   constructor(message: string, status: number) {
-    super(message)
-    this.name = "SupadataError"
-    this.status = status
+    super("Supadata", message, status)
   }
 }
 
@@ -44,10 +42,18 @@ export function createSupadata(options: SupadataOptions): Supadata {
           response.status
         )
       }
-      const account = accountSchema.parse(await response.json())
+      // Response-shape drift is the provider's fault, not the key's, so it reads
+      // as an unavailable provider rather than a crash.
+      const account = accountSchema.safeParse(await response.json())
+      if (!account.success) {
+        throw new SupadataError(
+          "Supadata returned an unrecognised account response",
+          response.status
+        )
+      }
       return {
         valid: true,
-        limitRemaining: account.maxCredits - account.usedCredits,
+        limitRemaining: account.data.maxCredits - account.data.usedCredits,
       }
     },
   }

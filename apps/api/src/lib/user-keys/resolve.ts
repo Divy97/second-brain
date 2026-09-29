@@ -24,14 +24,6 @@ export async function resolveUserKey(
   }
 }
 
-export async function resolveOpenRouterKey(
-  db: Database,
-  env: Env,
-  userId: string
-): Promise<ResolvedKey> {
-  return resolveUserKey(db, env, userId, "openrouter")
-}
-
 // Optional keys unlock a fallback; absent is a normal state, not a failure.
 export async function resolveOptionalKey(
   db: Database,

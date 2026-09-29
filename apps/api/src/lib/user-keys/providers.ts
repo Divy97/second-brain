@@ -66,4 +66,8 @@ export const keyProviders: Record<KeyProvider, KeyProviderSpec> = {
   },
 }
 
-export const keyProviderNames = Object.keys(keyProviders) as KeyProvider[]
+export const keyProviderNames: KeyProvider[] = [
+  "openrouter",
+  "transcript",
+  "reader",
+]

@@ -6,6 +6,7 @@ import type { KeyVerification } from "./lib/key-verification.js"
 
 export { OpenRouterError, type OpenRouterErrorKind } from "./lib/errors.js"
 export { type KeyVerification } from "./lib/key-verification.js"
+export { ProviderError } from "./lib/provider-error.js"
 export { createSupadata, SupadataError, type Supadata } from "./supadata.js"
 export { createJina, JinaError, type Jina, type JinaArticle } from "./jina.js"
 
