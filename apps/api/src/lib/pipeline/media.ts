@@ -1,41 +1,48 @@
 import {
   createSupadata,
-  SupadataError,
   createYouTube,
+  SupadataError,
   YouTubeError,
+  type Supadata,
 } from "@workspace/ai"
 
 import { assemble, type Extraction } from "./extraction.js"
 import { PipelineFailure } from "./failures.js"
 
-import type { VideoLink } from "../video-url.js"
+import type { MediaLink } from "../media-url.js"
 
-export interface VideoRequest {
-  link: VideoLink
+export interface MediaRequest {
+  link: MediaLink
   note: string | null
   youtubeApiKey: string | null
   transcriptKey: string | null
   fetchPage?: typeof fetch
 }
 
+export async function extractMedia(request: MediaRequest): Promise<Extraction> {
+  return request.link.platform === "youtube"
+    ? extractYouTube(request)
+    : extractInstagram(request)
+}
+
 // Ladder per spec.md §4.2: operator metadata, then the user's transcript key, then
 // partial. See ADR-0002 for why the former Innertube rung is gone.
-export async function extractVideo({
+async function extractYouTube({
   link,
   note,
   youtubeApiKey,
   transcriptKey,
   fetchPage = fetch,
-}: VideoRequest): Promise<Extraction> {
+}: MediaRequest): Promise<Extraction> {
   const metadata = youtubeApiKey
-    ? await fetchMetadata(link.videoId, youtubeApiKey, fetchPage)
+    ? await fetchMetadata(link.mediaId, youtubeApiKey, fetchPage)
     : null
 
-  const transcript = await fetchTranscript(
-    link.canonicalUrl,
-    transcriptKey,
-    fetchPage
-  )
+  const transcript = transcriptKey
+    ? await callSupadata(transcriptKey, fetchPage, (client) =>
+        client.fetchTranscript(link.canonicalUrl)
+      )
+    : null
 
   const text = assemble([
     note,
@@ -55,19 +62,46 @@ export async function extractVideo({
   return { text, quality: transcript?.text ? "full" : "partial" }
 }
 
+// Instagram has no native caption track, so a transcript call under mode=native is a
+// guaranteed 206 and a wasted credit. The caption comes from metadata instead.
+// See ADR-0003 and docs/research/16-instagram-ingestion.md.
+async function extractInstagram({
+  link,
+  note,
+  transcriptKey,
+  fetchPage = fetch,
+}: MediaRequest): Promise<Extraction> {
+  const metadata = transcriptKey
+    ? await callSupadata(transcriptKey, fetchPage, (client) =>
+        client.fetchMetadata(link.canonicalUrl)
+      )
+    : null
+
+  const text = assemble([
+    note,
+    link.canonicalUrl,
+    metadata?.title,
+    metadata?.author,
+    metadata?.description,
+    metadata?.tags.join(" "),
+  ])
+
+  return metadata?.description || metadata?.title
+    ? { text, quality: "full" }
+    : { text: assemble([note, link.canonicalUrl]), quality: "partial" }
+}
+
 // A rejected key is the user's to fix, so it surfaces as a retryable failure with an
-// actionable message. A transcript service that is merely down leaves the item partial.
-async function fetchTranscript(
-  url: string,
-  transcriptKey: string | null,
-  fetchPage: typeof fetch
-) {
-  if (!transcriptKey) return null
+// actionable message. A service that is merely down leaves the item partial.
+async function callSupadata<T>(
+  transcriptKey: string,
+  fetchPage: typeof fetch,
+  call: (client: Supadata) => Promise<T>
+): Promise<T | null> {
   try {
-    return await createSupadata({
-      apiKey: transcriptKey,
-      fetch: fetchPage,
-    }).fetchTranscript(url)
+    return await call(
+      createSupadata({ apiKey: transcriptKey, fetch: fetchPage })
+    )
   } catch (error) {
     if (error instanceof SupadataError) {
       if (error.status === 401) {

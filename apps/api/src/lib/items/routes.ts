@@ -21,7 +21,7 @@ import {
 import { apiError } from "../api-error.js"
 import { safeArticleUrl } from "../article-url.js"
 import { stalledRunAfterMs } from "../config.js"
-import { parseVideoLink } from "../video-url.js"
+import { dedupeKey, parseMediaLink } from "../media-url.js"
 import { contentHash } from "./content-hash.js"
 
 import type { AppEnv } from "../app-env.js"
@@ -128,14 +128,15 @@ itemRoutes.post("/url", async (c) => {
   const parsed = await parseUrl(c)
   if (!parsed.ok) return invalidText(c, parsed.message)
 
-  // Dedupe on the canonical video, so every link form for one video is one item.
+  // Dedupe on the media itself, so every link form for one video or post is one item.
   // The link the user actually saved is kept, so timestamps still open where they meant.
-  const dedupeUrl = parseVideoLink(parsed.url)?.canonicalUrl ?? parsed.url
+  const link = parseMediaLink(parsed.url)
+  const dedupeToken = link ? dedupeKey(link) : parsed.url
   const { item, created, run } = await captureUrlItem(c.var.db, {
     userId: c.var.userId,
     sourceUrl: parsed.url,
     sourceNote: parsed.note,
-    contentHash: await contentHash(`url:${dedupeUrl}`),
+    contentHash: await contentHash(`url:${dedupeToken}`),
   })
   if (item.status === "pending") {
     const refused = await enqueueOrRefuse(c, { itemId: item.id, run })

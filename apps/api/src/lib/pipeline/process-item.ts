@@ -26,9 +26,9 @@ import {
   PipelineFailure,
   toPipelineFailure,
 } from "./failures.js"
-import { extractVideo } from "./video.js"
+import { extractMedia } from "./media.js"
+import { parseMediaLink } from "../media-url.js"
 import { resolveOptionalKey, resolveUserKey } from "../user-keys/index.js"
-import { parseVideoLink } from "../video-url.js"
 
 // Step results are persisted by the Workflow engine, so they must be serialisable.
 export type StepRunner = <T extends Rpc.Serializable<T>>(
@@ -228,9 +228,9 @@ export async function processItem(
               true
             )
           }
-          const link = parseVideoLink(claimed.sourceUrl)
+          const link = parseMediaLink(claimed.sourceUrl)
           const fromUrl = link
-            ? await extractVideo({
+            ? await extractMedia({
                 link,
                 note: claimed.sourceNote,
                 youtubeApiKey: env.YOUTUBE_API_KEY || null,

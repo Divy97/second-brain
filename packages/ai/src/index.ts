@@ -10,6 +10,7 @@ export { ProviderError } from "./lib/provider-error.js"
 export {
   createSupadata,
   SupadataError,
+  type MediaMetadata,
   type Supadata,
   type Transcript,
 } from "./supadata.js"
