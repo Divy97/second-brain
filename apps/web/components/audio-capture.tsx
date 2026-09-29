@@ -22,6 +22,7 @@ export function AudioCapture({
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [recording, setRecording] = useState(false)
+  const [finishing, setFinishing] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const recorder = useRef<MediaRecorder | null>(null)
@@ -69,6 +70,7 @@ export function AudioCapture({
           tooLarge.current = true
           if (next.state === "recording") next.stop()
           setRecording(false)
+          setFinishing(true)
           return
         }
         if (event.data.size) chunks.current.push(event.data)
@@ -77,8 +79,11 @@ export function AudioCapture({
         microphone.getTracks().forEach((track) => {
           track.stop()
         })
-        stream.current = null
-        recorder.current = null
+        if (recorder.current === next) {
+          stream.current = null
+          recorder.current = null
+        }
+        setFinishing(false)
         if (recordingFailed.current) return
         if (tooLarge.current) {
           setError("Recording reached the 25 MB limit. Save a shorter clip.")
@@ -98,6 +103,7 @@ export function AudioCapture({
           track.stop()
         })
         setRecording(false)
+        setFinishing(true)
         setError("Recording stopped unexpectedly. Try again or upload audio.")
       })
       recorder.current = next
@@ -117,8 +123,8 @@ export function AudioCapture({
 
   function stopRecording() {
     recorder.current?.stop()
-    recorder.current = null
     setRecording(false)
+    setFinishing(true)
   }
 
   async function save() {
@@ -146,7 +152,7 @@ export function AudioCapture({
           type="button"
           variant={recording ? "destructive" : "outline"}
           onClick={recording ? stopRecording : () => void startRecording()}
-          disabled={pending}
+          disabled={pending || finishing}
         >
           {recording ? (
             <StopIcon aria-hidden />
@@ -161,7 +167,7 @@ export function AudioCapture({
             type="file"
             className="sr-only"
             accept="audio/wav,audio/webm,audio/mpeg,audio/mp4,audio/ogg,.m4a,.mp3"
-            disabled={recording || pending}
+            disabled={recording || finishing || pending}
             onChange={(event) => {
               const selected = event.target.files?.[0]
               event.target.value = ""

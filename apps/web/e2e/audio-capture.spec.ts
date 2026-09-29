@@ -70,6 +70,14 @@ test("uploading audio shows a saved voice note and its player", async ({
 })
 
 test("recording audio can be stopped and saved", async ({ page }) => {
+  await page.addInitScript(() => {
+    const stop = Reflect.get(MediaRecorder.prototype, "stop")
+    MediaRecorder.prototype.stop = function () {
+      window.setTimeout(() => {
+        stop.call(this)
+      }, 250)
+    }
+  })
   const item = {
     id: "b1137f23-699d-4dfb-a5dd-50b777670c28",
     type: "voice",
@@ -102,7 +110,11 @@ test("recording audio can be stopped and saved", async ({ page }) => {
   await expect(page.getByRole("status")).toHaveText("Recording…")
   await page.waitForTimeout(300)
   await page.getByRole("button", { name: "Stop recording" }).click()
+  await expect(
+    page.getByRole("button", { name: "Record audio" })
+  ).toBeDisabled()
   await expect(page.getByText(/voice-note\.(webm|m4a)/)).toBeVisible()
+  await expect(page.getByRole("button", { name: "Record audio" })).toBeEnabled()
   await page.getByRole("button", { name: "Save audio" }).click()
   await expect(page.getByRole("link", { name: /Voice note/ })).toBeVisible()
 })
