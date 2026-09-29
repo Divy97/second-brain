@@ -183,11 +183,44 @@ export async function processItem(
       if (!extracted) return { outcome: "skipped" }
     }
 
+    if (claimed.type === "pdf" && !claimed.rawText) {
+      const extracted = await runStep("extract pdf", () =>
+        inStep(context, async (db) => {
+          if (!claimed.fileKey || !claimed.fileName || !claimed.mimeType) {
+            throw new PipelineFailure(
+              "processing_error",
+              "PDF file is missing.",
+              true
+            )
+          }
+          const object = await env.ITEM_FILES.get(claimed.fileKey)
+          if (!object) {
+            throw new PipelineFailure(
+              "processing_error",
+              "PDF file is missing.",
+              true
+            )
+          }
+          const openRouter = await openRouterFor(db, env, claimed.userId)
+          const text = await openRouter.extractPdf(
+            new File([await object.arrayBuffer()], claimed.fileName, {
+              type: claimed.mimeType,
+            }),
+            chatModel
+          )
+          return saveExtractedText(db, job, text)
+        })
+      )
+      if (!extracted) return { outcome: "skipped" }
+    }
+
     const enrichment = await runStep("enrich", () =>
       inStep(context, async (db) => {
         const openRouter = await openRouterFor(db, env, claimed.userId)
         const rawText =
-          claimed.type === "voice" || claimed.type === "image"
+          claimed.type === "voice" ||
+          claimed.type === "image" ||
+          claimed.type === "pdf"
             ? await loadExtractedText(db, job)
             : claimed.rawText
         if (!rawText) {

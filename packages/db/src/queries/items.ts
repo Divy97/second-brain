@@ -126,7 +126,7 @@ export async function captureFileItem(
   db: Database,
   input: {
     userId: string
-    type: "voice" | "image"
+    type: "voice" | "image" | "pdf"
     contentHash: string
     fileKey: string
     fileName: string

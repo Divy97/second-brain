@@ -3,6 +3,7 @@ import Link from "next/link"
 
 import { StatusBadge } from "@/components/status-badge"
 import { formatListDate } from "@/lib/format-date"
+import { itemFallbackTitle, itemTypeLabel } from "@/lib/item-labels"
 import { Button } from "@workspace/ui/components/button"
 
 import type { ItemSummary } from "@/lib/items-api"
@@ -30,7 +31,8 @@ export function ItemList({
           Your first memory starts here.
         </h3>
         <p className="mt-2 text-muted-foreground">
-          Write, record, or add a photo above. We&apos;ll keep it safe.
+          Write, record, add a photo, or upload a PDF above. We&apos;ll keep it
+          safe.
         </p>
       </div>
     )
@@ -52,23 +54,11 @@ export function ItemList({
                 />
               </div>
               <h3 className="my-5 line-clamp-4 font-heading text-xl leading-snug break-words">
-                {item.title ??
-                  (item.excerpt
-                    ? item.excerpt
-                    : item.type === "voice"
-                      ? "Voice note"
-                      : item.type === "image"
-                        ? "Photo"
-                        : "Untitled note")}
+                {item.title ?? itemFallbackTitle(item)}
               </h3>
               <div className="flex items-center justify-between gap-2 border-t border-foreground/15 pt-4 text-xs font-medium text-muted-foreground">
                 <span className="capitalize">
-                  {item.kind ??
-                    (item.type === "voice"
-                      ? "Voice"
-                      : item.type === "image"
-                        ? "Photo"
-                        : "Note")}
+                  {item.kind ?? itemTypeLabel(item.type)}
                 </span>
                 <time dateTime={item.capturedAt}>
                   {formatListDate(item.capturedAt)}

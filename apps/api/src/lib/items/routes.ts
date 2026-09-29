@@ -109,6 +109,35 @@ const audioTypes = new Set([
   "audio/ogg",
 ])
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"])
+const fileUploadRules = {
+  voice: {
+    maxSize: MAX_AUDIO_SIZE,
+    label: "Audio files",
+    chooseMessage: "Choose an audio file.",
+    typeMessage: "Choose a WAV, WebM, MP3, M4A, or Ogg audio file.",
+    invalidKind: "audio",
+    validType: (type: string) => audioTypes.has(type),
+    validSignature: validAudioSignature,
+  },
+  image: {
+    maxSize: MAX_IMAGE_SIZE,
+    label: "Images",
+    chooseMessage: "Choose a photo.",
+    typeMessage: "Choose a JPEG, PNG, or WebP image.",
+    invalidKind: "image",
+    validType: (type: string) => imageTypes.has(type),
+    validSignature: validImageSignature,
+  },
+  pdf: {
+    maxSize: MAX_AUDIO_SIZE,
+    label: "PDFs",
+    chooseMessage: "Choose a PDF.",
+    typeMessage: "Choose a PDF file.",
+    invalidKind: "PDF",
+    validType: (type: string) => type === "application/pdf",
+    validSignature: (bytes: Uint8Array) => validPdfSignature(bytes),
+  },
+} as const
 
 function validAudioSignature(bytes: Uint8Array, type: string): boolean {
   const text = (start: number, end: number) =>
@@ -142,47 +171,37 @@ function validImageSignature(bytes: Uint8Array, type: string): boolean {
   return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
 }
 
-async function uploadFile(c: Context<AppEnv>, type: "voice" | "image") {
-  const maxSize = type === "voice" ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE
-  const label = type === "voice" ? "Audio" : "Images"
+function validPdfSignature(bytes: Uint8Array): boolean {
+  return (
+    String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-" &&
+    String.fromCharCode(...bytes.slice(-1024)).includes("%%EOF")
+  )
+}
+
+async function uploadFile(c: Context<AppEnv>, type: "voice" | "image" | "pdf") {
+  const rule = fileUploadRules[type]
   const size = Number(c.req.header("content-length"))
-  if (size > maxSize + 4096) {
+  if (size > rule.maxSize + 4096) {
     return invalidText(
       c,
-      `${label} can be at most ${maxSize / 1024 / 1024} MB.`
+      `${rule.label} can be at most ${rule.maxSize / 1024 / 1024} MB.`
     )
   }
   const form = await c.req.raw.formData().catch(() => null)
   const file = form?.get("file")
-  if (!(file instanceof File))
+  if (!(file instanceof File)) return invalidText(c, rule.chooseMessage)
+  if (!file.size || file.size > rule.maxSize) {
     return invalidText(
       c,
-      `Choose ${type === "voice" ? "an audio file" : "a photo"}.`
-    )
-  if (!file.size || file.size > maxSize) {
-    return invalidText(
-      c,
-      `${label} must be between 1 byte and ${maxSize / 1024 / 1024} MB.`
+      `${rule.label} must be between 1 byte and ${rule.maxSize / 1024 / 1024} MB.`
     )
   }
-  if (!(type === "voice" ? audioTypes : imageTypes).has(file.type)) {
-    return invalidText(
-      c,
-      type === "voice"
-        ? "Choose a WAV, WebM, MP3, M4A, or Ogg audio file."
-        : "Choose a JPEG, PNG, or WebP image."
-    )
-  }
+  if (!rule.validType(file.type)) return invalidText(c, rule.typeMessage)
   const bytes = new Uint8Array(await file.arrayBuffer())
-  if (
-    !(type === "voice" ? validAudioSignature : validImageSignature)(
-      bytes,
-      file.type
-    )
-  ) {
+  if (!rule.validSignature(bytes, file.type)) {
     return invalidText(
       c,
-      `That file does not appear to be valid ${type === "voice" ? "audio" : "image"}.`
+      `That file does not appear to be valid ${rule.invalidKind}.`
     )
   }
   const hash = await crypto.subtle.digest("SHA-256", bytes)
@@ -242,6 +261,7 @@ async function uploadFile(c: Context<AppEnv>, type: "voice" | "image") {
 
 itemRoutes.post("/audio", (c) => uploadFile(c, "voice"))
 itemRoutes.post("/image", (c) => uploadFile(c, "image"))
+itemRoutes.post("/pdf", (c) => uploadFile(c, "pdf"))
 
 itemRoutes.get("/:id/file", async (c) => {
   const ref = itemRef(c)
