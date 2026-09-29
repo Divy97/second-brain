@@ -3,13 +3,9 @@
 import { ArrowUpRightIcon, WarningCircleIcon } from "@phosphor-icons/react"
 import Link from "next/link"
 
-import { AudioCapture } from "@/components/audio-capture"
-import { CaptureBox } from "@/components/capture-box"
-import { ImageCapture } from "@/components/image-capture"
+import { CaptureComposer } from "@/components/capture-composer"
 import { ItemList } from "@/components/item-list"
 import { KeyReminder } from "@/components/key-reminder"
-import { PdfCapture } from "@/components/pdf-capture"
-import { UrlCapture } from "@/components/url-capture"
 import { useItemFeed } from "@/lib/use-item-feed"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
@@ -36,21 +32,7 @@ export function HomeFeed() {
             Or ask your notes <ArrowUpRightIcon aria-hidden />
           </Link>
         </div>
-        <div className="rounded-2xl bg-lilac p-3 sm:p-5">
-          <CaptureBox onSaved={feed.prepend} />
-          <div className="mt-3">
-            <AudioCapture onSaved={feed.prepend} />
-          </div>
-          <div className="mt-3">
-            <ImageCapture onSaved={feed.prepend} />
-          </div>
-          <div className="mt-3">
-            <PdfCapture onSaved={feed.prepend} />
-          </div>
-          <div className="mt-3">
-            <UrlCapture onSaved={feed.prepend} />
-          </div>
-        </div>
+        <CaptureComposer onSaved={feed.prepend} />
       </section>
       <KeyReminder />
       <section aria-labelledby="notes-heading">

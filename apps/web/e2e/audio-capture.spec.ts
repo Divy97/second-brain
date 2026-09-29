@@ -54,6 +54,7 @@ test("uploading audio shows a saved voice note and its player", async ({
   )
 
   await page.goto("/home")
+  await page.getByRole("tab", { name: "Voice" }).click()
   await page.getByLabel("Upload audio").setInputFiles({
     name: "memo.wav",
     mimeType: "audio/wav",
@@ -106,6 +107,7 @@ test("recording audio can be stopped and saved", async ({ page }) => {
   )
 
   await page.goto("/home")
+  await page.getByRole("tab", { name: "Voice" }).click()
   await page.getByRole("button", { name: "Record audio" }).click()
   await expect(page.getByRole("status")).toHaveText("Recording…")
   await page.waitForTimeout(300)
@@ -142,6 +144,7 @@ test("microphone denial leaves audio upload available", async ({ page }) => {
   )
 
   await page.goto("/home")
+  await page.getByRole("tab", { name: "Voice" }).click()
   await page.getByRole("button", { name: "Record audio" }).click()
   await expect(
     page.getByText(
