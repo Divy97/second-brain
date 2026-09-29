@@ -147,6 +147,70 @@ describe("createOpenRouter", () => {
     })
   })
 
+  it("extracts PDF text through OpenRouter's file parser", async () => {
+    const transport = fakeFetch(() =>
+      json(200, {
+        id: "gen-pdf",
+        model: "test/model",
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: '{"text":"Meeting in Kyoto on Tuesday."}',
+            },
+            finish_reason: "stop",
+          },
+        ],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      })
+    )
+    const openRouter = createOpenRouter({
+      apiKey: "sk-test",
+      fetch: transport.fetch,
+    })
+
+    await expect(
+      openRouter.extractPdf(
+        new File(["%PDF-1.4\n%%EOF"], "schedule.pdf", {
+          type: "application/pdf",
+        }),
+        "test/model"
+      )
+    ).resolves.toBe("Meeting in Kyoto on Tuesday.")
+
+    const body = z
+      .object({
+        messages: z.array(
+          z.object({
+            content: z.array(
+              z.union([
+                z.object({ type: z.literal("text") }),
+                z.object({
+                  type: z.literal("file"),
+                  file: z.object({
+                    filename: z.string(),
+                    file_data: z.string(),
+                  }),
+                }),
+              ])
+            ),
+          })
+        ),
+        plugins: z.array(z.unknown()),
+      })
+      .parse(transport.requests[0]?.body)
+    const filePart = body.messages[0]?.content.find(
+      (part) => part.type === "file"
+    )
+    expect(filePart).toMatchObject({
+      file: { filename: "schedule.pdf" },
+    })
+    expect(filePart?.file.file_data).toMatch(/^data:application\/pdf;base64,/)
+    expect(body.plugins).toEqual([
+      { id: "file-parser", pdf: { engine: "mistral-ocr" } },
+    ])
+  })
+
   it("maps a 401 to an invalid_key error", async () => {
     const transport = fakeFetch(() =>
       json(401, { error: { message: "User not found.", code: 401 } })

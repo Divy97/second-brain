@@ -82,6 +82,12 @@ export const saveImage = (file: File) => {
   return apiRequest<ItemSummary>("/items/image", { method: "POST", body })
 }
 
+export const savePdf = (file: File) => {
+  const body = new FormData()
+  body.set("file", file)
+  return apiRequest<ItemSummary>("/items/pdf", { method: "POST", body })
+}
+
 export const editItem = (id: string, text: string) =>
   apiRequest<ItemDetail>(itemPath(id), { method: "PATCH", json: { text } })
 

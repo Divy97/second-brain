@@ -16,6 +16,7 @@ export interface ChatMessage {
     | (
         | { type: "text"; text: string }
         | { type: "image_url"; image_url: { url: string } }
+        | { type: "file"; file: { filename: string; file_data: string } }
       )[]
 }
 
@@ -29,6 +30,7 @@ export interface ChatRequest<T> {
   model: string
   messages: ChatMessage[]
   output: StructuredOutput<T>
+  plugins?: unknown[]
 }
 
 export interface Usage {
@@ -69,6 +71,7 @@ export interface OpenRouter {
     mimeType: string,
     model: string
   ) => Promise<{ visibleText: string; description: string }>
+  extractPdf: (file: File, model: string) => Promise<string>
 }
 
 const BASE_URL = "https://openrouter.ai/api/v1"
@@ -76,6 +79,7 @@ const imageExtractionSchema = z.object({
   visibleText: z.string(),
   description: z.string().min(1),
 })
+const pdfExtractionSchema = z.object({ text: z.string().min(1) })
 
 const usageSchema = z.object({
   prompt_tokens: z.number(),
@@ -121,6 +125,14 @@ function toUsage(usage: z.infer<typeof usageSchema> | undefined): Usage {
 export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
   const fetchImpl = options.fetch ?? globalThis.fetch
 
+  function toBase64(bytes: Uint8Array): string {
+    let binary = ""
+    for (let offset = 0; offset < bytes.length; offset += 32766) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + 32766))
+    }
+    return btoa(binary)
+  }
+
   async function requestJson(
     path: string,
     method: "GET" | "POST",
@@ -143,10 +155,6 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
 
   const client: OpenRouter = {
     async extractImage(bytes, mimeType, model) {
-      let binary = ""
-      for (let offset = 0; offset < bytes.length; offset += 32766) {
-        binary += String.fromCharCode(...bytes.subarray(offset, offset + 32766))
-      }
       const result = await client.chat({
         model,
         messages: [
@@ -159,7 +167,9 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
               },
               {
                 type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${btoa(binary)}` },
+                image_url: {
+                  url: `data:${mimeType};base64,${toBase64(bytes)}`,
+                },
               },
             ],
           },
@@ -167,6 +177,32 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
         output: { name: "image_extract", schema: imageExtractionSchema },
       })
       return result.content
+    },
+    async extractPdf(file, model) {
+      const result = await client.chat({
+        model,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract the document text exactly enough for search and recall. Preserve useful headings and list items. Return only text.",
+              },
+              {
+                type: "file",
+                file: {
+                  filename: file.name,
+                  file_data: `data:${file.type};base64,${toBase64(new Uint8Array(await file.arrayBuffer()))}`,
+                },
+              },
+            ],
+          },
+        ],
+        output: { name: "pdf_extract", schema: pdfExtractionSchema },
+        plugins: [{ id: "file-parser", pdf: { engine: "mistral-ocr" } }],
+      })
+      return result.content.text
     },
     async transcribe(file: File): Promise<string> {
       const body = new FormData()
@@ -195,6 +231,7 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
             schema: z.toJSONSchema(request.output.schema),
           },
         },
+        plugins: request.plugins,
         provider: { require_parameters: true },
       })
       const parsed = chatResponseSchema.parse(payload)

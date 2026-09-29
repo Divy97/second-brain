@@ -15,6 +15,7 @@ import { ItemInsights } from "@/components/item-insights"
 import { StatusBadge } from "@/components/status-badge"
 import { ApiError, apiBaseUrl, fetchJson } from "@/lib/api"
 import { describeApiError, emptyNoteMessage } from "@/lib/describe-api-error"
+import { itemFallbackTitle } from "@/lib/item-labels"
 import {
   deleteItem,
   editItem,
@@ -123,12 +124,7 @@ export function ItemView({ id }: { id: string }) {
       {backLink}
       <header className="flex flex-col gap-3">
         <h1 className="max-w-3xl font-heading text-3xl leading-tight tracking-tight break-words sm:text-4xl">
-          {item.title ??
-            (item.type === "voice"
-              ? "Voice note"
-              : item.type === "image"
-                ? "Photo"
-                : "Untitled note")}
+          {item.title ?? itemFallbackTitle(item)}
         </h1>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <StatusBadge status={item.status} />
@@ -182,7 +178,9 @@ export function ItemView({ id }: { id: string }) {
             ? "Recording and transcript"
             : item.type === "image"
               ? "Photo and extracted text"
-              : "Original"}
+              : item.type === "pdf"
+                ? "PDF and extracted text"
+                : "Original"}
         </h2>
         {item.type === "voice" && (
           <div className="flex flex-col gap-2">
@@ -221,6 +219,16 @@ export function ItemView({ id }: { id: string }) {
             </a>
           </div>
         )}
+        {item.type === "pdf" && (
+          <a
+            href={`${apiBaseUrl}/items/${item.id}/file`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-fit text-sm font-semibold underline underline-offset-4"
+          >
+            Open original PDF
+          </a>
+        )}
         {editing ? (
           <ItemEditor
             initialText={item.rawText}
@@ -234,7 +242,9 @@ export function ItemView({ id }: { id: string }) {
         ) : (
           <p className="max-w-[65ch] text-lg leading-relaxed break-words whitespace-pre-wrap">
             {item.rawText ||
-              (item.type === "voice" || item.type === "image"
+              (item.type === "voice" ||
+              item.type === "image" ||
+              item.type === "pdf"
                 ? "Extracted text is being prepared."
                 : "")}
           </p>
