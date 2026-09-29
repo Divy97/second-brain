@@ -57,6 +57,7 @@ test("a photo can be previewed, saved, and opened with its extracted text", asyn
   )
 
   await page.goto("/home")
+  await page.getByRole("tab", { name: "Photo" }).click()
   await expect(page.getByLabel("Take photo")).toHaveAttribute(
     "capture",
     "environment"

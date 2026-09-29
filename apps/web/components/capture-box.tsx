@@ -1,11 +1,11 @@
 "use client"
 
-import { WarningCircleIcon } from "@phosphor-icons/react"
 import { useRef, useState, type KeyboardEvent, type SubmitEvent } from "react"
 
+import { CaptureError } from "@/components/capture-error"
+import { CaptureFooter } from "@/components/capture-footer"
 import { describeApiError, emptyNoteMessage } from "@/lib/describe-api-error"
 import { saveItem, type ItemSummary } from "@/lib/items-api"
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import { Textarea } from "@workspace/ui/components/textarea"
 
@@ -53,14 +53,11 @@ export function CaptureBox({
         event.preventDefault()
         void submit()
       }}
-      className="flex flex-col gap-4 rounded-xl bg-card p-5 sm:p-6"
+      className="flex flex-1 flex-col gap-4"
     >
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <label htmlFor="capture" className="font-semibold">
-          New note
-        </label>
-        <span className="text-xs text-muted-foreground">Required</span>
-      </div>
+      <label htmlFor="capture" className="sr-only">
+        Note
+      </label>
       <Textarea
         id="capture"
         value={text}
@@ -77,29 +74,22 @@ export function CaptureBox({
           event.preventDefault()
           setError(emptyNoteMessage)
         }}
-        className="max-h-[50dvh] min-h-28 resize-none border-0 bg-transparent px-0 py-0 font-sans text-base leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:min-h-36 sm:text-lg"
+        className="max-h-[50dvh] min-h-36 flex-1 resize-none rounded-none border-0 bg-transparent px-0 py-0 font-sans text-base leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:text-lg"
       />
-      {error && (
-        <Alert variant="destructive" id="capture-error">
-          <WarningCircleIcon aria-hidden />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      <div className="flex items-center justify-between gap-3">
-        <p className="hidden text-xs text-muted-foreground sm:block">
-          <kbd className="font-mono">Ctrl</kbd> or{" "}
-          <kbd className="font-mono">⌘</kbd> +{" "}
-          <kbd className="font-mono">Enter</kbd> saves
-        </p>
-        <Button
-          type="submit"
-          size="lg"
-          disabled={pending}
-          className="ml-auto bg-coral text-foreground hover:bg-coral/90"
-        >
-          {pending ? "Saving" : "Save this thought ↗"}
+      {error && <CaptureError id="capture-error" message={error} />}
+      <CaptureFooter
+        hint={
+          <span className="hidden sm:inline">
+            <kbd className="font-mono">⌘</kbd> or{" "}
+            <kbd className="font-mono">Ctrl</kbd> +{" "}
+            <kbd className="font-mono">Enter</kbd> to save
+          </span>
+        }
+      >
+        <Button type="submit" disabled={pending || !text.trim()}>
+          {pending ? "Saving" : "Save note"}
         </Button>
-      </div>
+      </CaptureFooter>
     </form>
   )
 }

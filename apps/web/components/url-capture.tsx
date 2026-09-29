@@ -1,11 +1,11 @@
 "use client"
 
-import { LinkIcon, WarningCircleIcon } from "@phosphor-icons/react"
-import { useState } from "react"
+import { useState, type SubmitEvent } from "react"
 
+import { CaptureError } from "@/components/capture-error"
+import { CaptureFooter } from "@/components/capture-footer"
 import { describeApiError } from "@/lib/describe-api-error"
 import { saveUrl, type ItemSummary } from "@/lib/items-api"
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Textarea } from "@workspace/ui/components/textarea"
@@ -36,15 +36,19 @@ export function UrlCapture({
   }
 
   return (
-    <section
-      className="rounded-xl bg-card px-5 py-4 sm:px-6"
-      aria-label="Link capture"
+    <form
+      className="flex flex-1 flex-col gap-4"
+      onSubmit={(event: SubmitEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        void save()
+      }}
     >
-      <div className="flex flex-col gap-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <LinkIcon aria-hidden /> Save a link
+      <div className="flex flex-col gap-2">
+        <label htmlFor="capture-url" className="text-sm font-semibold">
+          Link
         </label>
         <Input
+          id="capture-url"
           type="url"
           required
           placeholder="https://example.com/article"
@@ -54,28 +58,29 @@ export function UrlCapture({
             setUrl(event.target.value)
           }}
         />
+      </div>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="capture-url-note" className="text-sm font-semibold">
+          Why you&apos;re saving it{" "}
+          <span className="font-normal text-muted-foreground">(optional)</span>
+        </label>
         <Textarea
-          placeholder="Optional note"
+          id="capture-url-note"
+          placeholder="A line of context for later"
           value={note}
           disabled={pending}
           onChange={(event) => {
             setNote(event.target.value)
           }}
+          className="min-h-20 resize-none"
         />
-        <Button
-          type="button"
-          disabled={pending || !url.trim()}
-          onClick={() => void save()}
-        >
+      </div>
+      {error && <CaptureError message={error} />}
+      <CaptureFooter hint="The page's text is saved with your note">
+        <Button type="submit" disabled={pending || !url.trim()}>
           {pending ? "Saving" : "Save link"}
         </Button>
-      </div>
-      {error && (
-        <Alert variant="destructive" className="mt-4">
-          <WarningCircleIcon aria-hidden />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-    </section>
+      </CaptureFooter>
+    </form>
   )
 }

@@ -4,27 +4,35 @@ import {
   MicrophoneIcon,
   StopIcon,
   UploadSimpleIcon,
-  WarningCircleIcon,
+  WaveformIcon,
 } from "@phosphor-icons/react"
 import { useEffect, useRef, useState } from "react"
 
+import { CaptureError } from "@/components/capture-error"
+import { CaptureFooter } from "@/components/capture-footer"
+import { CaptureTileContent, captureTileClass } from "@/components/capture-tile"
+import { FilePickerTile } from "@/components/file-picker-tile"
+import { SelectedFile } from "@/components/selected-file"
 import { describeApiError } from "@/lib/describe-api-error"
 import { saveAudio, type ItemSummary } from "@/lib/items-api"
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { cn } from "@workspace/ui/lib/utils"
 
 const MAX_AUDIO_SIZE = 25 * 1024 * 1024
 
 export function AudioCapture({
   onSaved,
+  onRecordingChange,
 }: {
   onSaved: (item: ItemSummary) => Promise<void>
+  onRecordingChange: (recording: boolean) => void
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [recording, setRecording] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const recorder = useRef<MediaRecorder | null>(null)
   const stream = useRef<MediaStream | null>(null)
   const chunks = useRef<Blob[]>([])
@@ -40,6 +48,18 @@ export function AudioCapture({
       })
     }
   }, [])
+
+  useEffect(() => {
+    onRecordingChange(recording)
+    if (!recording) return
+    const startedAt = Date.now()
+    const timer = window.setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000))
+    }, 1000)
+    return () => {
+      window.clearInterval(timer)
+    }
+  }, [recording, onRecordingChange])
 
   async function startRecording() {
     if (!("mediaDevices" in navigator) || !("MediaRecorder" in window)) {
@@ -110,6 +130,7 @@ export function AudioCapture({
       setFile(null)
       setError(null)
       next.start(1000)
+      setElapsedSeconds(0)
       setRecording(true)
     } catch {
       stream.current?.getTracks().forEach((track) => {
@@ -143,64 +164,81 @@ export function AudioCapture({
   }
 
   return (
-    <section
-      className="rounded-xl bg-card px-5 py-4 sm:px-6"
-      aria-label="Audio capture"
-    >
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
+    <div className="flex flex-1 flex-col gap-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
           type="button"
-          variant={recording ? "destructive" : "outline"}
+          aria-label={recording ? "Stop recording" : "Record audio"}
           onClick={recording ? stopRecording : () => void startRecording()}
           disabled={pending || finishing}
-        >
-          {recording ? (
-            <StopIcon aria-hidden />
-          ) : (
-            <MicrophoneIcon aria-hidden />
+          className={cn(
+            captureTileClass,
+            recording &&
+              "border-solid border-coral bg-coral/10 hover:bg-coral/15"
           )}
-          {recording ? "Stop recording" : "Record audio"}
-        </Button>
-        <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-input px-5 text-sm font-medium focus-within:ring-2 focus-within:ring-ring hover:bg-muted">
-          <UploadSimpleIcon aria-hidden /> Upload audio
-          <input
-            type="file"
-            className="sr-only"
-            accept="audio/wav,audio/webm,audio/mpeg,audio/mp4,audio/ogg,.m4a,.mp3"
-            disabled={recording || finishing || pending}
-            onChange={(event) => {
-              const selected = event.target.files?.[0]
-              event.target.value = ""
-              if (!selected) return
-              setFile(selected.size <= MAX_AUDIO_SIZE ? selected : null)
-              setError(
-                selected.size > MAX_AUDIO_SIZE
-                  ? "Audio files can be at most 25 MB."
-                  : null
+        >
+          <CaptureTileContent
+            icon={recording ? StopIcon : MicrophoneIcon}
+            label={recording ? "Stop recording" : "Record audio"}
+            tone={recording ? "live" : "calm"}
+            hint={
+              recording ? (
+                <>
+                  <span role="status" className="text-coral-ink">
+                    Recording…
+                  </span>{" "}
+                  <span className="font-mono tabular-nums">
+                    {formatElapsed(elapsedSeconds)}
+                  </span>
+                </>
+              ) : (
+                "Use your microphone"
               )
-            }}
+            }
           />
-        </label>
-        {recording && (
-          <span className="text-sm text-coral-ink" role="status">
-            Recording…
-          </span>
-        )}
+        </button>
+        <FilePickerTile
+          icon={UploadSimpleIcon}
+          label="Upload audio"
+          hint="MP3, M4A, WAV, WebM, or OGG"
+          accept="audio/wav,audio/webm,audio/mpeg,audio/mp4,audio/ogg,.m4a,.mp3"
+          disabled={recording || finishing || pending}
+          onFile={(selected) => {
+            setFile(selected.size <= MAX_AUDIO_SIZE ? selected : null)
+            setError(
+              selected.size > MAX_AUDIO_SIZE
+                ? "Audio files can be at most 25 MB."
+                : null
+            )
+          }}
+        />
       </div>
       {file && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <p className="min-w-0 truncate text-sm">{file.name}</p>
-          <Button type="button" disabled={pending} onClick={() => void save()}>
-            {pending ? "Saving" : "Save audio"}
-          </Button>
-        </div>
+        <SelectedFile
+          file={file}
+          icon={WaveformIcon}
+          disabled={pending}
+          onRemove={() => {
+            setFile(null)
+          }}
+        />
       )}
-      {error && (
-        <Alert variant="destructive" className="mt-4">
-          <WarningCircleIcon aria-hidden />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-    </section>
+      {error && <CaptureError message={error} />}
+      <CaptureFooter hint="Up to 25 MB">
+        <Button
+          type="button"
+          disabled={!file || pending || recording}
+          onClick={() => void save()}
+        >
+          {pending ? "Saving" : "Save audio"}
+        </Button>
+      </CaptureFooter>
+    </div>
   )
+}
+
+function formatElapsed(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = String(totalSeconds % 60).padStart(2, "0")
+  return `${minutes}:${seconds}`
 }

@@ -1,15 +1,19 @@
 "use client"
 
-import { CameraIcon, ImageIcon, WarningCircleIcon } from "@phosphor-icons/react"
+import { CameraIcon, ImageIcon } from "@phosphor-icons/react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 
+import { CaptureError } from "@/components/capture-error"
+import { CaptureFooter } from "@/components/capture-footer"
+import { FilePickerTile } from "@/components/file-picker-tile"
+import { SelectedFile } from "@/components/selected-file"
 import { describeApiError } from "@/lib/describe-api-error"
 import { saveImage, type ItemSummary } from "@/lib/items-api"
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+const PHOTO_TYPES = "image/jpeg,image/png,image/webp"
 
 export function ImageCapture({
   onSaved,
@@ -35,14 +39,13 @@ export function ImageCapture({
     setFile(next)
   }
 
-  function choose(selected: File | undefined) {
-    if (!selected) return
+  function choose(selected: File) {
     if (selected.size > MAX_IMAGE_SIZE) {
       replaceFile(null)
       setError("Photos can be at most 10 MB.")
       return
     }
-    if (!["image/jpeg", "image/png", "image/webp"].includes(selected.type)) {
+    if (!PHOTO_TYPES.split(",").includes(selected.type)) {
       replaceFile(null)
       setError("Choose a JPEG, PNG, or WebP photo.")
       return
@@ -67,65 +70,60 @@ export function ImageCapture({
   }
 
   return (
-    <section
-      className="rounded-xl bg-card px-5 py-4 sm:px-6"
-      aria-label="Photo capture"
-    >
-      <div className="flex flex-wrap gap-3">
-        <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-input px-5 text-sm font-medium focus-within:ring-2 focus-within:ring-ring hover:bg-muted">
-          <ImageIcon aria-hidden /> Upload photo
-          <input
-            type="file"
-            className="sr-only"
-            aria-label="Upload photo"
-            accept="image/jpeg,image/png,image/webp"
+    <div className="flex flex-1 flex-col gap-4">
+      {file ? (
+        <SelectedFile
+          file={file}
+          icon={ImageIcon}
+          disabled={pending}
+          onRemove={() => {
+            replaceFile(null)
+          }}
+          thumbnail={
+            preview && (
+              <Image
+                unoptimized
+                src={preview}
+                width={112}
+                height={112}
+                alt="Photo preview"
+                className="size-28 shrink-0 rounded-md object-cover"
+              />
+            )
+          }
+        />
+      ) : (
+        <div className="grid gap-3 pointer-coarse:grid-cols-2">
+          <FilePickerTile
+            icon={ImageIcon}
+            label="Upload photo"
+            hint="Drop an image here or choose one"
+            accept={PHOTO_TYPES}
             disabled={pending}
-            onChange={(event) => {
-              choose(event.target.files?.[0])
-              event.target.value = ""
-            }}
+            onFile={choose}
           />
-        </label>
-        <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-input px-5 text-sm font-medium focus-within:ring-2 focus-within:ring-ring hover:bg-muted">
-          <CameraIcon aria-hidden /> Take photo
-          <input
-            type="file"
-            className="sr-only"
-            aria-label="Take photo"
-            accept="image/jpeg,image/png,image/webp"
+          <FilePickerTile
+            icon={CameraIcon}
+            label="Take photo"
+            hint="Use your camera"
+            accept={PHOTO_TYPES}
             capture="environment"
             disabled={pending}
-            onChange={(event) => {
-              choose(event.target.files?.[0])
-              event.target.value = ""
-            }}
+            className="hidden pointer-coarse:flex"
+            onFile={choose}
           />
-        </label>
-      </div>
-      {file && (
-        <div className="mt-4 flex flex-wrap items-center gap-4 border-t pt-4">
-          {preview && (
-            <Image
-              unoptimized
-              src={preview}
-              width={96}
-              height={96}
-              alt="Photo preview"
-              className="size-24 rounded-lg object-cover"
-            />
-          )}
-          <p className="min-w-0 flex-1 truncate text-sm">{file.name}</p>
-          <Button type="button" disabled={pending} onClick={() => void save()}>
-            {pending ? "Saving" : "Save photo"}
-          </Button>
         </div>
       )}
-      {error && (
-        <Alert variant="destructive" className="mt-4">
-          <WarningCircleIcon aria-hidden />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-    </section>
+      {error && <CaptureError message={error} />}
+      <CaptureFooter hint="JPEG, PNG, or WebP up to 10 MB">
+        <Button
+          type="button"
+          disabled={!file || pending}
+          onClick={() => void save()}
+        >
+          {pending ? "Saving" : "Save photo"}
+        </Button>
+      </CaptureFooter>
+    </div>
   )
 }
