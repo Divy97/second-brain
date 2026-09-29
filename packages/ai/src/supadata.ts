@@ -16,7 +16,6 @@ export interface SupadataOptions {
 export interface Transcript {
   /** Null when the platform has no transcript for this link. */
   text: string | null
-  lang: string | null
 }
 
 export interface Supadata {
@@ -29,15 +28,13 @@ const accountSchema = z.object({
   usedCredits: z.number(),
 })
 
-const transcriptSchema = z.object({
-  content: z.string().default(""),
-  lang: z.string().nullish(),
-})
+const transcriptSchema = z.object({ content: z.string().default("") })
 
+// Job shape per docs/research/14-byok-key-verification.md: 202 returns a jobId,
+// polled until completed or failed.
 const jobSchema = z.object({
   status: z.enum(["queued", "active", "completed", "failed"]),
   content: z.string().nullish(),
-  lang: z.string().nullish(),
   error: z.string().nullish(),
 })
 
@@ -80,7 +77,7 @@ export function createSupadata(options: SupadataOptions): Supadata {
 
   async function awaitJob(jobId: string): Promise<Transcript> {
     for (let attempt = 0; attempt < JOB_POLL_ATTEMPTS; attempt += 1) {
-      await sleep(JOB_POLL_INTERVAL_MS)
+      if (attempt > 0) await sleep(JOB_POLL_INTERVAL_MS)
       const response = await get(`/transcript/${jobId}`)
       if (!response.ok) {
         throw new SupadataError(
@@ -99,9 +96,7 @@ export function createSupadata(options: SupadataOptions): Supadata {
           response.status
         )
       }
-      if (job.status === "completed") {
-        return { text: job.content ?? null, lang: job.lang ?? null }
-      }
+      if (job.status === "completed") return { text: job.content ?? null }
     }
     throw new SupadataError("Supadata transcript job timed out", 504)
   }
@@ -147,7 +142,7 @@ export function createSupadata(options: SupadataOptions): Supadata {
       const payload: unknown = await response.json().catch(() => null)
 
       // 206 is "captured, no transcript", not a failure.
-      if (response.status === 206) return { text: null, lang: null }
+      if (response.status === 206) return { text: null }
       if (response.status === 202) {
         return awaitJob(
           parseOrThrow(startedJobSchema, payload, response.status).jobId
@@ -164,10 +159,7 @@ export function createSupadata(options: SupadataOptions): Supadata {
         payload,
         response.status
       )
-      return {
-        text: transcript.content.trim() || null,
-        lang: transcript.lang ?? null,
-      }
+      return { text: transcript.content.trim() || null }
     },
   }
 }

@@ -219,7 +219,7 @@ export async function processItem(
     }
 
     if (claimed.type === "url" && claimed.captureQuality === null) {
-      const extracted = await runStep("extract article", () =>
+      const extracted = await runStep("extract url", () =>
         inStep(context, async (db) => {
           if (!claimed.sourceUrl) {
             throw new PipelineFailure(
@@ -229,7 +229,7 @@ export async function processItem(
             )
           }
           const link = parseVideoLink(claimed.sourceUrl)
-          const extracted = link
+          const fromUrl = link
             ? await extractVideo({
                 link,
                 note: claimed.sourceNote,
@@ -253,7 +253,7 @@ export async function processItem(
                 ),
                 fetchPage: context.fetchPage,
               })
-          return saveExtractedText(db, job, extracted.text, extracted.quality)
+          return saveExtractedText(db, job, fromUrl.text, fromUrl.quality)
         })
       )
       if (!extracted) return { outcome: "skipped" }

@@ -10,10 +10,12 @@ export interface ExtractionStub {
   acceptKeys: (keys: string[]) => void
   /** Simulates a key revoked at the provider after it was saved here. */
   revokeKeys: (keys: string[]) => void
-  breakProvider: (provider: "transcript" | "reader") => void
+  breakProvider: (provider: "transcript" | "reader" | "youtube") => void
   readerReturns: (url: string, content: string) => void
   videoReturns: (videoId: string, video: VideoStub) => void
   transcriptReturns: (url: string, text: string) => void
+  /** Serves the transcript through the async 202 + jobId path instead of inline. */
+  transcriptReturnsViaJob: (url: string, text: string) => void
   exhaustYouTubeQuota: () => void
   restore: () => void
 }
@@ -31,8 +33,9 @@ const json = (status: number, body: unknown): Response =>
   })
 
 /**
- * Stubs Supadata and Jina Reader. Layers over whatever fetch is already installed,
- * so it composes with stubOpenRouter when created after it and restored before it.
+ * Stubs the YouTube Data API, Supadata and Jina Reader. Layers over whatever fetch is
+ * already installed, so it composes with stubOpenRouter when created after it and
+ * restored before it.
  */
 export function stubExtractionProviders(): ExtractionStub {
   const calls: Request[] = []
@@ -41,10 +44,12 @@ export function stubExtractionProviders(): ExtractionStub {
   const readerContent = new Map<string, string>()
   const videos = new Map<string, VideoStub>()
   const transcripts = new Map<string, string>()
+  const jobTranscripts = new Map<string, string>()
   let youTubeQuotaGone = false
   const innerFetch = globalThis.fetch
 
   function answerYouTube(outgoing: Request): Response {
+    if (broken.has("youtube")) return json(500, { error: { code: 500 } })
     if (youTubeQuotaGone) {
       return json(403, {
         error: {
@@ -97,7 +102,20 @@ export function stubExtractionProviders(): ExtractionStub {
         usedCredits: 7,
       })
     }
+    const jobMatch = /^\/v1\/transcript\/(.+)$/.exec(url.pathname)
+    if (jobMatch) {
+      const queued = jobTranscripts.get(jobMatch[1] ?? "")
+      return queued
+        ? json(200, { status: "completed", content: queued, lang: "en" })
+        : json(200, { status: "failed", error: "job expired" })
+    }
+
     const target = url.searchParams.get("url") ?? ""
+    const queued = jobTranscripts.get(target)
+    if (queued) {
+      jobTranscripts.set("job-1", queued)
+      return json(202, { jobId: "job-1" })
+    }
     const text = transcripts.get(target)
     if (!text) {
       return json(206, {
@@ -162,6 +180,7 @@ export function stubExtractionProviders(): ExtractionStub {
     readerReturns: (url, content) => readerContent.set(url, content),
     videoReturns: (videoId, video) => videos.set(videoId, video),
     transcriptReturns: (url, text) => transcripts.set(url, text),
+    transcriptReturnsViaJob: (url, text) => jobTranscripts.set(url, text),
     exhaustYouTubeQuota: () => {
       youTubeQuotaGone = true
     },
