@@ -180,7 +180,9 @@ export function ItemView({ id }: { id: string }) {
               ? "Photo and extracted text"
               : item.type === "pdf"
                 ? "PDF and extracted text"
-                : "Original"}
+                : item.type === "url"
+                  ? "Link and extracted text"
+                  : "Original"}
         </h2>
         {item.type === "voice" && (
           <div className="flex flex-col gap-2">
@@ -229,6 +231,16 @@ export function ItemView({ id }: { id: string }) {
             Open original PDF
           </a>
         )}
+        {item.type === "url" && item.sourceUrl && (
+          <a
+            href={item.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-fit text-sm font-semibold underline underline-offset-4"
+          >
+            Open original link
+          </a>
+        )}
         {editing ? (
           <ItemEditor
             initialText={item.rawText}
@@ -244,7 +256,8 @@ export function ItemView({ id }: { id: string }) {
             {item.rawText ||
               (item.type === "voice" ||
               item.type === "image" ||
-              item.type === "pdf"
+              item.type === "pdf" ||
+              item.type === "url"
                 ? "Extracted text is being prepared."
                 : "")}
           </p>

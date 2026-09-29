@@ -31,8 +31,8 @@ export function ItemList({
           Your first memory starts here.
         </h3>
         <p className="mt-2 text-muted-foreground">
-          Write, record, add a photo, or upload a PDF above. We&apos;ll keep it
-          safe.
+          Write, record, add a photo, upload a PDF, or save a link above.
+          We&apos;ll keep it safe.
         </p>
       </div>
     )

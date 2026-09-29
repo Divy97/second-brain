@@ -17,6 +17,9 @@ export interface ClaimedItem {
   fileKey: string | null
   fileName: string | null
   mimeType: string | null
+  sourceUrl: string | null
+  sourceNote: string | null
+  captureQuality: "full" | "partial" | null
 }
 
 export interface Enrichment {
@@ -68,6 +71,9 @@ export async function claimItemRun(
       fileKey: items.fileKey,
       fileName: items.fileName,
       mimeType: items.mimeType,
+      sourceUrl: items.sourceUrl,
+      sourceNote: items.sourceNote,
+      captureQuality: items.captureQuality,
     })
   return row
 }
@@ -75,11 +81,12 @@ export async function claimItemRun(
 export async function saveExtractedText(
   db: Database,
   job: PipelineJob,
-  text: string
+  text: string,
+  quality: "full" | "partial" = "full"
 ): Promise<boolean> {
   const rows = await db
     .update(items)
-    .set({ rawText: text, captureQuality: "full" })
+    .set({ rawText: text, captureQuality: quality })
     .where(currentRun(job))
     .returning({ id: items.id })
   return rows.length > 0
@@ -258,8 +265,8 @@ export async function requeueItem(
       error: null,
       ...(resetExtraction
         ? {
-            rawText: sql`case when ${items.type} in ('voice', 'image', 'pdf') then '' else ${items.rawText} end`,
-            captureQuality: sql`case when ${items.type} in ('voice', 'image', 'pdf') then null else ${items.captureQuality} end`,
+            rawText: sql`case when ${items.type} in ('voice', 'image', 'pdf') then '' when ${items.type} = 'url' then coalesce(${items.sourceNote}, ${items.sourceUrl}, '') else ${items.rawText} end`,
+            captureQuality: sql`case when ${items.type} in ('voice', 'image', 'pdf', 'url') then null else ${items.captureQuality} end`,
           }
         : {}),
     })

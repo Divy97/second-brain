@@ -68,6 +68,7 @@ export {
 export {
   captureFileItem,
   captureTextItem,
+  captureUrlItem,
   completeFileDeletion,
   findItem,
   findItemFile,
