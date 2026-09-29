@@ -31,16 +31,16 @@ Test case: you save a video about an "agentic browser". Weeks later you ask "wha
 
 Rule: **a capture never fails.** Raw input is stored before any processing starts.
 
-| Type            | Source                                                     | Extraction                                                                                         |
-| --------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Text            | typed / pasted (thoughts, facts, quotes, meeting notes)    | as-is                                                                                              |
-| Voice           | browser mic, audio file                                    | OpenRouter STT (Whisper / Qwen3 ASR, auto language). **Raw audio kept.**                           |
-| Photo           | upload / camera (screenshots, calendar photos, book pages) | vision model: OCR text + scene description                                                         |
-| PDF             | upload                                                     | text PDF → pure-JS extraction in Worker; scanned → vision OCR per page. Original kept.             |
-| YouTube         | URL                                                        | §4.2 ladder                                                                                        |
-| Instagram       | URL                                                        | transcript API (BYOK) → transcript + caption. No key → link + oEmbed embed + user note, `partial`. |
-| Blog / web page | URL                                                        | §4.1 ladder. Cleaned markdown + raw HTML snapshot stored.                                          |
-| Any URL         | fetch failed                                               | item saved, status `failed`, retryable                                                             |
+| Type            | Source                                                     | Extraction                                                                                                                     |
+| --------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Text            | typed / pasted (thoughts, facts, quotes, meeting notes)    | as-is                                                                                                                          |
+| Voice           | browser mic, audio file                                    | OpenRouter STT (Whisper / Qwen3 ASR, auto language). **Raw audio kept.**                                                       |
+| Photo           | upload / camera (screenshots, calendar photos, book pages) | vision model: OCR text + scene description                                                                                     |
+| PDF             | upload                                                     | text PDF → pure-JS extraction in Worker; scanned → vision OCR per page. Original kept.                                         |
+| YouTube         | URL                                                        | §4.2 ladder                                                                                                                    |
+| Instagram       | URL                                                        | metadata API (BYOK) → caption, author, hashtags. No key → link + user note, `partial`. Audio is not transcribed: see ADR-0003. |
+| Blog / web page | URL                                                        | §4.1 ladder. Cleaned markdown + raw HTML snapshot stored.                                                                      |
+| Any URL         | fetch failed                                               | item saved, status `failed`, retryable                                                                                         |
 
 ### 4.1 Article ladder (pasted URL)
 

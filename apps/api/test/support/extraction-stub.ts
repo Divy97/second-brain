@@ -1,3 +1,10 @@
+export interface MediaStub {
+  title?: string | null
+  description?: string | null
+  author?: string
+  tags?: string[]
+}
+
 export interface VideoStub {
   title: string
   channel: string
@@ -16,6 +23,7 @@ export interface ExtractionStub {
   transcriptReturns: (url: string, text: string) => void
   /** Serves the transcript through the async 202 + jobId path instead of inline. */
   transcriptReturnsViaJob: (url: string, text: string) => void
+  metadataReturns: (url: string, metadata: MediaStub) => void
   exhaustYouTubeQuota: () => void
   restore: () => void
 }
@@ -45,6 +53,7 @@ export function stubExtractionProviders(): ExtractionStub {
   const videos = new Map<string, VideoStub>()
   const transcripts = new Map<string, string>()
   const jobTranscripts = new Map<string, string>()
+  const metadata = new Map<string, MediaStub>()
   let youTubeQuotaGone = false
   const innerFetch = globalThis.fetch
 
@@ -102,6 +111,25 @@ export function stubExtractionProviders(): ExtractionStub {
         usedCredits: 7,
       })
     }
+    if (url.pathname === "/v1/metadata") {
+      const found = metadata.get(url.searchParams.get("url") ?? "")
+      if (!found) {
+        return json(404, {
+          error: "not-found",
+          message: "The requested item could not be found",
+        })
+      }
+      return json(200, {
+        platform: "instagram",
+        type: "video",
+        id: "stub",
+        title: found.title ?? null,
+        description: found.description ?? null,
+        author: { displayName: found.author ?? null },
+        tags: found.tags ?? [],
+      })
+    }
+
     const jobMatch = /^\/v1\/transcript\/(.+)$/.exec(url.pathname)
     if (jobMatch) {
       const queued = jobTranscripts.get(jobMatch[1] ?? "")
@@ -181,6 +209,7 @@ export function stubExtractionProviders(): ExtractionStub {
     videoReturns: (videoId, video) => videos.set(videoId, video),
     transcriptReturns: (url, text) => transcripts.set(url, text),
     transcriptReturnsViaJob: (url, text) => jobTranscripts.set(url, text),
+    metadataReturns: (url, found) => metadata.set(url, found),
     exhaustYouTubeQuota: () => {
       youTubeQuotaGone = true
     },

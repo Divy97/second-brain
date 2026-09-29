@@ -18,9 +18,19 @@ export interface Transcript {
   text: string | null
 }
 
+export interface MediaMetadata {
+  title: string | null
+  /** The caption, for platforms that have one. */
+  description: string | null
+  author: string | null
+  tags: string[]
+}
+
 export interface Supadata {
   verifyKey: () => Promise<KeyVerification>
   fetchTranscript: (url: string) => Promise<Transcript>
+  /** Null when the media is private, deleted or otherwise not reachable. */
+  fetchMetadata: (url: string) => Promise<MediaMetadata | null>
 }
 
 const accountSchema = z.object({
@@ -29,6 +39,13 @@ const accountSchema = z.object({
 })
 
 const transcriptSchema = z.object({ content: z.string().default("") })
+
+const metadataSchema = z.object({
+  title: z.string().nullish(),
+  description: z.string().nullish(),
+  author: z.object({ displayName: z.string().nullish() }).nullish(),
+  tags: z.array(z.string()).nullish(),
+})
 
 // Job shape per docs/research/14-byok-key-verification.md: 202 returns a jobId,
 // polled until completed or failed.
@@ -160,6 +177,27 @@ export function createSupadata(options: SupadataOptions): Supadata {
         response.status
       )
       return { text: transcript.content.trim() || null }
+    },
+
+    async fetchMetadata(url: string): Promise<MediaMetadata | null> {
+      const response = await get(`/metadata?url=${encodeURIComponent(url)}`)
+      const payload: unknown = await response.json().catch(() => null)
+
+      // Private and deleted media are indistinguishable here; both are 404.
+      if (response.status === 404 || response.status === 403) return null
+      if (!response.ok) {
+        throw new SupadataError(
+          `Supadata metadata request failed with status ${response.status}`,
+          response.status
+        )
+      }
+      const metadata = parseOrThrow(metadataSchema, payload, response.status)
+      return {
+        title: metadata.title ?? null,
+        description: metadata.description ?? null,
+        author: metadata.author?.displayName ?? null,
+        tags: metadata.tags ?? [],
+      }
     },
   }
 }
