@@ -58,6 +58,7 @@ export interface OpenRouter {
   chat: <T>(request: ChatRequest<T>) => Promise<ChatResult<T>>
   embed: (request: EmbedRequest) => Promise<EmbedResult>
   verifyKey: () => Promise<KeyVerification>
+  transcribe: (file: File) => Promise<string>
 }
 
 const BASE_URL = "https://openrouter.ai/api/v1"
@@ -127,6 +128,19 @@ export function createOpenRouter(options: OpenRouterOptions): OpenRouter {
   }
 
   return {
+    async transcribe(file: File): Promise<string> {
+      const body = new FormData()
+      body.set("model", "openai/whisper-1")
+      body.set("file", file)
+      const response = await fetchImpl(`${BASE_URL}/audio/transcriptions`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${options.apiKey}` },
+        body,
+      })
+      const payload: unknown = await response.json().catch(() => null)
+      if (!response.ok) throw toOpenRouterError(response.status, payload)
+      return z.object({ text: z.string().min(1) }).parse(payload).text
+    },
     async chat<T>(request: ChatRequest<T>): Promise<ChatResult<T>> {
       const payload = await requestJson("/chat/completions", "POST", {
         model: request.model,

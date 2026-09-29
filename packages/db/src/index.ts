@@ -66,8 +66,10 @@ export {
   type UserKeyRef,
 } from "./queries/user-keys.js"
 export {
+  captureFileItem,
   captureTextItem,
   findItem,
+  findItemFile,
   InvalidCursorError,
   listItems,
   replaceItemText,
@@ -87,6 +89,8 @@ export type {
 } from "./queries/item-types.js"
 export {
   claimItemRun,
+  loadExtractedText,
+  saveExtractedText,
   findNeighbourTags,
   markItemFailed,
   requeueItem,

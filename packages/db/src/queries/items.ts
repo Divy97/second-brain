@@ -16,6 +16,7 @@ const EXCERPT_LENGTH = 200
 
 export interface ItemSummary {
   id: string
+  type: "text" | "voice" | "image" | "pdf" | "url"
   status: ItemStatus
   kind: ItemKind | null
   title: string | null
@@ -24,6 +25,9 @@ export interface ItemSummary {
 }
 
 export interface ItemDetail extends ItemSummary {
+  fileName: string | null
+  mimeType: string | null
+  fileSize: number | null
   rawText: string
   cleanText: string | null
   summary: string | null
@@ -49,6 +53,7 @@ export interface ItemPage {
 
 const summaryColumns = {
   id: items.id,
+  type: items.type,
   status: items.status,
   kind: items.kind,
   title: items.title,
@@ -65,6 +70,7 @@ const visibleItem = (ref: ItemRef) =>
 
 interface CaptureRow extends Record<string, unknown> {
   id: string
+  type: "text" | "voice" | "image" | "pdf" | "url"
   status: ItemStatus
   kind: ItemKind | null
   title: string | null
@@ -87,7 +93,7 @@ export async function captureTextItem(
       values (${generateId()}, ${input.userId}, 'text', 'pending', ${input.contentHash}, ${input.text})
       on conflict (user_id, content_hash) where deleted_at is null do update
         set captured_at = now(), updated_at = now()
-      returning id, status, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
+      returning id, type, status, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
     ), capture as (
       insert into ${itemCaptures} (id, item_id, captured_at)
       select ${generateId()}, id, captured_at from upserted
@@ -100,6 +106,48 @@ export async function captureTextItem(
     run: row.run,
     item: {
       id: row.id,
+      type: row.type,
+      status: row.status,
+      kind: row.kind,
+      title: row.title,
+      excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
+      rawText: row.raw_text,
+      capturedAt: new Date(row.captured_at),
+    },
+  }
+}
+
+export async function captureFileItem(
+  db: Database,
+  input: {
+    userId: string
+    contentHash: string
+    fileKey: string
+    fileName: string
+    mimeType: string
+    fileSize: number
+  }
+): Promise<CapturedItem> {
+  const [row] = await db.execute<CaptureRow>(sql`
+    with upserted as (
+      insert into ${items} (id, user_id, type, status, content_hash, raw_text, file_key, file_name, mime_type, file_size)
+      values (${generateId()}, ${input.userId}, 'voice', 'pending', ${input.contentHash}, '', ${input.fileKey}, ${input.fileName}, ${input.mimeType}, ${input.fileSize})
+      on conflict (user_id, content_hash) where deleted_at is null do update
+        set captured_at = now(), updated_at = now()
+      returning id, type, status, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
+    ), capture as (
+      insert into ${itemCaptures} (id, item_id, captured_at)
+      select ${generateId()}, id, captured_at from upserted
+    )
+    select * from upserted
+  `)
+  if (!row) throw new Error("capture did not return a row")
+  return {
+    created: row.created,
+    run: row.run,
+    item: {
+      id: row.id,
+      type: row.type,
       status: row.status,
       kind: row.kind,
       title: row.title,
@@ -163,6 +211,9 @@ export async function findItem(
     .select({
       ...summaryColumns,
       rawText: items.rawText,
+      fileName: items.fileName,
+      mimeType: items.mimeType,
+      fileSize: items.fileSize,
       cleanText: items.cleanText,
       summary: items.summary,
       language: items.language,
@@ -187,6 +238,23 @@ export async function findItem(
     entities: itemEntityRows,
     captures: captures.map((capture) => capture.capturedAt),
   }
+}
+
+export async function findItemFile(
+  db: Database,
+  ref: ItemRef
+): Promise<{ key: string; mimeType: string; fileName: string } | undefined> {
+  const [row] = await db
+    .select({
+      key: items.fileKey,
+      mimeType: items.mimeType,
+      fileName: items.fileName,
+    })
+    .from(items)
+    .where(visibleItem(ref))
+  return row?.key && row.mimeType && row.fileName
+    ? { key: row.key, mimeType: row.mimeType, fileName: row.fileName }
+    : undefined
 }
 
 export type ReplaceTextResult =

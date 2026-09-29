@@ -2,8 +2,10 @@ import { createOpenRouter, type OpenRouter } from "@workspace/ai"
 import {
   claimItemRun,
   findNeighbourTags,
+  loadExtractedText,
   markItemFailed,
   saveProcessedItem,
+  saveExtractedText,
   type Database,
   type Enrichment,
   type FailureReason,
@@ -111,10 +113,54 @@ export async function processItem(
     )
     if (!claimed) return { outcome: "skipped" }
 
+    if (claimed.type === "voice") {
+      const extracted = await runStep("extract audio", () =>
+        inStep(context, async (db) => {
+          if (!claimed.fileKey || !claimed.fileName || !claimed.mimeType) {
+            throw new PipelineFailure(
+              "processing_error",
+              "Audio file is missing.",
+              true
+            )
+          }
+          const object = await env.ITEM_FILES.get(claimed.fileKey)
+          if (!object) {
+            throw new PipelineFailure(
+              "processing_error",
+              "Audio file is missing.",
+              true
+            )
+          }
+          const openRouter = await openRouterFor(db, env, claimed.userId)
+          const file = new File(
+            [await object.arrayBuffer()],
+            claimed.fileName,
+            {
+              type: claimed.mimeType,
+            }
+          )
+          const transcript = await openRouter.transcribe(file)
+          return saveExtractedText(db, job, transcript)
+        })
+      )
+      if (!extracted) return { outcome: "skipped" }
+    }
+
     const enrichment = await runStep("enrich", () =>
       inStep(context, async (db) => {
         const openRouter = await openRouterFor(db, env, claimed.userId)
-        const [opening = claimed.rawText] = chunkText(claimed.rawText)
+        const rawText =
+          claimed.type === "voice"
+            ? await loadExtractedText(db, job)
+            : claimed.rawText
+        if (!rawText) {
+          throw new PipelineFailure(
+            "processing_error",
+            "Transcript is empty.",
+            true
+          )
+        }
+        const [opening = rawText] = chunkText(rawText)
         const [noteEmbedding = []] = await embed(openRouter, [opening])
         const neighbourTags = await findNeighbourTags(db, {
           userId: claimed.userId,
@@ -123,7 +169,7 @@ export async function processItem(
           embeddingModel,
           limit: enrichmentLimits.neighbourCount,
         })
-        return enrichNote(openRouter, { note: claimed.rawText, neighbourTags })
+        return enrichNote(openRouter, { note: rawText, neighbourTags })
       })
     )
 

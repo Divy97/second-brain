@@ -7,12 +7,14 @@ import { Button } from "@workspace/ui/components/button"
 export function ItemActions({
   pending,
   canReprocess,
+  canEdit = true,
   onEdit,
   onReprocess,
   onDelete,
 }: {
   pending: boolean
   canReprocess: boolean
+  canEdit?: boolean
   onEdit: () => void
   onReprocess: () => void
   onDelete: () => void
@@ -40,9 +42,11 @@ export function ItemActions({
         </>
       ) : (
         <>
-          <Button variant="outline" onClick={onEdit}>
-            Edit
-          </Button>
+          {canEdit && (
+            <Button variant="outline" onClick={onEdit}>
+              Edit
+            </Button>
+          )}
           {canReprocess && (
             <Button variant="ghost" disabled={pending} onClick={onReprocess}>
               Reprocess

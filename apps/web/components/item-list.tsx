@@ -27,10 +27,10 @@ export function ItemList({
           ✳
         </span>
         <h3 className="mt-4 font-heading text-3xl">
-          Your first thought goes here.
+          Your first memory starts here.
         </h3>
         <p className="mt-2 text-muted-foreground">
-          Write anything above. We&apos;ll keep it safe.
+          Write or record above. We&apos;ll keep it safe.
         </p>
       </div>
     )
@@ -52,10 +52,12 @@ export function ItemList({
                 />
               </div>
               <h3 className="my-5 line-clamp-4 font-heading text-xl leading-snug break-words">
-                {item.title ?? item.excerpt}
+                {item.title ?? (item.excerpt ? item.excerpt : "Voice note")}
               </h3>
               <div className="flex items-center justify-between gap-2 border-t border-foreground/15 pt-4 text-xs font-medium text-muted-foreground">
-                <span className="capitalize">{item.kind ?? "Note"}</span>
+                <span className="capitalize">
+                  {item.kind ?? (item.type === "voice" ? "Voice" : "Note")}
+                </span>
                 <time dateTime={item.capturedAt}>
                   {formatListDate(item.capturedAt)}
                 </time>
