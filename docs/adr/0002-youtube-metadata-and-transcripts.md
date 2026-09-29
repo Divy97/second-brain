@@ -27,4 +27,5 @@ Status: Accepted
 - An uncaptioned video is permanently `partial` under `mode=native`. If that proves too limiting, the honest fix is an explicit per-item "transcribe this anyway" action that states the per-minute cost, not a silent default.
 - The operator key is a new deployment dependency. It is optional at runtime: unset, the ladder falls through to the transcript key and then to partial, so CI and local dev need no secret.
 - A Data API quota exhaustion degrades captures to `partial` rather than failing them. An invalid operator key is an outage, not something a user can fix, so it surfaces as a retryable processing error.
+- Quota exhaustion is not backed off. The research notes an exhausted key should stop being called until midnight PT, and that even invalid requests cost a unit. Persisting that state is its own ticket; today each capture simply tries and degrades.
 - Video ids are extracted from link forms that **no primary Google source specifies**. The parser fails closed and is covered by unit tests; treat it as a heuristic that may need revision.

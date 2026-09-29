@@ -52,7 +52,7 @@ Rule: **a capture never fails.** Raw input is stored before any processing start
 
 ### 4.2 YouTube ladder
 
-1. **Metadata always**: official Data API `videos.list` (title, channel, description, duration) on the **operator's** key. Free, 10k units/day, 1 unit per video, reliable. Chapters are _not_ available from this API; they exist only as timestamps people type into the description, so they arrive as description text and are not parsed.
+1. **Metadata always**: official Data API `videos.list` (title, channel, description) on the **operator's** key. Free, 10k units/day, 1 unit per video, reliable. Chapters are _not_ available from this API; they exist only as timestamps people type into the description, so they arrive as description text and are not parsed.
 2. **Transcript**: transcript API on the user's optional key, pinned to `mode=native`. 1 credit per video.
 3. No transcript, or no key → metadata-only item, `partial`.
 
@@ -165,16 +165,16 @@ packages/db      Drizzle schema + queries (Neon via Hyperdrive)
 packages/ai      OpenRouter calls (STT, vision, enrich, embed, rerank, answer)
 ```
 
-| Layer    | Choice                                           | Why                                                                                                                         |
-| -------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Compute  | Cloudflare Workers, **free plan to start**       | No Container, no binary. Upgrade to Paid ($5/mo) only when a limit bites (10 MiB Worker size, Browser Run minutes, CPU ms). |
-| Pipeline | Cloudflare Queues + Workflows                    | durable per-step retries, no Redis, no server                                                                               |
-| DB       | Neon Postgres + pgvector via Hyperdrive, Drizzle | hybrid search in one DB; Hyperdrive = connection pool for Workers                                                           |
-| Files    | Cloudflare R2                                    | 10 GB free, zero egress                                                                                                     |
-| Auth     | Better Auth                                      | multi-user, TS-native, runs in the Worker                                                                                   |
-| Models   | OpenRouter (chat, STT, embeddings)               | single BYOK key covers the chain                                                                                            |
-| Articles | Defuddle → Browser Run → reader API → partial    | §4.1                                                                                                                        |
-| Video    | Data API metadata + youtubei.js → transcript API | §4.2                                                                                                                        |
+| Layer    | Choice                                                           | Why                                                                                                                         |
+| -------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Compute  | Cloudflare Workers, **free plan to start**                       | No Container, no binary. Upgrade to Paid ($5/mo) only when a limit bites (10 MiB Worker size, Browser Run minutes, CPU ms). |
+| Pipeline | Cloudflare Queues + Workflows                                    | durable per-step retries, no Redis, no server                                                                               |
+| DB       | Neon Postgres + pgvector via Hyperdrive, Drizzle                 | hybrid search in one DB; Hyperdrive = connection pool for Workers                                                           |
+| Files    | Cloudflare R2                                                    | 10 GB free, zero egress                                                                                                     |
+| Auth     | Better Auth                                                      | multi-user, TS-native, runs in the Worker                                                                                   |
+| Models   | OpenRouter (chat, STT, embeddings)                               | single BYOK key covers the chain                                                                                            |
+| Articles | Defuddle → Browser Run → reader API → partial                    | §4.1                                                                                                                        |
+| Video    | Data API metadata (operator key) → transcript API, `mode=native` | §4.2                                                                                                                        |
 
 Monthly cost at personal scale: **$0**. Model/API spend on the user's keys.
 

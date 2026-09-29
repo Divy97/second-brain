@@ -1,13 +1,14 @@
-import { createSupadata, createYouTube, YouTubeError } from "@workspace/ai"
+import {
+  createSupadata,
+  SupadataError,
+  createYouTube,
+  YouTubeError,
+} from "@workspace/ai"
 
+import { assemble, type Extraction } from "./extraction.js"
 import { PipelineFailure } from "./failures.js"
 
 import type { VideoLink } from "../video-url.js"
-
-export interface VideoExtraction {
-  text: string
-  quality: "full" | "partial"
-}
 
 export interface VideoRequest {
   link: VideoLink
@@ -17,34 +18,24 @@ export interface VideoRequest {
   fetchPage?: typeof fetch
 }
 
-function assemble(parts: (string | null | undefined)[]): string {
-  return parts
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join("\n\n")
-}
-
-// Ladder: operator metadata, then the user's transcript key, then partial. The
-// opportunistic Innertube rung in spec.md §4.2 step 2 is not implemented: YouTube now
-// gates transcripts behind an attestation a Worker cannot solve.
-// See docs/research/15-youtube-ingestion.md.
+// Ladder per spec.md §4.2: operator metadata, then the user's transcript key, then
+// partial. See ADR-0002 for why the former Innertube rung is gone.
 export async function extractVideo({
   link,
   note,
   youtubeApiKey,
   transcriptKey,
   fetchPage = fetch,
-}: VideoRequest): Promise<VideoExtraction> {
+}: VideoRequest): Promise<Extraction> {
   const metadata = youtubeApiKey
     ? await fetchMetadata(link.videoId, youtubeApiKey, fetchPage)
     : null
 
-  const transcript = transcriptKey
-    ? await createSupadata({
-        apiKey: transcriptKey,
-        fetch: fetchPage,
-      }).fetchTranscript(link.canonicalUrl)
-    : null
+  const transcript = await fetchTranscript(
+    link.canonicalUrl,
+    transcriptKey,
+    fetchPage
+  )
 
   const text = assemble([
     note,
@@ -62,6 +53,34 @@ export async function extractVideo({
   }
 
   return { text, quality: transcript?.text ? "full" : "partial" }
+}
+
+// A rejected key is the user's to fix, so it surfaces as a retryable failure with an
+// actionable message. A transcript service that is merely down leaves the item partial.
+async function fetchTranscript(
+  url: string,
+  transcriptKey: string | null,
+  fetchPage: typeof fetch
+) {
+  if (!transcriptKey) return null
+  try {
+    return await createSupadata({
+      apiKey: transcriptKey,
+      fetch: fetchPage,
+    }).fetchTranscript(url)
+  } catch (error) {
+    if (error instanceof SupadataError) {
+      if (error.status === 401) {
+        throw new PipelineFailure(
+          "invalid_key",
+          "The transcript key was rejected. Update it in settings and retry.",
+          true
+        )
+      }
+      return null
+    }
+    throw error
+  }
 }
 
 async function fetchMetadata(

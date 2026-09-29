@@ -13,8 +13,6 @@ export interface VideoMetadata {
   title: string
   channel: string
   description: string
-  /** ISO 8601 duration exactly as the API returns it, e.g. "PT15M33S". */
-  duration: string | null
 }
 
 export interface YouTube {
@@ -42,7 +40,6 @@ const videoSchema = z.object({
           channelTitle: z.string().default(""),
           description: z.string().default(""),
         }),
-        contentDetails: z.object({ duration: z.string() }).optional(),
       })
     )
     .default([]),
@@ -82,7 +79,7 @@ export function createYouTube(options: YouTubeOptions): YouTube {
   return {
     async fetchMetadata(videoId: string): Promise<VideoMetadata | null> {
       const url = new URL(BASE_URL)
-      url.searchParams.set("part", "snippet,contentDetails")
+      url.searchParams.set("part", "snippet")
       url.searchParams.set("id", videoId)
       url.searchParams.set("key", options.apiKey)
 
@@ -109,7 +106,6 @@ export function createYouTube(options: YouTubeOptions): YouTube {
         title: video.snippet.title,
         channel: video.snippet.channelTitle,
         description: video.snippet.description,
-        duration: video.contentDetails?.duration ?? null,
       }
     },
   }

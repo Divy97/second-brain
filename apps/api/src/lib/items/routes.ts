@@ -128,13 +128,14 @@ itemRoutes.post("/url", async (c) => {
   const parsed = await parseUrl(c)
   if (!parsed.ok) return invalidText(c, parsed.message)
 
-  // A video saved from any of its link forms is one item with many captures.
-  const sourceUrl = parseVideoLink(parsed.url)?.canonicalUrl ?? parsed.url
+  // Dedupe on the canonical video, so every link form for one video is one item.
+  // The link the user actually saved is kept, so timestamps still open where they meant.
+  const dedupeUrl = parseVideoLink(parsed.url)?.canonicalUrl ?? parsed.url
   const { item, created, run } = await captureUrlItem(c.var.db, {
     userId: c.var.userId,
-    sourceUrl,
+    sourceUrl: parsed.url,
     sourceNote: parsed.note,
-    contentHash: await contentHash(`url:${sourceUrl}`),
+    contentHash: await contentHash(`url:${dedupeUrl}`),
   })
   if (item.status === "pending") {
     const refused = await enqueueOrRefuse(c, { itemId: item.id, run })
