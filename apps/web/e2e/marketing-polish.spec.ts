@@ -10,7 +10,7 @@ test("video examples reveal answers from the selected sample source", async ({
   page,
 }) => {
   await page.goto("/")
-  await expect(page.getByText("YouTube & Instagram, remembered")).toBeVisible()
+  await expect(page.getByText("YouTube videos & Shorts")).toBeVisible()
   await page.getByRole("button", { name: "What was that focus tip?" }).click()
   await expect(page.getByRole("status")).toContainText(
     "Put your phone in another room"

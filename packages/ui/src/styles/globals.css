@@ -163,9 +163,6 @@ main li {
   .marketing-doodle:nth-of-type(2) {
     animation-delay: 180ms;
   }
-  .marketing-sticker {
-    animation: content-enter 700ms 180ms ease-out both;
-  }
   .marketing-preview-frame {
     transition:
       transform 450ms ease,

@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 test("landing leads to sign-up", async ({ page }) => {
   await page.goto("/")
   await expect(
-    page.getByRole("heading", { name: "Make room for more." })
+    page.getByRole("heading", { name: "Save anything. Then just ask." })
   ).toBeVisible()
   await page.getByRole("link", { name: "Start remembering" }).first().click()
   await expect(
@@ -22,7 +22,7 @@ test("single theme fits the viewport", async ({ page }, testInfo) => {
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" })
   await page.goto("/")
   await expect(
-    page.getByRole("heading", { name: "Make room for more." })
+    page.getByRole("heading", { name: "Save anything. Then just ask." })
   ).toBeVisible()
   expect(
     await page.evaluate(
