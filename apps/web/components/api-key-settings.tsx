@@ -82,12 +82,6 @@ export function ApiKeySettings({
       </div>
 
       <div className="flex flex-col gap-5 rounded-2xl bg-card p-5 sm:p-7">
-        {copy.withoutKey && !status.set && (
-          <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-            {copy.withoutKey}
-          </p>
-        )}
-
         {status.set && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             <p className="flex items-center gap-2 text-sm">
@@ -165,7 +159,7 @@ export function ApiKeySettings({
                   aria-hidden
                   className="text-xs font-normal text-muted-foreground"
                 >
-                  {copy.requirement}
+                  Required
                 </span>
               </FieldLabel>
               <PasswordInput

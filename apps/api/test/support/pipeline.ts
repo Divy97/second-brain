@@ -22,8 +22,18 @@ export interface QueueRecorder {
 // Stands in for the queue consumer: every message POST/PATCH/retry would have queued is
 // handed to processItem directly, the way the Workflow does.
 export function recordQueue(
-  options: { fetchPage?: typeof fetch } = {}
+  options: {
+    fetchPage?: typeof fetch
+    env?: Partial<Env>
+    now?: () => Date
+  } = {}
 ): QueueRecorder {
+  const context = {
+    env: { ...env, ...options.env },
+    openDb: testDb,
+    fetchPage: options.fetchPage,
+    now: options.now,
+  }
   const messages: ProcessItemParams[] = []
   const spy = vi
     .spyOn(env.ITEMS_QUEUE, "send")
@@ -37,20 +47,14 @@ export function recordQueue(
       const pending = messages.splice(0)
       const outcomes: ProcessItemOutcome[] = []
       for (const message of pending)
-        outcomes.push(
-          await processItem({ env, openDb: testDb }, message, runDirectly)
-        )
+        outcomes.push(await processItem(context, message, runDirectly))
       return outcomes
     },
     processLatest: async () => {
       const message = messages.at(-1)
       if (!message) throw new Error("nothing was queued")
       messages.length = 0
-      return processItem(
-        { env, openDb: testDb, fetchPage: options.fetchPage },
-        message,
-        runDirectly
-      )
+      return processItem(context, message, runDirectly)
     },
     restore: () => {
       spy.mockRestore()

@@ -56,7 +56,12 @@ export async function checkDatabaseHealth(
 }
 
 export { schema }
-export { generateId } from "./schema.js"
+export { generateId, type PartialReason } from "./schema.js"
+export {
+  spendPaidLookup,
+  type PaidLookup,
+  type PaidService,
+} from "./queries/paid-lookups.js"
 export {
   deleteUserKey,
   findUserKey,

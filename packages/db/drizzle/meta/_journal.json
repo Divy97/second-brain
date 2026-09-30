@@ -64,6 +64,13 @@
       "when": 1790730000000,
       "tag": "0008_facts",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790740000000,
+      "tag": "0009_operator_paid_fallbacks",
+      "breakpoints": true
     }
   ]
 }

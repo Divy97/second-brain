@@ -2,7 +2,7 @@ import { apiRequest } from "@/lib/api"
 
 export type KeyStatus = { set: false } | { set: true; last4: string }
 
-export type KeyProvider = "openrouter" | "transcript" | "reader"
+export type KeyProvider = "openrouter"
 
 export type KeySettings = Record<KeyProvider, KeyStatus>
 

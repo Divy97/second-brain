@@ -23,14 +23,3 @@ export async function resolveUserKey(
     ),
   }
 }
-
-// Optional keys unlock a fallback; absent is a normal state, not a failure.
-export async function resolveOptionalKey(
-  db: Database,
-  env: Env,
-  userId: string,
-  provider: Extract<KeyProvider, "transcript" | "reader">
-): Promise<string | null> {
-  const resolved = await resolveUserKey(db, env, userId, provider)
-  return resolved.ok ? resolved.apiKey : null
-}

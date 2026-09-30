@@ -4,10 +4,12 @@ import { assemble, type Extraction } from "./extraction.js"
 import { safeArticleUrl } from "../article-url.js"
 import { PipelineFailure } from "./failures.js"
 
+import type { OperatorService } from "../paid-service.js"
+
 export interface ArticleRequest {
   sourceUrl: string
   note: string | null
-  readerKey?: string | null
+  readerService?: OperatorService | null
   fetchPage?: typeof fetch
 }
 
@@ -98,11 +100,18 @@ async function fetchSafe(
 export async function extractArticle({
   sourceUrl,
   note,
-  readerKey = null,
+  readerService = null,
   fetchPage = fetch,
 }: ArticleRequest): Promise<Extraction> {
-  const read = (): Promise<JinaArticle | null> =>
-    readWithReader(sourceUrl, readerKey, fetchPage)
+  const refused = { byAllowance: false }
+  const read = async (): Promise<JinaArticle | null> => {
+    if (!readerService) return null
+    if (!(await readerService.spend())) {
+      refused.byAllowance = true
+      return null
+    }
+    return readWithReader(sourceUrl, readerService.apiKey, fetchPage)
+  }
 
   let response: Response | null = null
   try {
@@ -147,6 +156,9 @@ export async function extractArticle({
   return {
     text: assemble([note, sourceUrl, title, description]),
     quality: "partial",
+    ...(refused.byAllowance
+      ? { partialReason: "allowance_used" as const }
+      : {}),
   }
 }
 
@@ -173,27 +185,18 @@ function fullFromReader(
 
 async function readWithReader(
   sourceUrl: string,
-  readerKey: string | null,
+  apiKey: string,
   fetchPage: typeof fetch
 ): Promise<JinaArticle | null> {
-  if (!readerKey) return null
   try {
     const article = await createJina({
-      apiKey: readerKey,
+      apiKey,
       fetch: fetchPage,
     }).read(sourceUrl)
     return article.content.trim() ? article : null
   } catch (error) {
-    // A rejected key is the user's to fix, so it surfaces as a retryable failure.
-    // A reader that is merely down leaves the item partial instead.
     if (error instanceof JinaError) {
-      if (error.status === 401) {
-        throw new PipelineFailure(
-          "invalid_key",
-          "The reader key was rejected. Update it in settings and retry.",
-          true
-        )
-      }
+      console.error("reader service failed", error.status)
       return null
     }
     throw error

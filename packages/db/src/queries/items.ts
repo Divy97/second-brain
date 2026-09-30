@@ -11,6 +11,7 @@ import {
 import { listItemEntities } from "./item-entities.js"
 
 import type { Database } from "../database.js"
+import type { PartialReason } from "../schema.js"
 import type { ItemEntity, ItemKind, ItemRef, ItemStatus } from "./item-types.js"
 
 const EXCERPT_LENGTH = 200
@@ -38,6 +39,7 @@ export interface ItemDetail extends ItemSummary {
   language: string | null
   tags: string[]
   failureReason: string | null
+  partialReason: PartialReason | null
   error: string | null
   updatedAt: Date
   entities: ItemEntity[]
@@ -274,6 +276,7 @@ export async function findItem(
       language: items.language,
       tags: items.tags,
       failureReason: items.failureReason,
+      partialReason: items.partialReason,
       error: items.error,
       updatedAt: items.updatedAt,
     })
