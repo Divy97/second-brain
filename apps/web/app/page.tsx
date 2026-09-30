@@ -8,12 +8,17 @@ import {
   NotePencilIcon,
   QuotesIcon,
   SparkleIcon,
+  ScribbleLoopIcon,
+  ShootingStarIcon,
+  YoutubeLogoIcon,
+  InstagramLogoIcon,
 } from "@phosphor-icons/react/dist/ssr"
 import Image from "next/image"
 import Link from "next/link"
 
 import { LandingRedirect } from "@/components/landing-redirect"
 import { PublicHeader } from "@/components/public-header"
+import { VideoMemoryDemo } from "@/components/video-memory-demo"
 import { Wordmark } from "@/components/wordmark"
 
 const formats = [
@@ -42,7 +47,7 @@ const formats = [
     name: "Links",
     icon: LinkIcon,
     detail:
-      "Save articles and video links with their extracted text or transcript.",
+      "Articles, YouTube videos, Instagram Reels. Save the link and keep the useful context.",
   },
 ]
 
@@ -55,8 +60,8 @@ export default function LandingPage() {
         <section className="relative grid gap-10 pt-12 pb-14 sm:pt-16 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-12 lg:pt-20 lg:pb-24">
           <div className="content-enter relative z-10">
             <p className="mb-6 flex items-center gap-2 text-xs font-semibold tracking-[0.12em] text-coral-ink uppercase">
-              <SparkleIcon size={18} weight="fill" aria-hidden /> For the
-              beautifully forgetful
+              <SparkleIcon size={18} weight="fill" aria-hidden /> YouTube &amp;
+              Instagram, remembered
             </p>
             <h1 className="max-w-xl text-[clamp(2.8rem,6vw,4.75rem)] leading-[1.06] tracking-[-0.055em]">
               Make room
@@ -64,8 +69,8 @@ export default function LandingPage() {
               for <span className="text-coral-ink">more.</span>
             </h1>
             <p className="mt-6 max-w-sm text-lg leading-relaxed text-muted-foreground">
-              Notes, voice, photos, PDFs, links. One place to keep them. A
-              better way to remember.
+              That YouTube deep dive. That Instagram Reel. Save the link, keep
+              the useful bits, ask about them later.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-5">
               <Link
@@ -75,19 +80,35 @@ export default function LandingPage() {
                 Start remembering <ArrowRightIcon aria-hidden />
               </Link>
               <a
-                href="#possibilities"
+                href="#video-memories"
                 className="inline-flex items-center gap-1.5 py-3 text-sm font-semibold underline decoration-border underline-offset-4 hover:decoration-current"
               >
-                Take a look <ArrowUpRightIcon aria-hidden />
+                Try a question <ArrowUpRightIcon aria-hidden />
               </a>
             </div>
           </div>
-          <figure className="product-preview relative min-w-0">
+          <figure className="product-preview relative mt-5 min-w-0 lg:mt-0">
+            <ScribbleLoopIcon
+              weight="thin"
+              className="marketing-doodle pointer-events-none absolute -top-12 -right-3 z-10 size-20 text-coral-ink sm:-right-8 sm:size-24"
+              aria-hidden
+            />
+            <ShootingStarIcon
+              weight="thin"
+              className="marketing-doodle pointer-events-none absolute -bottom-8 -left-4 z-10 size-16 text-coral-ink sm:-left-9 sm:size-24"
+              aria-hidden
+            />
+            <div
+              aria-hidden
+              className="marketing-sticker absolute -top-5 left-4 z-10 flex -rotate-6 items-center gap-2 rounded-lg border border-primary/10 bg-butter px-3 py-2 text-xs font-semibold shadow-sm sm:left-7"
+            >
+              <YoutubeLogoIcon size={20} /> A rabbit hole, remembered.
+            </div>
             <div
               className="absolute -inset-4 -rotate-3 rounded-[2rem] bg-coral/25 sm:-inset-6"
               aria-hidden
             />
-            <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card shadow-[0_24px_70px_-24px_rgb(83_60_81/0.3)]">
+            <div className="marketing-preview-frame relative overflow-hidden rounded-2xl border border-primary/15 bg-card shadow-[0_24px_70px_-24px_rgb(83_60_81/0.3)]">
               <div className="flex items-center justify-between border-b px-5 py-3 text-xs text-muted-foreground">
                 <span>Your thoughts, in good company.</span>
                 <SparkleIcon size={16} aria-hidden />
@@ -106,6 +127,59 @@ export default function LandingPage() {
               A little space for everything you want to keep.
             </figcaption>
           </figure>
+        </section>
+        <section
+          id="video-memories"
+          className="relative grid scroll-mt-8 gap-10 border-t border-border py-14 sm:py-20 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-16"
+        >
+          <div>
+            <div
+              className="mb-6 flex items-center gap-4 text-coral-ink"
+              aria-label="YouTube and Instagram"
+            >
+              <YoutubeLogoIcon size={34} weight="duotone" aria-hidden />
+              <span className="text-lg" aria-hidden>
+                +
+              </span>
+              <InstagramLogoIcon size={32} weight="duotone" aria-hidden />
+            </div>
+            <h2 className="max-w-md text-3xl leading-tight tracking-tight sm:text-5xl">
+              Your saved videos.
+              <br />
+              <span className="relative inline-block">
+                Finally useful.
+                <span
+                  aria-hidden
+                  className="marketing-underline absolute -bottom-2 left-0 h-3 w-full -rotate-2 rounded-[50%] border-t-[3px] border-coral"
+                />
+              </span>
+            </h2>
+            <p className="mt-7 max-w-md leading-relaxed text-muted-foreground">
+              The recipe in a Reel. The idea halfway through a video. Bring the
+              link here, then find the detail without hunting through your feed.
+            </p>
+            <dl className="mt-7 space-y-5 text-sm">
+              <div>
+                <dt className="font-semibold">YouTube videos &amp; Shorts</dt>
+                <dd className="mt-1 leading-relaxed text-muted-foreground">
+                  Save video details and available transcripts. Ask about the
+                  parts you want to remember.
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Instagram Reels &amp; posts</dt>
+                <dd className="mt-1 leading-relaxed text-muted-foreground">
+                  Keep captions and post details. Rediscover the recipe,
+                  recommendation or idea you saved.
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
+              Available content varies by link. When extraction is limited, your
+              link stays saved.
+            </p>
+          </div>
+          <VideoMemoryDemo />
         </section>
         <section
           id="possibilities"

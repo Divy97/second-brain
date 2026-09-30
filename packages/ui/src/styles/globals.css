@@ -141,6 +141,45 @@ main li {
   }
 }
 
+@keyframes doodle-arrive {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) rotate(-18deg) scale(0.85);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-4px) rotate(5deg) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .marketing-doodle {
+    animation: doodle-arrive 1400ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .marketing-doodle:nth-of-type(2) {
+    animation-delay: 180ms;
+  }
+  .marketing-sticker {
+    animation: content-enter 700ms 180ms ease-out both;
+  }
+  .marketing-preview-frame {
+    transition:
+      transform 450ms ease,
+      box-shadow 450ms ease;
+  }
+  .product-preview:hover .marketing-preview-frame {
+    transform: translateY(-5px) rotate(0.5deg);
+  }
+  .marketing-underline {
+    transform-origin: left;
+    animation: content-enter 700ms ease-out both;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
