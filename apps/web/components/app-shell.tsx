@@ -37,9 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isPending || session) return
     router.replace(
-      signingOut.current
-        ? "/sign-in"
-        : `/sign-in?next=${encodeURIComponent(pathname)}`
+      signingOut.current ? "/" : `/sign-in?next=${encodeURIComponent(pathname)}`
     )
   }, [isPending, session, pathname, router])
 

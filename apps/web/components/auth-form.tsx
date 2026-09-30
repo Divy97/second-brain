@@ -164,6 +164,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
               name="email"
               type="email"
               autoComplete="email"
+              placeholder="you@example.com"
               aria-invalid={!!fieldErrors.email}
               aria-describedby={fieldErrors.email ? "email-error" : undefined}
               onInvalid={(event) => {
@@ -204,6 +205,11 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             <PasswordInput
               id="password"
               name="password"
+              placeholder={
+                mode === "sign-up"
+                  ? "Create a password (8+ characters)"
+                  : "Enter your password"
+              }
               autoComplete={
                 mode === "sign-up" ? "new-password" : "current-password"
               }
