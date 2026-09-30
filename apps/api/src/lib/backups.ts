@@ -1,3 +1,5 @@
+import { backups as backupConfig } from "./config.js"
+
 import type { Database } from "@workspace/db"
 
 const tables = [
@@ -18,8 +20,11 @@ const tables = [
 ]
 const pageSize = 500
 
+const backupRoot = "backups/"
+const deleteBatchSize = 1000
+
 function dayPrefix(date: Date): string {
-  return `backups/${date.toISOString().slice(0, 10)}`
+  return `${backupRoot}${date.toISOString().slice(0, 10)}`
 }
 
 export function shouldRunNightlyBackup(event: ScheduledController): boolean {
@@ -66,6 +71,27 @@ export async function backupR2Files(
   } while (cursor)
 }
 
+export async function pruneExpiredBackups(
+  bucket: R2Bucket,
+  date: Date,
+  retentionDays: number
+): Promise<void> {
+  const oldestKept = dayPrefix(
+    new Date(date.getTime() - (retentionDays - 1) * 24 * 60 * 60 * 1000)
+  )
+  let cursor: string | undefined
+  do {
+    const page = await bucket.list({ prefix: backupRoot, cursor })
+    const expired = page.objects
+      .map((object) => object.key)
+      .filter((key) => key.slice(0, oldestKept.length) < oldestKept)
+    for (let i = 0; i < expired.length; i += deleteBatchSize) {
+      await bucket.delete(expired.slice(i, i + deleteBatchSize))
+    }
+    cursor = page.truncated ? page.cursor : undefined
+  } while (cursor)
+}
+
 export async function runNightlyBackup(
   db: Database,
   itemFiles: R2Bucket,
@@ -75,4 +101,5 @@ export async function runNightlyBackup(
   const prefix = dayPrefix(date)
   await backupDatabase(db, backups, prefix)
   await backupR2Files(itemFiles, backups, prefix)
+  await pruneExpiredBackups(backups, date, backupConfig.retentionDays)
 }
