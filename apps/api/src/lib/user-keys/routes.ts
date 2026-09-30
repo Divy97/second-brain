@@ -38,8 +38,6 @@ async function statusOf(
   return stored ? { set: true, last4: stored.last4 } : { set: false }
 }
 
-// Spelled out rather than folded over keyProviderNames: a new provider should fail
-// typechecking here until its status is served.
 async function keySettings(c: Context<AppEnv>): Promise<KeySettings> {
   return { openrouter: await statusOf(c, "openrouter") }
 }

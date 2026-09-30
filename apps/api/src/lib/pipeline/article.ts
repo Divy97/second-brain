@@ -9,7 +9,7 @@ import type { OperatorService } from "../paid-service.js"
 export interface ArticleRequest {
   sourceUrl: string
   note: string | null
-  reader?: OperatorService | null
+  readerService?: OperatorService | null
   fetchPage?: typeof fetch
 }
 
@@ -100,17 +100,17 @@ async function fetchSafe(
 export async function extractArticle({
   sourceUrl,
   note,
-  reader = null,
+  readerService = null,
   fetchPage = fetch,
 }: ArticleRequest): Promise<Extraction> {
   const refused = { byAllowance: false }
   const read = async (): Promise<JinaArticle | null> => {
-    if (!reader) return null
-    if (!(await reader.spend())) {
+    if (!readerService) return null
+    if (!(await readerService.spend())) {
       refused.byAllowance = true
       return null
     }
-    return readWithReader(sourceUrl, reader.apiKey, fetchPage)
+    return readWithReader(sourceUrl, readerService.apiKey, fetchPage)
   }
 
   let response: Response | null = null
@@ -195,8 +195,6 @@ async function readWithReader(
     }).read(sourceUrl)
     return article.content.trim() ? article : null
   } catch (error) {
-    // The operator's key, not the user's: a rejected or failing reader is an outage to
-    // log, never a failure the user can fix, so the item is kept partial.
     if (error instanceof JinaError) {
       console.error("reader service failed", error.status)
       return null

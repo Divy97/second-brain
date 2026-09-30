@@ -26,7 +26,7 @@ Settings asks for the OpenRouter key and nothing else. The product pays for tran
 12. As a **User**, I want a refused lookup not to use up my allowance, so that hitting the limit does not cost me more.
     12a. As a **User**, I want a blocked article to use only my reader allowance and a video link only my transcript allowance, so that one kind of capture cannot starve the other.
 13. As a **User**, I want my allowance to reset each day, so that I can capture more tomorrow.
-14. As a **User**, I want lookups that need no paid service (plain articles, captioned pages) not to use my allowance, so that normal captures are never limited.
+14. As a **User**, I want captures that need no paid service (plain text, pages a normal fetch can read, YouTube metadata from the operator's Data API) not to use my allowance, so that normal captures are never limited. A YouTube transcript and an Instagram caption are paid lookups.
 15. As a **User**, I want a YouTube link to keep its title and channel even when transcripts are unavailable, so that it is still findable.
 16. As a **User** who saved a transcript key or reader key before, I want my settings to no longer show them, so that the page is not confusing.
 17. As a **User** who saved those keys before, I want them deleted rather than left stored, so that my data is not kept needlessly.

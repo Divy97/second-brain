@@ -1,7 +1,9 @@
+import type { PartialReason } from "@workspace/db"
+
 export interface Extraction {
   text: string
   quality: "full" | "partial"
-  partialReason?: "allowance_used"
+  partialReason?: PartialReason
 }
 
 export function assemble(parts: (string | null | undefined)[]): string {

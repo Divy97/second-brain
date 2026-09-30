@@ -16,7 +16,7 @@ export interface MediaRequest {
   link: MediaLink
   note: string | null
   youtubeApiKey: string | null
-  transcript: OperatorService | null
+  transcriptService: OperatorService | null
   fetchPage?: typeof fetch
 }
 
@@ -26,13 +26,13 @@ export async function extractMedia(request: MediaRequest): Promise<Extraction> {
     : extractInstagram(request)
 }
 
-// Ladder per spec.md §4.2: operator metadata, then the operator's transcript service
-// within the User's daily allowance, then partial. See ADR-0002 for why the former Innertube rung is gone.
+// Ladder per spec.md §4.2: operator metadata, then the operator transcript service
+// within the User's daily allowance, then partial.
 async function extractYouTube({
   link,
   note,
   youtubeApiKey,
-  transcript: transcriptService,
+  transcriptService,
   fetchPage = fetch,
 }: MediaRequest): Promise<Extraction> {
   const metadata = youtubeApiKey
@@ -54,8 +54,6 @@ async function extractYouTube({
   ])
 
   if (!metadata && !transcript?.text) {
-    // Nothing but the user's own words survived, so the capture is kept and retryable
-    // rather than failed: reprocessing once the lookup works can still complete it.
     return {
       text: assemble([note, link.canonicalUrl]),
       ...partial(lookup.limited),
@@ -73,7 +71,7 @@ async function extractYouTube({
 async function extractInstagram({
   link,
   note,
-  transcript: transcriptService,
+  transcriptService,
   fetchPage = fetch,
 }: MediaRequest): Promise<Extraction> {
   const lookup = await paidLookup(transcriptService, fetchPage, (client) =>
@@ -110,8 +108,8 @@ interface PaidLookupResult<T> {
   limited: boolean
 }
 
-// The operator's key, not the user's: a rejected or failing service is an outage to
-// log, never a failure the user can fix, so the item is kept partial.
+// A rejected or failing operator service is an outage to log, not a failure the User
+// can fix, so the item is kept partial.
 async function paidLookup<T>(
   service: OperatorService | null,
   fetchPage: typeof fetch,

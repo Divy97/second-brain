@@ -3,6 +3,7 @@ import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm"
 import { chunks, entities, generateId, itemEntities, items } from "../schema.js"
 
 import type { Database } from "../database.js"
+import type { PartialReason } from "../schema.js"
 import type { ItemEntity, ItemKind, ItemRef } from "./item-types.js"
 
 export interface PipelineJob {
@@ -83,7 +84,7 @@ export async function saveExtractedText(
   job: PipelineJob,
   text: string,
   quality: "full" | "partial" = "full",
-  partialReason: "allowance_used" | null = null
+  partialReason: PartialReason | null = null
 ): Promise<boolean> {
   const rows = await db
     .update(items)

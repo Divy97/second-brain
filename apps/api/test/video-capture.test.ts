@@ -91,7 +91,7 @@ describe("YouTube capture", () => {
     }
   })
 
-  it("saves metadata as a partial capture when no transcript key is set", async () => {
+  it("saves metadata as a partial capture when the transcript service is not configured", async () => {
     const model = stubOpenRouter()
     const providers = stubExtractionProviders()
     providers.videoReturns(videoId, agenticBrowser)

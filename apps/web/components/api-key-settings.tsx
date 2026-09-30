@@ -159,7 +159,7 @@ export function ApiKeySettings({
                   aria-hidden
                   className="text-xs font-normal text-muted-foreground"
                 >
-                  {copy.requirement}
+                  Required
                 </span>
               </FieldLabel>
               <PasswordInput

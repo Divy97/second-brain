@@ -81,6 +81,8 @@ export const paidServiceEnum = pgEnum("paid_service", ["transcript", "reader"])
 
 export const partialReasonEnum = pgEnum("partial_reason", ["allowance_used"])
 
+export type PartialReason = (typeof partialReasonEnum.enumValues)[number]
+
 export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"])
 
 export const users = pgTable("users", {

@@ -240,7 +240,7 @@ export async function processItem(
                 link,
                 note: claimed.sourceNote,
                 youtubeApiKey: env.YOUTUBE_API_KEY || null,
-                transcript: operatorService(
+                transcriptService: operatorService(
                   db,
                   env,
                   claimed.userId,
@@ -252,7 +252,13 @@ export async function processItem(
             : await extractArticle({
                 sourceUrl: claimed.sourceUrl,
                 note: claimed.sourceNote,
-                reader: operatorService(db, env, claimed.userId, "reader", now),
+                readerService: operatorService(
+                  db,
+                  env,
+                  claimed.userId,
+                  "reader",
+                  now
+                ),
                 fetchPage: context.fetchPage,
               })
           return saveExtractedText(
