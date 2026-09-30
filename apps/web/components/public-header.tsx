@@ -10,7 +10,7 @@ export function PublicHeader() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="relative z-10 flex h-16 items-center justify-between gap-4">
+    <header className="relative z-20 flex h-16 items-center justify-between gap-4">
       <Wordmark />
       <nav className="hidden items-center gap-6 sm:flex" aria-label="Main">
         <Link href="/sign-in" className="text-sm font-medium hover:underline">

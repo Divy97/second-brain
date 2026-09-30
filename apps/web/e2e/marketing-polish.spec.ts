@@ -77,3 +77,32 @@ test("explicit sign-out returns to marketing while protected routes still requir
   await page.goto("/settings")
   await expect(page).toHaveURL(/\/sign-in\?next=%2Fsettings$/)
 })
+
+test("mobile menu paints above the hero and its links stay clickable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 440, height: 956 })
+  await page.goto("/")
+  await page.getByRole("button", { name: "Menu" }).click()
+  const menu = page.getByRole("navigation", { name: "Mobile", exact: true })
+  await expect(menu).toBeVisible()
+  await expect
+    .poll(() =>
+      menu.evaluate((element) => {
+        const box = element.getBoundingClientRect()
+        return [0.25, 0.5, 0.75].every((x) =>
+          [0.25, 0.5, 0.75].every((y) =>
+            element.contains(
+              document.elementFromPoint(
+                box.x + box.width * x,
+                box.y + box.height * y
+              )
+            )
+          )
+        )
+      })
+    )
+    .toBe(true)
+  await menu.getByRole("link", { name: "Get started" }).click()
+  await expect(page).toHaveURL("/sign-up")
+})
