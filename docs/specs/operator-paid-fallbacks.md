@@ -16,7 +16,7 @@ Settings asks for the OpenRouter key and nothing else. The product pays for tran
 2. As a **User**, I want to save a YouTube link and get its transcript without adding any key, so that video capture just works.
 3. As a **User**, I want an Instagram link captured with its caption without adding any key, so that social saves just work.
 4. As a **User**, I want a page that blocks ordinary fetching to still be read, so that I do not lose articles to bot walls.
-5. As a **User**, I want a daily allowance of these paid lookups, so that the service stays affordable for everyone.
+5. As a **User**, I want a daily allowance of 2 transcript lookups and 2 reader lookups, so that the service stays affordable for everyone.
 6. As a **User** past the allowance, I want my capture saved anyway, so that I never lose a link.
 7. As a **User** past the allowance, I want the item to say it is saved but the transcript or article text was not captured because today's limit is used, so that I understand what is missing.
 8. As a **User** past the allowance, I want that message to say I can Reprocess tomorrow, so that I know how to complete it.
@@ -24,6 +24,7 @@ Settings asks for the OpenRouter key and nothing else. The product pays for tran
 10. As a **User**, I want Reprocess to fetch the transcript or article text once my allowance is available, so that partial items can be completed.
 11. As a **User**, I want Reprocess to use my allowance like any other capture, so that the limit cannot be bypassed.
 12. As a **User**, I want a refused lookup not to use up my allowance, so that hitting the limit does not cost me more.
+    12a. As a **User**, I want a blocked article to use only my reader allowance and a video link only my transcript allowance, so that one kind of capture cannot starve the other.
 13. As a **User**, I want my allowance to reset each day, so that I can capture more tomorrow.
 14. As a **User**, I want lookups that need no paid service (plain articles, captioned pages) not to use my allowance, so that normal captures are never limited.
 15. As a **User**, I want a YouTube link to keep its title and channel even when transcripts are unavailable, so that it is still findable.
@@ -45,8 +46,8 @@ Settings asks for the OpenRouter key and nothing else. The product pays for tran
 - **Provider set:** Users store one key only, for OpenRouter. The transcript and reader providers are removed from the keys API, the settings screen, the key status type and the stored-key verification code. The key status response has only `openrouter`.
 - **Operator secrets:** two new Worker secrets, one for the transcript service (Supadata) and one for the reader service (Jina). They follow the existing `YOUTUBE_API_KEY` pattern (ADR-0002): optional at runtime, absent means the fallback is skipped. Names are added to the local secrets example.
 - **Key resolution:** the pipeline receives the operator secret instead of resolving a per-User key. The pipeline's extraction steps keep taking an optional key, so their contracts do not change.
-- **Daily allowance:** a per-User, per-UTC-day count of paid lookups (one per Supadata call and one per Jina call). A new table holds `(user, day, count)`. Usage is recorded with a single atomic "increment only if under the limit" statement, so concurrent captures cannot exceed it. A refused call is not counted.
-- **Allowance source:** one function returns the limit for a **User**. Today it returns one configured number for everyone (placeholder 20, in the shared config module). It exists as a function so paid plans can later vary it; no plan model is built now.
+- **Daily allowance:** a per-User, per-UTC-day count of paid lookups, kept separately for each service: one count for Supadata calls (transcript and metadata) and one for Jina calls. A new table holds `(user, day, service, count)`. Usage is recorded with a single atomic "increment only if under the limit" statement, so concurrent captures cannot exceed it. A refused call is not counted.
+- **Allowance source:** one function returns the limit for a **User**. Today it returns, per service, one configured number for everyone: 2 per day for the transcript service and 2 per day for the reader service, in the shared config module (confirmed by the operator on 2026-09-30). It exists as a function so paid plans can later vary it; no plan model is built now.
 - **Where the cap applies:** only immediately before a call that spends a paid lookup. Captures that finish without one (plain articles, captioned YouTube metadata from the operator Data API) never touch the allowance. Capture and Reprocess share the same path, so both respect it.
 - **Partial reason:** items gain a nullable reason alongside `capture_quality`. The only value written now is `allowance_used`. Other partial causes keep null and their current copy.
 - **Item API and view:** the item payload includes the reason. The item view shows, for `allowance_used`: "Saved, but the transcript or article text was not captured because today's limit is used. Reprocess tomorrow to complete it. It is still searchable by its link, title and note." The existing Reprocess action is unchanged.
@@ -74,6 +75,6 @@ Settings asks for the OpenRouter key and nothing else. The product pays for tran
 ## Further Notes
 
 - Decision record: `docs/adr/0006-transcript-and-reader-run-on-operator-keys.md` (PR #70).
-- The allowance number is a placeholder (20 per User per day) until the operator confirms it against Supadata and Jina pricing.
+- The allowance is 2 per User per day for each service, set by the operator. Sizing (see `docs/research/18-supadata-jina-free-tiers.md`): the transcript service costs at most 60 credits per User per month, so Supadata Pro (3,000 credits) covers 50 always-maxing Users or about 200 at 25% usage. The reader service spends Jina tokens from a one-time free grant (10M, about 1,000 page fetches if a page is around 10,000 tokens, which is an unverified assumption); Jina's paid token price is unconfirmed and should be checked in its dashboard before growing past that.
 - Before this ships, the operator must create Supadata and reader accounts and set the two Worker secrets; until then every video and blocked-page capture is `partial`, as it is for a User with no key today.
 - Users who saved transcript or reader keys lose them on migration. Their captured items are unaffected.
