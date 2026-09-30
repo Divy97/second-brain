@@ -13,7 +13,7 @@ Run before cutover (ADR-0004, issue #65). Vercel's rewrite behaviour for externa
 2. **Session via proxy.** `curl -s <web>/api/auth/get-session -b '<cookie>' -H 'origin: <web>'` returns the user.
 3. **Large upload.** Upload an audio, image or PDF file over 4.5 MB from the app. It must be accepted. If Vercel answers `413`, uploads need a different path (follow-up spec).
 4. **Streaming.** Ask a question in a thread. The reply must appear incrementally, not all at once after a long wait.
-5. **Client IP header.** After signing in, `get-session` returns `session.ipAddress`. If it is not your public IP, redeploy the Worker with `--var AUTH_CLIENT_IP_HEADER:x-forwarded-for` (then try `x-real-ip`) until it is. Until then the auth rate limit counts every user as one client.
+5. **Client IP header.** Verified on production: behind the rewrite `cf-connecting-ip` is Vercel's egress IP, while `x-forwarded-for` carries the real client IP, so the deploy script sets `AUTH_CLIENT_IP_HEADER:x-forwarded-for`. To re-check, sign in and compare `session.ipAddress` from `get-session` with your public IPv4. The Worker's `workers.dev` URL is still public, so a direct caller can set this header; the per-IP auth limit is a speed bump there, not a guarantee.
 6. **No shared cache.** Signed in as two users in two browsers, `GET <web>/api/items` returns each user's own items and the response carries `cache-control: no-store`.
 
 When all six pass, mark ADR-0004 Accepted.
