@@ -28,6 +28,12 @@ app.use(
     credentials: true,
   })
 )
+app.use("*", async (c, next) => {
+  await next()
+  if (!c.res.headers.has("cache-control")) {
+    c.header("cache-control", "no-store")
+  }
+})
 app.route("/health", healthRoutes)
 app.use("*", requestContext)
 app.on(["GET", "POST"], "/api/auth/*", (c) => c.var.auth.handler(c.req.raw))

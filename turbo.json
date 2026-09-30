@@ -31,6 +31,6 @@
       "persistent": true
     }
   },
-  "globalEnv": ["NEXT_PUBLIC_API_URL"],
+  "globalEnv": ["API_ORIGIN"],
   "globalPassThroughEnv": ["DATABASE_URL"]
 }
