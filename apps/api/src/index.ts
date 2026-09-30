@@ -44,7 +44,7 @@ export default {
     // postgres.js end() raises unhandled socket errors inside workerd; the runtime
     // reclaims per-invocation Hyperdrive clients.
     await deletePendingFiles(connection.db, env.ITEM_FILES)
-    if (shouldRunNightlyBackup(event)) {
+    if (env.NIGHTLY_BACKUPS === "on" && shouldRunNightlyBackup(event)) {
       try {
         await runNightlyBackup(
           connection.db,

@@ -46,4 +46,8 @@ export const retrieval = {
   followUpChunksPerItem: 3,
 }
 
+export const backups = {
+  retentionDays: 7,
+}
+
 export const nothingSavedReply = "I don't have anything saved about that."
