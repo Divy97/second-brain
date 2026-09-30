@@ -3,6 +3,7 @@ import { cors } from "hono/cors"
 
 import { connect } from "@workspace/db"
 
+import { runNightlyBackup, shouldRunNightlyBackup } from "./lib/backups.js"
 import { healthRoutes } from "./lib/health.js"
 import { deletePendingFiles } from "./lib/items/delete-files.js"
 import { itemRoutes } from "./lib/items/index.js"
@@ -38,12 +39,22 @@ app.route("/threads", threadRoutes)
 export default {
   fetch: app.fetch,
   queue: itemsQueueConsumer,
-  scheduled: async (_event, env) => {
+  scheduled: async (event, env) => {
     const connection = connect(env.HYPERDRIVE.connectionString)
-    try {
-      await deletePendingFiles(connection.db, env.ITEM_FILES)
-    } finally {
-      await connection.close()
+    // postgres.js end() raises unhandled socket errors inside workerd; the runtime
+    // reclaims per-invocation Hyperdrive clients.
+    await deletePendingFiles(connection.db, env.ITEM_FILES)
+    if (shouldRunNightlyBackup(event)) {
+      try {
+        await runNightlyBackup(
+          connection.db,
+          env.ITEM_FILES,
+          env.BACKUPS,
+          new Date(event.scheduledTime)
+        )
+      } catch (error) {
+        console.error("nightly backup failed", error)
+      }
     }
   },
 } satisfies ExportedHandler<Env, ProcessItemParams>
