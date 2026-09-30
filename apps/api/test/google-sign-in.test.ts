@@ -81,6 +81,34 @@ describe("google sign-in", () => {
     expect(user.image).toBe(person.picture)
   })
 
+  it("sends a replayed callback to the sign-in page", async () => {
+    google.signsInAs(profile())
+    const start = await startGoogleSignIn({
+      errorCallbackURL: "/sign-in",
+    })
+    const { url } = await start.json<StartBody>()
+    const state = new URL(url).searchParams.get("state")
+    const stateCookies = start.headers
+      .getSetCookie()
+      .map((header) => header.split(";")[0] ?? "")
+      .join("; ")
+    const callbackPath = `/api/auth/callback/google?code=google-code&state=${state}`
+
+    const first = await request(callbackPath, {
+      headers: { cookie: stateCookies },
+      redirect: "manual",
+    })
+    const replay = await request(callbackPath, {
+      headers: { cookie: stateCookies },
+      redirect: "manual",
+    })
+
+    expect(first.headers.get("location")).toBe("/home")
+    expect(replay.headers.get("location")).toBe(
+      `${webOrigin}/sign-in?error=state_mismatch`
+    )
+  })
+
   it("signs a returning user back into the same User", async () => {
     google.signsInAs(profile())
     const first = await signedInUser(await completeGoogleSignIn())

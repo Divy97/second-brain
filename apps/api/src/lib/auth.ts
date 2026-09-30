@@ -14,6 +14,7 @@ export function createAuth(env: Env, db: Database) {
     database: drizzleAdapter(db, { provider: "pg", schema, usePlural: true }),
     emailAndPassword: { enabled: true },
     socialProviders: googleProvider(env),
+    onAPIError: { errorURL: `${env.WEB_ORIGIN}/sign-in` },
     rateLimit: { enabled: env.AUTH_RATE_LIMIT === "on", window: 10, max: 100 },
     advanced: {
       database: { generateId: () => generateId() },
