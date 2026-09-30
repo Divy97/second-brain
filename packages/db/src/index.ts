@@ -23,7 +23,7 @@ export interface DatabaseHealth {
 // prepared statements so Hyperdrive can cache them.
 export function connect(connectionString: string): DatabaseConnection {
   const client = postgres(connectionString, {
-    max: 5,
+    max: 1,
     fetch_types: false,
     prepare: true,
   })
