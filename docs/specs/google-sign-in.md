@@ -64,6 +64,6 @@ Add Google as a second **Sign-in method**. The sign-in and sign-up pages each sh
 
 ## Further Notes
 
-- Research: `docs/research/08-vercel-proxy-and-google-sign-in.md`.
+- Research: `docs/research/17-vercel-proxy-and-google-sign-in.md`.
 - Until the operator adds credentials, the feature ships dark: the flag is off and the Worker route is unconfigured.
 - The consent screen must be published to Production; in Testing status sign-in is capped at 100 test users.
