@@ -8,6 +8,7 @@ import { healthRoutes } from "./lib/health.js"
 import { deletePendingFiles } from "./lib/items/delete-files.js"
 import { itemRoutes } from "./lib/items/index.js"
 import { itemsQueueConsumer } from "./lib/items-queue.js"
+import { noStore } from "./lib/no-store.js"
 import { type ProcessItemParams } from "./lib/process-item-workflow.js"
 import { requestContext, requireUser } from "./lib/request-context.js"
 import { threadRoutes } from "./lib/threads/index.js"
@@ -28,12 +29,7 @@ app.use(
     credentials: true,
   })
 )
-app.use("*", async (c, next) => {
-  await next()
-  if (!c.res.headers.has("cache-control")) {
-    c.header("cache-control", "no-store")
-  }
-})
+app.use("*", noStore)
 app.route("/health", healthRoutes)
 app.use("*", requestContext)
 app.on(["GET", "POST"], "/api/auth/*", (c) => c.var.auth.handler(c.req.raw))

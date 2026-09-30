@@ -31,16 +31,13 @@ function Row({ label, ok, detail }: RowProps) {
 }
 
 export async function StatusPanel() {
+  const origin = workerOrigin()
   const result = await fetchHealth()
 
   if (!result.reachable) {
     return (
       <div className="divide-y divide-border">
-        <Row
-          label="API"
-          ok={false}
-          detail={`${workerOrigin()}: ${result.error}`}
-        />
+        <Row label="API" ok={false} detail={`${origin}: ${result.error}`} />
         <Row label="Database" ok={false} detail="unknown, API unreachable" />
       </div>
     )
@@ -53,7 +50,7 @@ export async function StatusPanel() {
       <Row
         label="API"
         ok={health.ok}
-        detail={`${workerOrigin()}, version ${health.version}`}
+        detail={`${origin}, version ${health.version}`}
       />
       <Row
         label="Database"

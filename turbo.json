@@ -31,6 +31,6 @@
       "persistent": true
     }
   },
-  "globalEnv": ["API_ORIGIN"],
+  "globalEnv": ["WORKER_ORIGIN"],
   "globalPassThroughEnv": ["DATABASE_URL"]
 }

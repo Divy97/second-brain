@@ -28,7 +28,7 @@ describe("apiRequest", () => {
 
 describe("fetchHealth", () => {
   it("reaches the Worker directly from the server", async () => {
-    vi.stubEnv("API_ORIGIN", "https://worker.example")
+    vi.stubEnv("WORKER_ORIGIN", "https://worker.example")
     const fetchMock = stubFetch({
       ok: true,
       version: "1",

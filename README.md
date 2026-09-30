@@ -21,7 +21,7 @@ Prerequisites: Bun 1.3, Docker.
 ```bash
 bun install
 cp .env.example .env                        # set POSTGRES_PASSWORD; the URLs derive from it
-cp apps/web/.env.example apps/web/.env      # API_ORIGIN (the Worker, for the /api proxy)
+cp apps/web/.env.example apps/web/.env      # WORKER_ORIGIN (the API the /api proxy forwards to)
 cp apps/api/.dev.vars.example apps/api/.dev.vars   # Worker secrets for local dev
 docker compose up -d --wait                 # Postgres 17 + pgvector on :5432
 bun run db:migrate                          # apply migrations to the local database

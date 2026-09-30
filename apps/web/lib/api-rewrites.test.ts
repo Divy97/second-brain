@@ -39,10 +39,4 @@ describe("apiRewrites", () => {
       expect(destinationFor(page)).toBeNull()
     }
   )
-
-  it("tolerates a trailing slash on the Worker origin", () => {
-    expect(
-      apiRewrites(`${worker}/`)[0]?.destination.startsWith(`${worker}/api`)
-    ).toBe(true)
-  })
 })

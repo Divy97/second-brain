@@ -1,6 +1,6 @@
 import { workerOrigin } from "./worker-origin"
 
-export const apiBaseUrl = "/api"
+export const apiPrefix = "/api"
 
 export interface DatabaseHealth {
   ok: true
@@ -67,7 +67,7 @@ export async function apiRequest<T>(
   const { json, headers, body: requestBody, ...rest } = init
   const mergedHeaders = new Headers(headers)
   if (json !== undefined) mergedHeaders.set("content-type", "application/json")
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${apiPrefix}${path}`, {
     ...rest,
     credentials: "include",
     headers: mergedHeaders,
