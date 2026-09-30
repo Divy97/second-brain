@@ -3,6 +3,7 @@
 // Runtime types generated with workerd@1.20260925.1 2026-09-08 nodejs_compat
 interface __BaseEnv_Env {
   ITEM_FILES: R2Bucket
+  BACKUPS: R2Bucket
   HYPERDRIVE: Hyperdrive
   ITEMS_QUEUE: Queue
   API_VERSION: string

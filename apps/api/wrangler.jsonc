@@ -20,6 +20,10 @@
     {
       "binding": "ITEM_FILES",
       "bucket_name": "second-brain-item-files"
+    },
+    {
+      "binding": "BACKUPS",
+      "bucket_name": "second-brain-backups"
     }
   ],
   "triggers": { "crons": ["0 * * * *"] },
