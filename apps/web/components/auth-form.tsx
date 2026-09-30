@@ -1,13 +1,19 @@
 "use client"
 
-import { WarningCircleIcon } from "@phosphor-icons/react"
+import { GoogleLogoIcon, WarningCircleIcon } from "@phosphor-icons/react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState, type SubmitEvent } from "react"
 
 import { PasswordInput } from "@/components/password-input"
 import { authClient, describeAuthError } from "@/lib/auth-client"
+import { authPagePath, type AuthMode } from "@/lib/auth-page-path"
 import { formText } from "@/lib/form-text"
+import {
+  authPageErrorMessage,
+  googleSignInEnabled,
+  googleSignInOptions,
+} from "@/lib/google-sign-in"
 import { safeNextPath } from "@/lib/safe-next-path"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
@@ -18,18 +24,17 @@ import {
   FieldLabel,
 } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
-
-type Mode = "sign-in" | "sign-up"
+import { Separator } from "@workspace/ui/components/separator"
 
 const textByMode: Record<
-  Mode,
+  AuthMode,
   {
     title: string
     submit: string
     pending: string
     switchPrompt: string
     switchLabel: string
-    switchHref: string
+    switchMode: AuthMode
   }
 > = {
   "sign-in": {
@@ -38,7 +43,7 @@ const textByMode: Record<
     pending: "Signing in",
     switchPrompt: "New here?",
     switchLabel: "Create an account",
-    switchHref: "/sign-up",
+    switchMode: "sign-up",
   },
   "sign-up": {
     title: "Create your account",
@@ -46,15 +51,17 @@ const textByMode: Record<
     pending: "Creating account",
     switchPrompt: "Already have an account?",
     switchLabel: "Sign in",
-    switchHref: "/sign-in",
+    switchMode: "sign-in",
   },
 }
 
-export function AuthForm({ mode }: { mode: Mode }) {
+export function AuthForm({ mode }: { mode: AuthMode }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = safeNextPath(searchParams.get("next"))
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(() =>
+    authPageErrorMessage(searchParams.get("error"))
+  )
   const [fieldErrors, setFieldErrors] = useState({ email: "", password: "" })
   const [pending, setPending] = useState(false)
   const text = textByMode[mode]
@@ -86,14 +93,47 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
   }
 
-  const switchHref =
-    next === "/home"
-      ? text.switchHref
-      : `${text.switchHref}?next=${encodeURIComponent(next)}`
+  async function continueWithGoogle() {
+    setPending(true)
+    setError(null)
+    try {
+      const result = await authClient.signIn.social(
+        googleSignInOptions(mode, next)
+      )
+      if (result.error) {
+        setError(authPageErrorMessage(result.error.code ?? "unknown"))
+        setPending(false)
+      }
+    } catch {
+      setError("Could not connect. Try again.")
+      setPending(false)
+    }
+  }
+
+  const switchHref = authPagePath(text.switchMode, next)
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-heading text-3xl tracking-tight">{text.title}</h1>
+      {googleSignInEnabled && (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            disabled={pending}
+            onClick={() => void continueWithGoogle()}
+          >
+            <GoogleLogoIcon aria-hidden weight="bold" />
+            Continue with Google
+          </Button>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Separator className="flex-1" />
+            or
+            <Separator className="flex-1" />
+          </div>
+        </>
+      )}
       <form
         onSubmit={(event: SubmitEvent<HTMLFormElement>) => {
           event.preventDefault()

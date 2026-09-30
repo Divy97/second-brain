@@ -20,6 +20,8 @@ export default defineConfig({
           WEB_ORIGIN: "https://second-brain.test",
           AUTH_RATE_LIMIT: "off",
           AUTH_CLIENT_IP_HEADER: "x-test-client-ip",
+          GOOGLE_CLIENT_ID: "test-google-client-id",
+          GOOGLE_CLIENT_SECRET: "test-google-client-secret",
         },
       },
     })),
