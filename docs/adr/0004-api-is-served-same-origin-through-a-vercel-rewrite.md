@@ -16,7 +16,7 @@ The browser only talks to the web origin. A `next.config.ts` rewrite forwards th
 ## Consequences
 
 - No CORS and no third-party cookies in the browser.
-- Uploads (`/items/audio`, `/image`, `/pdf`) and streamed thread replies now cross the Vercel proxy. Its body-size, streaming and header behaviour for external rewrites is unconfirmed in Vercel's docs (`docs/research/08-vercel-proxy-and-google-sign-in.md`) and must be verified on a preview deployment before cutover.
+- Uploads (`/items/audio`, `/image`, `/pdf`) and streamed thread replies now cross the Vercel proxy. Its body-size, streaming and header behaviour for external rewrites is unconfirmed in Vercel's docs (`docs/research/17-vercel-proxy-and-google-sign-in.md`) and must be verified on a preview deployment before cutover.
 - `cf-connecting-ip` behind the rewrite identifies Vercel, not the user. The per-IP auth rate limit must be re-pointed at the real client IP header, or it throttles all users together.
 - Proxied bytes count toward Vercel Fast Data Transfer.
 - Moving to a custom domain later supersedes this ADR.

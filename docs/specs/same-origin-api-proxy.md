@@ -38,7 +38,7 @@ The browser only talks to the web origin. The web app forwards every API call to
 - **Client-IP header:** the auth IP header list becomes a Worker var (default `cf-connecting-ip`, current behaviour). The operator sets it after the preview echo check shows which header carries the real client IP.
 - **Caching:** responses from the Worker under the proxy carry `Cache-Control: no-store` for authenticated routes, since Vercel honours upstream `Cache-Control` on external rewrites for newer projects.
 - **Deployment order:** ship the Worker config and the web rewrite together; the old cross-site URLs stop being used by the browser the moment the new web build is live.
-- **Verification checklist on a preview deployment** (unconfirmed in Vercel's docs, see `docs/research/08-vercel-proxy-and-google-sign-in.md`): a multipart upload above 4.5 MB succeeds; a streamed thread reply streams incrementally; `Set-Cookie` arrives first-party and `get-session` returns the **User**; the `Origin` and client-IP headers seen by the Worker; no shared-cache hit across two **Users**.
+- **Verification checklist on a preview deployment** (unconfirmed in Vercel's docs, see `docs/research/17-vercel-proxy-and-google-sign-in.md`): a multipart upload above 4.5 MB succeeds; a streamed thread reply streams incrementally; `Set-Cookie` arrives first-party and `get-session` returns the **User**; the `Origin` and client-IP headers seen by the Worker; no shared-cache hit across two **Users**.
 - No schema change.
 
 ## Testing Decisions
@@ -59,6 +59,6 @@ The browser only talks to the web origin. The web app forwards every API call to
 
 ## Further Notes
 
-- Research: `docs/research/08-vercel-proxy-and-google-sign-in.md`.
+- Research: `docs/research/17-vercel-proxy-and-google-sign-in.md`.
 - Known risk: if Vercel rejects large multipart bodies on external rewrites, uploads need a different path (for example a direct upload URL). That would be a follow-up spec, found during the preview check.
 - Proxied bytes count toward Vercel Fast Data Transfer.
