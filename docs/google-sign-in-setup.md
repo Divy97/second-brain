@@ -30,4 +30,4 @@ In Vercel, set `NEXT_PUBLIC_GOOGLE_SIGN_IN=on` and redeploy (it is read at build
 
 ## Check
 
-Sign in with a Google account on a fresh profile: you land on `/home` signed in. Then try a Google account whose email already has an unverified password account: you see "An account with this email already exists. Sign in with your password." (ADR-0005).
+Sign in with a Google account on a fresh profile: you land on `/home` signed in. Then try a Google account whose email already has an unverified email-and-password User: you see "An account with this email already exists. Sign in with your password." (ADR-0005).

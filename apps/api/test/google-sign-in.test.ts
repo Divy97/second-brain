@@ -5,6 +5,7 @@ import { connect } from "@workspace/db"
 
 import {
   completeGoogleSignIn,
+  signedInUser,
   stubGoogle,
   type GoogleStub,
 } from "./support/google.js"
@@ -27,10 +28,6 @@ async function startGoogleSignIn(init: Record<string, string> = {}) {
     method: "POST",
     json: { provider: "google", callbackURL: "/home", ...init },
   })
-}
-
-interface SessionBody {
-  user: { id: string; email: string; name: string; emailVerified: boolean }
 }
 
 let google: GoogleStub
@@ -76,35 +73,21 @@ describe("google sign-in", () => {
     const result = await completeGoogleSignIn({ callbackURL: "/items/42" })
 
     expect(result.location).toBe("/items/42")
-    const current = await request("/api/auth/get-session", {
-      session: result.session ?? undefined,
-    })
-    const body = await current.json<SessionBody>()
-    expect(body.user.email).toBe(person.email)
-    expect(body.user.name).toBe("Grace Hopper")
-    expect(body.user.emailVerified).toBe(true)
+    const user = await signedInUser(result)
+    expect(user.email).toBe(person.email)
+    expect(user.name).toBe("Grace Hopper")
+    expect(user.emailVerified).toBe(true)
   })
 
-  it("signs a returning user into the same account", async () => {
-    const person = profile()
-    google.signsInAs(person)
-    const first = await completeGoogleSignIn()
-    const second = await completeGoogleSignIn()
+  it("signs a returning user back into the same User", async () => {
+    google.signsInAs(profile())
+    const first = await signedInUser(await completeGoogleSignIn())
+    const second = await signedInUser(await completeGoogleSignIn())
 
-    const [a, b] = await Promise.all(
-      [first, second].map(async (result) => {
-        const response = await request("/api/auth/get-session", {
-          session: result.session ?? undefined,
-        })
-        return response.json<SessionBody>()
-      })
-    )
-
-    expect(a?.user.id).toBeTruthy()
-    expect(b?.user.id).toBe(a?.user.id)
+    expect(second.id).toBe(first.id)
   })
 
-  it("never links Google to an unverified email-and-password user", async () => {
+  it("never links Google to an unverified email-and-password User", async () => {
     const email = uniqueEmail("taken")
     await signUp(email)
     google.signsInAs(profile(email))
@@ -115,7 +98,7 @@ describe("google sign-in", () => {
     expect(new URL(result.location, webOrigin).searchParams.get("error")).toBe(
       "account_not_linked"
     )
-    expect(result.session).toBeNull()
+    expect(result.cookie).toBeNull()
   })
 
   it("sends the user back with an error when they cancel at Google", async () => {
@@ -123,11 +106,11 @@ describe("google sign-in", () => {
       returned: (state) => `error=access_denied&state=${state}`,
     })
 
-    expect(result.session).toBeNull()
+    expect(result.cookie).toBeNull()
     expect(result.location).toBe("/sign-in?error=access_denied")
   })
 
-  it("does not let a Google-only user sign in with a password", async () => {
+  it("does not let a Google-only User sign in with a password", async () => {
     const person = profile()
     google.signsInAs(person)
     await completeGoogleSignIn()
@@ -140,7 +123,7 @@ describe("google sign-in", () => {
     expect(response.status).toBe(401)
   })
 
-  it("refuses to create a password account for an email that signed up with Google", async () => {
+  it("refuses to create an email-and-password User for an email that signed up with Google", async () => {
     const person = profile()
     google.signsInAs(person)
     await completeGoogleSignIn()

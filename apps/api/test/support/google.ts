@@ -1,11 +1,10 @@
-import { request, sessionCookieFrom, type Session } from "./http.js"
+import { request, sessionCookieFrom } from "./http.js"
 
 export interface GoogleProfile {
   sub: string
   email: string
   name: string
   email_verified: boolean
-  picture?: string
 }
 
 const tokenHost = "oauth2.googleapis.com"
@@ -60,7 +59,7 @@ export function stubGoogle(): GoogleStub {
 
 export interface GoogleCallbackResult {
   location: string
-  session: Session | null
+  cookie: string | null
 }
 
 export async function completeGoogleSignIn(
@@ -97,8 +96,24 @@ export async function completeGoogleSignIn(
     .some((header) => header.includes("session_token="))
   return {
     location: callback.headers.get("location") ?? "",
-    session: hasSession
-      ? { userId: "", email: "", cookie: sessionCookieFrom(callback) }
-      : null,
+    cookie: hasSession ? sessionCookieFrom(callback) : null,
   }
+}
+
+export interface SignedInUser {
+  id: string
+  email: string
+  name: string
+  emailVerified: boolean
+}
+
+export async function signedInUser(
+  result: GoogleCallbackResult
+): Promise<SignedInUser> {
+  if (!result.cookie) throw new Error("Google sign-in did not start a session")
+  const response = await request("/api/auth/get-session", {
+    headers: { cookie: result.cookie },
+  })
+  const body = await response.json<{ user: SignedInUser }>()
+  return body.user
 }

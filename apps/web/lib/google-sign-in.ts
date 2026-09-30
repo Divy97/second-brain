@@ -9,7 +9,7 @@ const messageByErrorCode: Record<string, string> = {
   access_denied: "Google sign-in was cancelled.",
 }
 
-export function authPageErrorMessage(code: string | null): string | null {
+export function googleSignInErrorMessage(code: string | null): string | null {
   if (!code) return null
   return messageByErrorCode[code] ?? "Could not sign in with Google. Try again."
 }

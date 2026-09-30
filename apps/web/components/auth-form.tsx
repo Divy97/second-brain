@@ -10,7 +10,7 @@ import { authClient, describeAuthError } from "@/lib/auth-client"
 import { authPagePath, type AuthMode } from "@/lib/auth-page-path"
 import { formText } from "@/lib/form-text"
 import {
-  authPageErrorMessage,
+  googleSignInErrorMessage,
   googleSignInEnabled,
   googleSignInOptions,
 } from "@/lib/google-sign-in"
@@ -60,7 +60,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const searchParams = useSearchParams()
   const next = safeNextPath(searchParams.get("next"))
   const [error, setError] = useState<string | null>(() =>
-    authPageErrorMessage(searchParams.get("error"))
+    googleSignInErrorMessage(searchParams.get("error"))
   )
   const [fieldErrors, setFieldErrors] = useState({ email: "", password: "" })
   const [pending, setPending] = useState(false)
@@ -101,7 +101,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         googleSignInOptions(mode, next)
       )
       if (result.error) {
-        setError(authPageErrorMessage(result.error.code ?? "unknown"))
+        setError(googleSignInErrorMessage(result.error.code ?? "unknown"))
         setPending(false)
       }
     } catch {

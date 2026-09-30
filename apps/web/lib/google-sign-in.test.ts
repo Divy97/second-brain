@@ -1,26 +1,26 @@
 import { describe, expect, it } from "vitest"
 
-import { authPageErrorMessage, googleSignInOptions } from "./google-sign-in"
+import { googleSignInErrorMessage, googleSignInOptions } from "./google-sign-in"
 
-describe("authPageErrorMessage", () => {
+describe("googleSignInErrorMessage", () => {
   it("shows nothing when there is no error", () => {
-    expect(authPageErrorMessage(null)).toBeNull()
+    expect(googleSignInErrorMessage(null)).toBeNull()
   })
 
   it("tells a user with a password account to use it", () => {
-    expect(authPageErrorMessage("account_not_linked")).toBe(
+    expect(googleSignInErrorMessage("account_not_linked")).toBe(
       "An account with this email already exists. Sign in with your password."
     )
   })
 
   it("explains a cancelled Google sign-in", () => {
-    expect(authPageErrorMessage("access_denied")).toBe(
+    expect(googleSignInErrorMessage("access_denied")).toBe(
       "Google sign-in was cancelled."
     )
   })
 
   it("falls back to a generic message for anything else", () => {
-    expect(authPageErrorMessage("state_mismatch")).toBe(
+    expect(googleSignInErrorMessage("state_mismatch")).toBe(
       "Could not sign in with Google. Try again."
     )
   })
