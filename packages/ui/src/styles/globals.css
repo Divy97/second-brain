@@ -81,18 +81,64 @@
   }
 }
 
-@keyframes float-note {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-4deg);
+@keyframes content-fade {
+  from {
+    opacity: 0;
   }
-  50% {
-    transform: translateY(-10px) rotate(-2deg);
+  to {
+    opacity: 1;
   }
 }
 
-.float-note {
-  animation: float-note 7s ease-in-out infinite;
+main > *,
+main li {
+  animation: content-fade 240ms ease-out;
+}
+
+@keyframes content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content-enter,
+[role="tabpanel"]:not([hidden]),
+[data-slot="alert"] {
+  animation: content-enter 240ms ease-out both;
+}
+
+.product-preview {
+  animation: content-enter 600ms ease-out both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  a,
+  input,
+  textarea {
+    transition-property:
+      color, background-color, border-color, box-shadow, transform;
+    transition-duration: 180ms;
+    transition-timing-function: ease-out;
+  }
+  button:active:not(:disabled),
+  .marketing-cta:active {
+    transform: scale(0.98);
+  }
+  .marketing-cta:hover {
+    transform: translateY(-2px);
+  }
+  .format-feature svg {
+    transition: transform 220ms ease-out;
+  }
+  .format-feature:hover svg {
+    transform: translateY(-3px) rotate(-5deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -100,6 +146,10 @@
   *::before,
   *::after {
     scroll-behavior: auto !important;
+    animation: none !important;
+    translate: none !important;
+    scale: none !important;
+    rotate: none !important;
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

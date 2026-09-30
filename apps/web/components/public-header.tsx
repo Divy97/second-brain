@@ -27,6 +27,7 @@ export function PublicHeader() {
         type="button"
         aria-label="Menu"
         aria-expanded={open}
+        aria-controls="mobile-navigation"
         onClick={() => {
           setOpen(!open)
         }}
@@ -42,7 +43,7 @@ export function PublicHeader() {
         <nav
           id="mobile-navigation"
           aria-label="Mobile"
-          className="absolute inset-x-0 top-full grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-md sm:hidden"
+          className="content-enter absolute inset-x-0 top-full grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-md sm:hidden"
         >
           <Link href="/sign-in" className="rounded-xl px-4 py-3 font-medium">
             Sign in

@@ -1,6 +1,7 @@
 "use client"
 
-import { GoogleLogoIcon, WarningCircleIcon } from "@phosphor-icons/react"
+import { WarningCircleIcon } from "@phosphor-icons/react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState, type SubmitEvent } from "react"
@@ -124,7 +125,13 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             disabled={pending}
             onClick={() => void continueWithGoogle()}
           >
-            <GoogleLogoIcon aria-hidden weight="bold" />
+            <Image
+              src="/google-g.png"
+              alt=""
+              width={20}
+              height={20}
+              className="size-5 object-contain"
+            />
             Continue with Google
           </Button>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">

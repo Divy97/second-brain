@@ -6,6 +6,7 @@ import Link from "next/link"
 import { CaptureComposer } from "@/components/capture-composer"
 import { ItemList } from "@/components/item-list"
 import { KeyReminder } from "@/components/key-reminder"
+import { CollectionSkeleton } from "@/components/page-skeleton"
 import { useItemFeed } from "@/lib/use-item-feed"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
@@ -61,18 +62,7 @@ export function HomeFeed() {
           </Alert>
         )}
         {feed.isLoading ? (
-          <div
-            className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-            aria-busy
-            aria-label="Loading notes"
-          >
-            {[0, 1, 2].map((row) => (
-              <div
-                key={row}
-                className="h-52 animate-pulse rounded-[1.75rem] bg-muted"
-              />
-            ))}
-          </div>
+          <CollectionSkeleton />
         ) : (
           !feed.error && (
             <ItemList

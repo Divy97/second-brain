@@ -16,6 +16,7 @@ import { ItemActions } from "@/components/item-actions"
 import { ItemEditor } from "@/components/item-editor"
 import { ItemFailure } from "@/components/item-failure"
 import { ItemInsights } from "@/components/item-insights"
+import { PageSkeleton } from "@/components/page-skeleton"
 import { StatusBadge } from "@/components/status-badge"
 import { ApiError, apiPrefix, fetchJson } from "@/lib/api"
 import { describeApiError, emptyNoteMessage } from "@/lib/describe-api-error"
@@ -97,15 +98,7 @@ export function ItemView({ id }: { id: string }) {
     })
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-6" aria-busy aria-label="Loading note">
-        {backLink}
-        <div className="h-6 w-48 animate-pulse bg-muted" />
-        <div className="h-32 w-full animate-pulse bg-muted" />
-      </div>
-    )
-  }
+  if (isLoading) return <PageSkeleton pathname="/items/loading" />
 
   if (error || !item) {
     const notFound = error instanceof ApiError && error.status === 404
