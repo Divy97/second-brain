@@ -8,6 +8,7 @@ import useSWR from "swr"
 
 import { AskBox } from "@/components/ask-box"
 import { AskError } from "@/components/ask-error"
+import { CollectionSkeleton } from "@/components/page-skeleton"
 import { PendingAnswer } from "@/components/pending-answer"
 import { fetchJson } from "@/lib/api"
 import { formatListDate } from "@/lib/format-date"
@@ -86,7 +87,7 @@ export function ThreadsView() {
           </span>
         </div>
         {isLoading ? (
-          <div className="h-24 animate-pulse rounded-2xl bg-muted" aria-busy />
+          <CollectionSkeleton rows />
         ) : threads.length === 0 ? (
           <div className="rounded-[1.75rem] bg-card p-10 text-center">
             <p className="font-heading text-2xl">Start with a question.</p>

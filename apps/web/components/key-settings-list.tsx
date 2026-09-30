@@ -34,7 +34,20 @@ export function KeySettingsList() {
       </Alert>
 
       {isLoading && (
-        <div className="h-16 w-full animate-pulse bg-muted" aria-busy />
+        <div
+          role="status"
+          aria-label="Loading settings"
+          aria-busy
+          className="animate-pulse space-y-5"
+        >
+          <div className="h-8 w-48 rounded-lg bg-muted" />
+          <div className="h-10 max-w-lg rounded-lg bg-muted" />
+          <div className="space-y-4 rounded-2xl bg-card p-7">
+            <div className="h-5 w-20 rounded bg-muted" />
+            <div className="h-11 rounded-lg bg-muted" />
+            <div className="h-11 w-28 rounded-full bg-muted" />
+          </div>
+        </div>
       )}
 
       {error && (

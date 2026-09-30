@@ -9,6 +9,7 @@ import { AnswerText } from "@/components/answer-text"
 import { AskBox } from "@/components/ask-box"
 import { AskError } from "@/components/ask-error"
 import { DeleteThread } from "@/components/delete-thread"
+import { PageSkeleton } from "@/components/page-skeleton"
 import { PendingAnswer } from "@/components/pending-answer"
 import { SourceCards } from "@/components/source-cards"
 import { ApiError, fetchJson } from "@/lib/api"
@@ -76,15 +77,7 @@ export function ThreadView({ id }: { id: string }) {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-8" aria-busy aria-label="Loading">
-        {backLink}
-        <div className="h-6 w-2/3 animate-pulse bg-muted" />
-        <div className="h-24 w-full animate-pulse bg-muted" />
-      </div>
-    )
-  }
+  if (isLoading) return <PageSkeleton pathname="/threads/loading" />
 
   if (error || !data) {
     const notFound = error instanceof ApiError && error.status === 404

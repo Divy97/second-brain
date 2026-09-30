@@ -10,6 +10,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useRef, type ReactNode } from "react"
 
+import { PageSkeleton } from "@/components/page-skeleton"
 import { Wordmark } from "@/components/wordmark"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@workspace/ui/components/button"
@@ -50,7 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-background">
       <header className="border-b border-border/70 bg-card/70">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8">
+        <div className="mx-auto grid h-16 max-w-7xl grid-cols-[1fr_auto] items-center gap-3 px-5 sm:grid-cols-[1fr_auto_1fr] sm:px-8">
           <Wordmark href="/home" />
           <nav
             className="hidden items-center gap-2 rounded-full bg-secondary p-1.5 sm:flex"
@@ -75,31 +76,25 @@ export function AppShell({ children }: { children: ReactNode }) {
               )
             })}
           </nav>
-          {session && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={`Sign out ${session.user.email}`}
-              title="Sign out"
-              onClick={() => {
-                void signOut()
-              }}
-            >
-              <SignOutIcon aria-hidden />
-            </Button>
-          )}
+          <div className="flex size-10 items-center justify-center justify-self-end">
+            {session && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Sign out ${session.user.email}`}
+                title="Sign out"
+                onClick={() => {
+                  void signOut()
+                }}
+              >
+                <SignOutIcon aria-hidden />
+              </Button>
+            )}
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-7xl px-5 py-7 pb-28 sm:px-8 sm:py-10">
-        {session ? (
-          children
-        ) : (
-          <div
-            className="h-56 animate-pulse rounded-[2rem] bg-muted"
-            aria-busy
-            aria-label="Loading"
-          />
-        )}
+        {session ? children : <PageSkeleton pathname={pathname} />}
       </main>
       <nav
         className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-border bg-card px-3 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] sm:hidden"
