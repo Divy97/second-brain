@@ -7,3 +7,8 @@ KEY_ENCRYPTION_SECRET=
 # Operator-level YouTube Data API v3 key. Optional: without it, YouTube captures
 # fall back to the user's transcript key, then to a partial item.
 YOUTUBE_API_KEY=
+
+# Google sign-in (optional). Create a "Web application" OAuth client in Google Cloud Console
+# with redirect URI <web origin>/api/auth/callback/google. Without both, Google sign-in is off.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

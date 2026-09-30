@@ -31,6 +31,6 @@
       "persistent": true
     }
   },
-  "globalEnv": ["WORKER_ORIGIN"],
+  "globalEnv": ["WORKER_ORIGIN", "NEXT_PUBLIC_GOOGLE_SIGN_IN"],
   "globalPassThroughEnv": ["DATABASE_URL"]
 }
