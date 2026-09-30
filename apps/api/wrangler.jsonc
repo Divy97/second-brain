@@ -6,9 +6,10 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "API_VERSION": "0.0.1",
-    "API_ORIGIN": "http://localhost:8787",
+    "API_ORIGIN": "http://localhost:3000",
     "WEB_ORIGIN": "http://localhost:3000",
     "AUTH_RATE_LIMIT": "on",
+    "AUTH_CLIENT_IP_HEADER": "cf-connecting-ip",
     "NIGHTLY_BACKUPS": "off"
   },
   "hyperdrive": [

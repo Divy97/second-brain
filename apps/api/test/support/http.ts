@@ -1,7 +1,7 @@
 import { exports } from "cloudflare:workers"
 
-export const apiOrigin = "http://localhost:8787"
-export const webOrigin = "http://localhost:3000"
+export const webOrigin = "https://second-brain.test"
+export const apiOrigin = webOrigin
 
 export interface Session {
   userId: string
@@ -15,7 +15,7 @@ export function request(
 ): Promise<Response> {
   const { session, json, headers, ...rest } = init
   const merged = new Headers(headers)
-  merged.set("origin", webOrigin)
+  if (!merged.has("origin")) merged.set("origin", webOrigin)
   if (session) merged.set("cookie", session.cookie)
   if (json !== undefined) merged.set("content-type", "application/json")
   return exports.default.fetch(`${apiOrigin}${path}`, {

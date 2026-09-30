@@ -6,6 +6,7 @@ import {
   signUp,
   testPassword,
   uniqueEmail,
+  webOrigin,
 } from "./support/http.js"
 
 interface ErrorBody {
@@ -100,11 +101,77 @@ describe("auth", () => {
       },
     })
 
-    expect(response.headers.get("access-control-allow-origin")).toBe(
-      "http://localhost:3000"
-    )
+    expect(response.headers.get("access-control-allow-origin")).toBe(webOrigin)
     expect(response.headers.get("access-control-allow-credentials")).toBe(
       "true"
     )
+  })
+
+  it("sets a first-party, secure, script-proof session cookie", async () => {
+    const response = await request("/api/auth/sign-up/email", {
+      method: "POST",
+      json: {
+        name: "cookie",
+        email: uniqueEmail("cookie"),
+        password: testPassword,
+      },
+    })
+
+    const cookie = response.headers
+      .getSetCookie()
+      .find((header) => header.includes("session_token="))
+    expect(cookie).toMatch(/^__Secure-better-auth\.session_token=/)
+    expect(cookie).toContain("Secure")
+    expect(cookie).toContain("HttpOnly")
+    expect(cookie).toContain("SameSite=Lax")
+  })
+
+  it("refuses a cookie-bearing request from an origin that is not the web app", async () => {
+    const session = await signUp()
+
+    const response = await request("/api/auth/sign-out", {
+      method: "POST",
+      session,
+      headers: { origin: "https://evil.example" },
+    })
+
+    expect(response.status).toBe(403)
+  })
+
+  it("records the client IP from the configured header only", async () => {
+    const response = await request("/api/auth/sign-up/email", {
+      method: "POST",
+      headers: {
+        "cf-connecting-ip": "198.51.100.1",
+        "x-test-client-ip": "203.0.113.7",
+      },
+      json: {
+        name: "ip",
+        email: uniqueEmail("ip"),
+        password: testPassword,
+      },
+    })
+    const session = {
+      userId: "",
+      email: "",
+      cookie: sessionCookieFrom(response),
+    }
+
+    const current = await request("/api/auth/get-session", { session })
+
+    const body = await current.json<{ session: { ipAddress: string } }>()
+    expect(body.session.ipAddress).toBe("203.0.113.7")
+  })
+
+  it("never lets the edge cache an authenticated response", async () => {
+    const session = await signUp()
+
+    const sessionResponse = await request("/api/auth/get-session", { session })
+    const itemsResponse = await request("/items", { session })
+    const healthResponse = await request("/health")
+
+    for (const response of [sessionResponse, itemsResponse, healthResponse]) {
+      expect(response.headers.get("cache-control")).toContain("no-store")
+    }
   })
 })

@@ -16,7 +16,7 @@ export function createAuth(env: Env, db: Database) {
     rateLimit: { enabled: env.AUTH_RATE_LIMIT === "on", window: 10, max: 100 },
     advanced: {
       database: { generateId: () => generateId() },
-      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      ipAddress: { ipAddressHeaders: [env.AUTH_CLIENT_IP_HEADER] },
     },
   })
 }

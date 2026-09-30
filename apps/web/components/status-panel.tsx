@@ -1,6 +1,7 @@
 import { CheckCircleIcon, XCircleIcon } from "@phosphor-icons/react/dist/ssr"
 
-import { apiBaseUrl, fetchHealth } from "@/lib/api"
+import { fetchHealth } from "@/lib/api"
+import { workerOrigin } from "@/lib/worker-origin"
 
 interface RowProps {
   label: string
@@ -30,12 +31,13 @@ function Row({ label, ok, detail }: RowProps) {
 }
 
 export async function StatusPanel() {
+  const origin = workerOrigin()
   const result = await fetchHealth()
 
   if (!result.reachable) {
     return (
       <div className="divide-y divide-border">
-        <Row label="API" ok={false} detail={`${apiBaseUrl}: ${result.error}`} />
+        <Row label="API" ok={false} detail={`${origin}: ${result.error}`} />
         <Row label="Database" ok={false} detail="unknown, API unreachable" />
       </div>
     )
@@ -48,7 +50,7 @@ export async function StatusPanel() {
       <Row
         label="API"
         ok={health.ok}
-        detail={`${apiBaseUrl}, version ${health.version}`}
+        detail={`${origin}, version ${health.version}`}
       />
       <Row
         label="Database"
