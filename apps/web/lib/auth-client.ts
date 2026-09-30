@@ -1,8 +1,6 @@
 import { createAuthClient } from "better-auth/react"
 
-import { apiBaseUrl } from "./api"
-
-export const authClient = createAuthClient({ baseURL: apiBaseUrl })
+export const authClient = createAuthClient()
 
 const messagesByCode: Record<string, string> = {
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL:

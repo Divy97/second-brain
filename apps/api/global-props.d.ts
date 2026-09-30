@@ -9,5 +9,7 @@ declare global {
   interface Env {
     TRANSCRIPT_API_KEY?: string
     READER_API_KEY?: string
+    GOOGLE_CLIENT_ID?: string
+    GOOGLE_CLIENT_SECRET?: string
   }
 }

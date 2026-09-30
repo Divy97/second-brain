@@ -12,3 +12,8 @@ YOUTUBE_API_KEY=
 # capture is saved partial. Each User may spend 2 lookups per service per UTC day.
 TRANSCRIPT_API_KEY=
 READER_API_KEY=
+
+# Google sign-in (optional). Create a "Web application" OAuth client in Google Cloud Console
+# with redirect URI <web origin>/api/auth/callback/google. Without both, Google sign-in is off.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

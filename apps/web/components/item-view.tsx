@@ -17,7 +17,7 @@ import { ItemEditor } from "@/components/item-editor"
 import { ItemFailure } from "@/components/item-failure"
 import { ItemInsights } from "@/components/item-insights"
 import { StatusBadge } from "@/components/status-badge"
-import { ApiError, apiBaseUrl, fetchJson } from "@/lib/api"
+import { ApiError, apiPrefix, fetchJson } from "@/lib/api"
 import { describeApiError, emptyNoteMessage } from "@/lib/describe-api-error"
 import { itemFallbackTitle } from "@/lib/item-labels"
 import {
@@ -208,7 +208,7 @@ export function ItemView({ id }: { id: string }) {
               crossOrigin="use-credentials"
               preload="metadata"
               className="w-full max-w-xl"
-              src={`${apiBaseUrl}/items/${item.id}/file`}
+              src={`${apiPrefix}/items/${item.id}/file`}
             >
               Your browser cannot play this recording.
             </audio>
@@ -218,7 +218,7 @@ export function ItemView({ id }: { id: string }) {
           <div className="flex flex-col gap-3">
             <Image
               unoptimized
-              src={`${apiBaseUrl}/items/${item.id}/file`}
+              src={`${apiPrefix}/items/${item.id}/file`}
               alt={item.fileName ?? "Saved photo"}
               width={800}
               height={600}
@@ -226,7 +226,7 @@ export function ItemView({ id }: { id: string }) {
               className="h-auto max-h-[36rem] w-full rounded-xl object-contain"
             />
             <a
-              href={`${apiBaseUrl}/items/${item.id}/file`}
+              href={`${apiPrefix}/items/${item.id}/file`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-fit text-sm font-semibold underline underline-offset-4"
@@ -237,7 +237,7 @@ export function ItemView({ id }: { id: string }) {
         )}
         {item.type === "pdf" && (
           <a
-            href={`${apiBaseUrl}/items/${item.id}/file`}
+            href={`${apiPrefix}/items/${item.id}/file`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-fit text-sm font-semibold underline underline-offset-4"

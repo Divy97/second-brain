@@ -13,12 +13,23 @@ export function createAuth(env: Env, db: Database) {
     trustedOrigins: [env.WEB_ORIGIN],
     database: drizzleAdapter(db, { provider: "pg", schema, usePlural: true }),
     emailAndPassword: { enabled: true },
+    socialProviders: googleProvider(env),
     rateLimit: { enabled: env.AUTH_RATE_LIMIT === "on", window: 10, max: 100 },
     advanced: {
       database: { generateId: () => generateId() },
-      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      ipAddress: { ipAddressHeaders: [env.AUTH_CLIENT_IP_HEADER] },
     },
   })
+}
+
+function googleProvider(env: Env) {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return {}
+  return {
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+  }
 }
 
 export type Auth = ReturnType<typeof createAuth>

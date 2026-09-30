@@ -17,6 +17,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "bun run dev",
+    env: { NEXT_PUBLIC_GOOGLE_SIGN_IN: "on" },
     url: "http://localhost:3000",
     reuseExistingServer: false,
     timeout: 120_000,

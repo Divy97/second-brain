@@ -1,5 +1,6 @@
-export const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787"
+import { workerOrigin } from "./worker-origin"
+
+export const apiPrefix = "/api"
 
 export interface DatabaseHealth {
   ok: true
@@ -20,7 +21,9 @@ export type HealthResult =
 
 export async function fetchHealth(): Promise<HealthResult> {
   try {
-    const response = await fetch(`${apiBaseUrl}/health`, { cache: "no-store" })
+    const response = await fetch(`${workerOrigin()}/health`, {
+      cache: "no-store",
+    })
     const health = (await response.json()) as HealthResponse
     return { reachable: true, health }
   } catch (error) {
@@ -64,7 +67,7 @@ export async function apiRequest<T>(
   const { json, headers, body: requestBody, ...rest } = init
   const mergedHeaders = new Headers(headers)
   if (json !== undefined) mergedHeaders.set("content-type", "application/json")
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${apiPrefix}${path}`, {
     ...rest,
     credentials: "include",
     headers: mergedHeaders,
