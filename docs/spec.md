@@ -20,11 +20,10 @@ Test case: you save a video about an "agentic browser". Weeks later you ask "wha
 ## 3. Users, auth, keys
 
 - Multi-user from day one (single user today; open-source / commercial later).
-- **BYOK for everything that costs money.** Each user adds keys in settings:
+- **BYOK for the user's own model spend.** Each user adds one key in settings:
   - OpenRouter — chat, enrichment, STT, embeddings (required)
-  - Transcript API (Supadata or similar) — YouTube fallback + Instagram (optional)
-  - Reader API (Tavily / Firecrawl / Jina) — bot-blocked article fallback (optional)
-- Without an optional key, the corresponding fallback is skipped and the item is saved `partial`.
+- The transcript API (Supadata) and the reader API (Jina) are operator-paid Worker secrets behind a per-user daily allowance; see ADR-0006.
+- Without an operator secret, or past the daily allowance, the corresponding fallback is skipped and the item is saved `partial`.
 - Web app (responsive) is the only V1 client.
 
 ## 4. Inputs and extraction
