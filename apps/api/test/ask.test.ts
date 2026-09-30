@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
+import { testDb } from "./support/database.js"
 import {
   request,
   saveOpenRouterKey,
@@ -160,6 +161,24 @@ describe("asking", () => {
 
     const answer = await answerTo("how do I tune my coffee machine?")
 
+    expect(answer.sources.map((source) => source.id)).toEqual([id])
+  })
+
+  it("answers from extracted facts when no chunk matches", async () => {
+    openRouter.onChat("facts", () => ({
+      facts: ["My dentist is Dr. Mehta."],
+    }))
+    openRouter.onChat("fact_reconciliation", () => ({
+      action: "ADD",
+      existingFactId: null,
+    }))
+    const id = await saveReady("My dentist is Dr. Mehta.")
+    await testDb().execute(`delete from chunks where item_id = '${id}'`)
+    rewriteWith({ variants: ["dentist"], keywords: [] })
+
+    const answer = await answerTo("who is my dentist?")
+
+    expect(answer.text).toContain("My dentist is Dr. Mehta.")
     expect(answer.sources.map((source) => source.id)).toEqual([id])
   })
 

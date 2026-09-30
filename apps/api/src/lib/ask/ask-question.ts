@@ -82,7 +82,7 @@ export async function askQuestion(
   const candidates = await loadCandidates(db, {
     userId: input.userId,
     embeddingModel,
-    chunkIds: [...new Set([...previouslyCited, ...fused])].slice(
+    candidateIds: [...new Set([...previouslyCited, ...fused])].slice(
       0,
       retrieval.rerankCandidates
     ),
@@ -93,12 +93,12 @@ export async function askQuestion(
     history: input.history,
   })
   const carriedOver = candidates.filter((candidate) =>
-    previouslyCited.includes(candidate.chunkId)
+    previouslyCited.includes(candidate.candidateId)
   )
   const relevant = [
     ...new Map(
       [...carriedOver, ...reranked].map((candidate) => [
-        candidate.chunkId,
+        candidate.candidateId,
         candidate,
       ])
     ).values(),

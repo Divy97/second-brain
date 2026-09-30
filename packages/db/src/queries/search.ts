@@ -1,6 +1,6 @@
 import { sql, type SQL } from "drizzle-orm"
 
-import { chunks, items } from "../schema.js"
+import { chunks, facts, items } from "../schema.js"
 
 import type { Database } from "../database.js"
 import type { ItemKind } from "./item-types.js"
@@ -21,9 +21,9 @@ export interface SearchInput {
 }
 
 export interface Candidate {
-  chunkId: string
+  candidateId: string
   itemId: string
-  chunkText: string
+  text: string
   itemTitle: string | null
   itemKind: ItemKind | null
   itemRawText: string
@@ -37,12 +37,28 @@ const searchableChunk = (userId: string, embeddingModel: string) => sql`
   and c.embedding_model = ${embeddingModel}
 `
 
+const searchableFact = (userId: string, embeddingModel: string) => sql`
+  f.user_id = ${userId}
+  and f.valid_to is null
+  and f.embedding_model = ${embeddingModel}
+  and i.deleted_at is null
+  and i.status = 'ready'
+`
+
 function listFilter(input: SearchInput, kind: ItemKind | null): SQL {
   return sql`
     ${searchableChunk(input.userId, input.embeddingModel)}
     ${input.window.from ? sql`and i.captured_at >= ${input.window.from.toISOString()}::timestamptz` : sql``}
     ${input.window.to ? sql`and i.captured_at < ${input.window.to.toISOString()}::timestamptz` : sql``}
     ${kind ? sql`and i.kind = ${kind}` : sql``}
+  `
+}
+
+function factListFilter(input: SearchInput): SQL {
+  return sql`
+    ${searchableFact(input.userId, input.embeddingModel)}
+    ${input.window.from ? sql`and i.captured_at >= ${input.window.from.toISOString()}::timestamptz` : sql``}
+    ${input.window.to ? sql`and i.captured_at < ${input.window.to.toISOString()}::timestamptz` : sql``}
   `
 }
 
@@ -67,6 +83,26 @@ function vectorList(
   )`
 }
 
+function vectorFactList(
+  label: string,
+  embedding: number[],
+  input: SearchInput
+): SQL {
+  const vector = JSON.stringify(embedding)
+  return sql`(
+    with hits as materialized (
+      select f.id, f.embedding <=> ${vector}::vector as distance
+      from ${facts} f
+      join ${items} i on i.id = f.source_item_id
+      where ${factListFilter(input)}
+      order by f.embedding <=> ${vector}::vector
+      limit ${input.limit}
+    )
+    select ${label} as list, id, row_number() over (order by distance + 0, id) as rank
+    from hits
+  )`
+}
+
 function fullTextList(label: string, query: SQL, input: SearchInput): SQL {
   return sql`(
     with query as (select ${query} as q), hits as materialized (
@@ -79,6 +115,25 @@ function fullTextList(label: string, query: SQL, input: SearchInput): SQL {
         and c.tsv @@ query.q
         and ${listFilter(input, null)}
       order by score desc, c.id
+      limit ${input.limit}
+    )
+    select ${label} as list, id, row_number() over (order by score desc, id) as rank
+    from hits
+  )`
+}
+
+function fullTextFactList(label: string, query: SQL, input: SearchInput): SQL {
+  return sql`(
+    with query as (select ${query} as q), hits as materialized (
+      select f.id, ts_rank_cd(f.tsv, query.q) as score
+      from ${facts} f
+      join ${items} i on i.id = f.source_item_id
+      cross join query
+      where query.q is not null
+        and querytree(query.q) not in ('', 'T')
+        and f.tsv @@ query.q
+        and ${factListFilter(input)}
+      order by score desc, f.id
       limit ${input.limit}
     )
     select ${label} as list, id, row_number() over (order by score desc, id) as rank
@@ -106,7 +161,9 @@ export async function searchChunks(
   const lists = [
     ...input.variants.flatMap((variant, index) => [
       vectorList(`vector:${index}`, variant.embedding, input),
+      vectorFactList(`fact-vector:${index}`, variant.embedding, input),
       fullTextList(`text:${index}`, variantQuery(variant.text), input),
+      fullTextFactList(`fact-text:${index}`, variantQuery(variant.text), input),
       ...(input.preferredKind
         ? [
             vectorList(
@@ -120,6 +177,9 @@ export async function searchChunks(
     ]),
     ...(input.keywords.length > 0
       ? [fullTextList("keywords", keywordQuery(input.keywords), input)]
+      : []),
+    ...(input.keywords.length > 0
+      ? [fullTextFactList("fact-keywords", keywordQuery(input.keywords), input)]
       : []),
   ]
   if (lists.length === 0) return []
@@ -149,32 +209,40 @@ export async function searchChunks(
 
 export async function loadCandidates(
   db: Database,
-  input: { userId: string; embeddingModel: string; chunkIds: string[] }
+  input: { userId: string; embeddingModel: string; candidateIds: string[] }
 ): Promise<Candidate[]> {
-  if (input.chunkIds.length === 0) return []
+  if (input.candidateIds.length === 0) return []
   const rows = await db.execute<{
-    chunk_id: string
+    candidate_id: string
     item_id: string
-    chunk_text: string
+    candidate_text: string
     item_title: string | null
     item_kind: ItemKind | null
     item_raw_text: string
     captured_at: Date
   }>(sql`
-    select c.id as chunk_id, c.item_id, c.text as chunk_text, i.title as item_title,
+    select c.id as candidate_id, c.item_id, c.text as candidate_text, i.title as item_title,
            i.kind as item_kind, i.raw_text as item_raw_text, i.captured_at
     from ${chunks} c
     join ${items} i on i.id = c.item_id
-    where c.id in ${input.chunkIds}
+    where c.id in ${input.candidateIds}
       and ${searchableChunk(input.userId, input.embeddingModel)}
+    union all
+    select f.id as candidate_id, f.source_item_id as item_id, f.text as candidate_text,
+           i.title as item_title, i.kind as item_kind, f.text as item_raw_text,
+           i.captured_at
+    from ${facts} f
+    join ${items} i on i.id = f.source_item_id
+    where f.id in ${input.candidateIds}
+      and ${searchableFact(input.userId, input.embeddingModel)}
   `)
   const byId = new Map(
     rows.map((row) => [
-      row.chunk_id,
+      row.candidate_id,
       {
-        chunkId: row.chunk_id,
+        candidateId: row.candidate_id,
         itemId: row.item_id,
-        chunkText: row.chunk_text,
+        text: row.candidate_text,
         itemTitle: row.item_title,
         itemKind: row.item_kind,
         itemRawText: row.item_raw_text,
@@ -182,7 +250,7 @@ export async function loadCandidates(
       },
     ])
   )
-  return input.chunkIds.flatMap((id) => byId.get(id) ?? [])
+  return input.candidateIds.flatMap((id) => byId.get(id) ?? [])
 }
 
 // Every chunk of the given items, in item order then chunk order: the follow-up path puts
