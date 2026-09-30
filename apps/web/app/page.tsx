@@ -59,18 +59,14 @@ export default function LandingPage() {
         <PublicHeader />
         <section className="relative grid gap-10 pt-12 pb-14 sm:pt-16 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-12 lg:pt-20 lg:pb-24">
           <div className="content-enter relative z-10">
-            <p className="mb-6 flex items-center gap-2 text-xs font-semibold tracking-[0.12em] text-coral-ink uppercase">
-              <SparkleIcon size={18} weight="fill" aria-hidden /> YouTube &amp;
-              Instagram, remembered
-            </p>
             <h1 className="max-w-xl text-[clamp(2.8rem,6vw,4.75rem)] leading-[1.06] tracking-[-0.055em]">
-              Make room
+              Save anything.
               <br />
-              for <span className="text-coral-ink">more.</span>
+              Then just <span className="text-coral-ink">ask.</span>
             </h1>
             <p className="mt-6 max-w-sm text-lg leading-relaxed text-muted-foreground">
-              That YouTube deep dive. That Instagram Reel. Save the link, keep
-              the useful bits, ask about them later.
+              Save notes, videos, links and files in one place. Ask questions
+              about what you’ve saved and get answers linked to your sources.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-5">
               <Link
@@ -98,12 +94,6 @@ export default function LandingPage() {
               className="marketing-doodle pointer-events-none absolute -bottom-8 -left-4 z-10 size-16 text-coral-ink sm:-left-9 sm:size-24"
               aria-hidden
             />
-            <div
-              aria-hidden
-              className="marketing-sticker absolute -top-5 left-4 z-10 flex -rotate-6 items-center gap-2 rounded-lg border border-primary/10 bg-butter px-3 py-2 text-xs font-semibold shadow-sm sm:left-7"
-            >
-              <YoutubeLogoIcon size={20} /> A rabbit hole, remembered.
-            </div>
             <div
               className="absolute -inset-4 -rotate-3 rounded-[2rem] bg-coral/25 sm:-inset-6"
               aria-hidden
