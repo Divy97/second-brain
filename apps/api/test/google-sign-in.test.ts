@@ -46,6 +46,7 @@ function profile(email = uniqueEmail("google")) {
     email,
     name: "Grace Hopper",
     email_verified: true,
+    picture: "https://lh3.googleusercontent.com/a/grace",
   }
 }
 
@@ -77,6 +78,7 @@ describe("google sign-in", () => {
     expect(user.email).toBe(person.email)
     expect(user.name).toBe("Grace Hopper")
     expect(user.emailVerified).toBe(true)
+    expect(user.image).toBe(person.picture)
   })
 
   it("signs a returning user back into the same User", async () => {

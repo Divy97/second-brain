@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 
 test("sign-in explains required fields and can reveal the password", async ({
   page,
@@ -31,29 +31,33 @@ interface SocialSignInBody {
   errorCallbackURL: string
 }
 
-test("sign-in starts Google sign-in and returns to the page it came from", async ({
-  page,
-}) => {
-  let body: SocialSignInBody | null = null
+async function interceptGoogleStart(page: Page) {
+  const captured: { body: SocialSignInBody | null } = { body: null }
   await page.route("**/api/auth/sign-in/social", async (route) => {
-    body = route.request().postDataJSON() as SocialSignInBody
+    captured.body = route.request().postDataJSON() as SocialSignInBody
     await route.fulfill({
       json: {
-        url: "http://localhost:3000/sign-in?error=account_not_linked",
+        url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=test",
         redirect: true,
       },
     })
   })
+  await page.route("https://accounts.google.com/**", (route) =>
+    route.fulfill({ body: "google", contentType: "text/html" })
+  )
+  return captured
+}
+
+test("sign-in sends the browser to Google and remembers where it was going", async ({
+  page,
+}) => {
+  const captured = await interceptGoogleStart(page)
   await page.goto("/sign-in?next=%2Fitems%2F42")
 
   await page.getByRole("button", { name: "Continue with Google" }).click()
 
-  await expect(
-    page.getByText(
-      "An account with this email already exists. Sign in with your password."
-    )
-  ).toBeVisible()
-  expect(body).toEqual({
+  await page.waitForURL("https://accounts.google.com/**")
+  expect(captured.body).toEqual({
     provider: "google",
     callbackURL: "/items/42",
     newUserCallbackURL: "/items/42",
@@ -61,10 +65,29 @@ test("sign-in starts Google sign-in and returns to the page it came from", async
   })
 })
 
-test("sign-up offers Google sign-in too", async ({ page }) => {
+test("sign-up sends the browser to Google and comes back to sign-up on error", async ({
+  page,
+}) => {
+  const captured = await interceptGoogleStart(page)
   await page.goto("/sign-up")
+
+  await page.getByRole("button", { name: "Continue with Google" }).click()
+
+  await page.waitForURL("https://accounts.google.com/**")
+  expect(captured.body).toMatchObject({
+    callbackURL: "/home",
+    errorCallbackURL: "/sign-up",
+  })
+})
+
+test("a password account that already owns the email tells the user to sign in with it", async ({
+  page,
+}) => {
+  await page.goto("/sign-in?error=account_not_linked")
   await expect(
-    page.getByRole("button", { name: "Continue with Google" })
+    page.getByText(
+      "An account with this email already exists. Sign in with your password."
+    )
   ).toBeVisible()
 })
 

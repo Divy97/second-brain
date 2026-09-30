@@ -5,6 +5,7 @@ export interface GoogleProfile {
   email: string
   name: string
   email_verified: boolean
+  picture?: string
 }
 
 const tokenHost = "oauth2.googleapis.com"
@@ -105,6 +106,7 @@ export interface SignedInUser {
   email: string
   name: string
   emailVerified: boolean
+  image: string | null
 }
 
 export async function signedInUser(
