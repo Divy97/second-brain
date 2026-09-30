@@ -41,8 +41,8 @@ export async function rerankCandidates(
           followUp: input.rewrite.followUp,
           history: input.history.map(({ role, text }) => ({ role, text })),
           candidates: input.candidates.map((candidate) => ({
-            id: candidate.chunkId,
-            text: `${candidate.itemTitle ?? ""}\n${candidate.chunkText}`,
+            id: candidate.candidateId,
+            text: `${candidate.itemTitle ?? ""}\n${candidate.text}`,
           })),
         }),
       },
@@ -55,7 +55,7 @@ export async function rerankCandidates(
   return input.candidates
     .map((candidate) => ({
       candidate,
-      score: scores.get(candidate.chunkId) ?? 0,
+      score: scores.get(candidate.candidateId) ?? 0,
     }))
     .filter((entry) => entry.score >= retrieval.rerankFloor)
     .sort((a, b) => b.score - a.score)

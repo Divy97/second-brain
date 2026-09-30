@@ -2,8 +2,10 @@ import { createOpenRouter, type OpenRouter } from "@workspace/ai"
 import {
   claimItemRun,
   findNeighbourTags,
+  findSimilarFacts,
   loadExtractedText,
   markItemFailed,
+  saveFactChanges,
   saveProcessedItem,
   saveExtractedText,
   type Database,
@@ -21,6 +23,7 @@ import {
 import { extractArticle } from "./article.js"
 import { chunkText } from "./chunk-text.js"
 import { enrichNote } from "./enrich.js"
+import { extractFacts, reconcileFact, shouldExtractFacts } from "./facts.js"
 import {
   describeFailure,
   PipelineFailure,
@@ -292,6 +295,31 @@ export async function processItem(
     const indexed = await runStep("index", () =>
       inStep(context, async (db) => {
         const openRouter = await openRouterFor(db, env, claimed.userId)
+        const factTexts = shouldExtractFacts({
+          type: claimed.type,
+          kind: enrichment.kind,
+        })
+          ? await extractFacts(openRouter, enrichment.cleanText)
+          : []
+        const factEmbeddings =
+          factTexts.length > 0 ? await embed(openRouter, factTexts) : []
+        const factChanges = []
+        for (const [index, fact] of factTexts.entries()) {
+          const embedding = factEmbeddings[index] ?? []
+          const existing = await findSimilarFacts(db, {
+            userId: claimed.userId,
+            embedding,
+            embeddingModel,
+            limit: 10,
+          })
+          const decision = await reconcileFact(openRouter, { fact, existing })
+          factChanges.push({
+            text: fact,
+            embedding,
+            action: decision.action,
+            existingFactId: decision.existingFactId,
+          })
+        }
         const chunks = chunkText(enrichment.cleanText)
         const embeddings = await embed(
           openRouter,
@@ -308,6 +336,15 @@ export async function processItem(
           embeddingModel,
           embeddingDimensions,
         })
+        if (saved) {
+          await saveFactChanges(db, {
+            userId: claimed.userId,
+            sourceItemId: job.itemId,
+            changes: factChanges,
+            embeddingModel,
+            embeddingDimensions,
+          })
+        }
         return { saved, chunkCount: chunks.length }
       })
     )

@@ -257,6 +257,41 @@ export const chunks = pgTable(
   ]
 )
 
+export const facts = pgTable(
+  "facts",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    searchText: text("search_text").notNull(),
+    embedding: vector("embedding", {
+      dimensions: EMBEDDING_DIMENSIONS,
+    }).notNull(),
+    embeddingModel: text("embedding_model").notNull(),
+    embeddingDimensions: integer("embedding_dimensions").notNull(),
+    tsv: tsvector("tsv").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('simple', ${facts.searchText})`
+    ),
+    sourceItemId: uuid("source_item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    validFrom: timestampTz("valid_from").notNull().defaultNow(),
+    validTo: timestampTz("valid_to"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("facts_user_valid_idx").on(t.userId, t.validTo),
+    index("facts_source_item_idx").on(t.sourceItemId),
+    index("facts_embedding_idx").using(
+      "hnsw",
+      t.embedding.op("vector_cosine_ops")
+    ),
+    index("facts_tsv_idx").using("gin", t.tsv),
+  ]
+)
+
 export const entities = pgTable(
   "entities",
   {

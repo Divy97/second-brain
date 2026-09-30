@@ -129,3 +129,9 @@ export {
   type SearchInput,
   type TimeWindow,
 } from "./queries/search.js"
+export {
+  findSimilarFacts,
+  saveFactChanges,
+  type FactChange,
+  type SimilarFact,
+} from "./queries/facts.js"

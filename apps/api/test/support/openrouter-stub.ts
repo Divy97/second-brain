@@ -180,6 +180,8 @@ export function stubOpenRouter(): OpenRouterStub {
       "enrichment",
       (call) => defaultEnrichment(parseEnrichmentInput(call).note),
     ],
+    ["facts", () => ({ facts: [] })],
+    ["fact_reconciliation", () => ({ action: "ADD", existingFactId: null })],
     ["rewrite", (call) => defaultRewrite(parseRewriteInput(call).question)],
     ["rerank", (call) => defaultRerank(parseRerankInput(call))],
     ["answer", (call) => defaultAnswer(parseAnswerInput(call))],

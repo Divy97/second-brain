@@ -64,9 +64,7 @@ export function toSources(candidates: Candidate[], timezone: string): Source[] {
       savedOn: savedOn.format(first.capturedAt),
       text: whole
         ? first.itemRawText
-        : itemCandidates
-            .map((candidate) => candidate.chunkText)
-            .join("\n\n…\n\n"),
+        : itemCandidates.map((candidate) => candidate.text).join("\n\n…\n\n"),
     }
   })
 }

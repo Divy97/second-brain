@@ -159,6 +159,109 @@ describe("processing a saved note", () => {
     })
   })
 
+  it("extracts own-word facts with source provenance", async () => {
+    openRouter.onChat("facts", () => ({
+      facts: ["My dentist is Dr. Mehta."],
+    }))
+    openRouter.onChat("fact_reconciliation", () => ({
+      action: "ADD",
+      existingFactId: null,
+    }))
+    const id = await save(session, "My dentist is Dr. Mehta.")
+
+    await queue.processLatest()
+
+    const rows = await testDb().execute<{
+      text: string
+      source_item_id: string
+      valid_to: Date | null
+    }>(
+      `select text, source_item_id, valid_to from facts where source_item_id = '${id}'`
+    )
+    expect(rows).toEqual([
+      {
+        text: "My dentist is Dr. Mehta.",
+        source_item_id: id,
+        valid_to: null,
+      },
+    ])
+  })
+
+  it("invalidates a superseded fact and keeps the replacement valid", async () => {
+    openRouter.onChat("facts", (call) => ({
+      facts: [
+        call.messages.at(-1)?.content.toString().includes("Rao")
+          ? "My dentist is Dr. Rao."
+          : "My dentist is Dr. Mehta.",
+      ],
+    }))
+    openRouter.onChat("fact_reconciliation", (call) => {
+      const parsed: unknown = JSON.parse(
+        call.messages.at(-1)?.content.toString() ?? "{}"
+      )
+      const existing =
+        typeof parsed === "object" &&
+        parsed !== null &&
+        "existing" in parsed &&
+        Array.isArray(parsed.existing)
+          ? parsed.existing
+          : []
+      const first = existing[0] as { id?: unknown } | undefined
+      return {
+        action: existing.length ? "UPDATE" : "ADD",
+        existingFactId: typeof first?.id === "string" ? first.id : null,
+      }
+    })
+
+    await save(session, "My dentist is Dr. Mehta.")
+    await queue.processLatest()
+    await save(session, "My dentist is Dr. Rao.")
+    await queue.processLatest()
+
+    const rows = await testDb().execute<{
+      text: string
+      valid_to: Date | null
+    }>(
+      `select text, valid_to from facts where user_id = '${session.userId}' and text like 'My dentist%' order by valid_from`
+    )
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({ text: "My dentist is Dr. Mehta." })
+    expect(rows[0]?.valid_to).not.toBeNull()
+    expect(rows[1]).toEqual({ text: "My dentist is Dr. Rao.", valid_to: null })
+  })
+
+  it("keeps a same-source fact valid when reconciliation returns noop", async () => {
+    openRouter.onChat("facts", () => ({
+      facts: ["My dentist is Dr. Mehta."],
+    }))
+    openRouter.onChat("fact_reconciliation", (call) => {
+      const parsed: unknown = JSON.parse(
+        call.messages.at(-1)?.content.toString() ?? "{}"
+      )
+      const existing =
+        typeof parsed === "object" &&
+        parsed !== null &&
+        "existing" in parsed &&
+        Array.isArray(parsed.existing)
+          ? parsed.existing
+          : []
+      return {
+        action: existing.length ? "NOOP" : "ADD",
+        existingFactId: null,
+      }
+    })
+    const id = await save(session, "My dentist is Dr. Mehta.")
+    await queue.processLatest()
+
+    await request(`/items/${id}/reprocess`, { method: "POST", session })
+    await queue.processLatest()
+
+    const rows = await testDb().execute<{ valid_to: Date | null }>(
+      `select valid_to from facts where source_item_id = '${id}'`
+    )
+    expect(rows).toEqual([{ valid_to: null }])
+  })
+
   it("feeds the tags of similar existing notes into enrichment", async () => {
     openRouter.onChat("enrichment", (call) => ({
       ...defaultEnrichment(parseEnrichmentInput(call).note),
@@ -252,7 +355,9 @@ describe("processing a saved note", () => {
     expect(response.status).toBe(200)
     await queue.processLatest()
 
-    expect(openRouter.chatCalls).toHaveLength(1)
+    expect(
+      openRouter.chatCalls.filter((call) => call.schemaName === "enrichment")
+    ).toHaveLength(1)
     expect((await detail(session, id)).status).toBe("ready")
   })
 
