@@ -1,6 +1,10 @@
 "use client"
 
-import { ArrowLeftIcon, WarningCircleIcon } from "@phosphor-icons/react"
+import {
+  ArrowLeftIcon,
+  InfoIcon,
+  WarningCircleIcon,
+} from "@phosphor-icons/react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -26,6 +30,7 @@ import {
   retryItem,
   type ItemDetail,
 } from "@/lib/items-api"
+import { partialNotice } from "@/lib/partial-notice"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 
@@ -119,6 +124,8 @@ export function ItemView({ id }: { id: string }) {
     )
   }
 
+  const notice = partialNotice(item)
+
   return (
     <article className="mx-auto flex max-w-4xl flex-col gap-8">
       {backLink}
@@ -134,6 +141,13 @@ export function ItemView({ id }: { id: string }) {
           {item.kind && <span className="capitalize">{item.kind}</span>}
         </div>
       </header>
+
+      {notice && (
+        <Alert>
+          <InfoIcon aria-hidden />
+          <AlertDescription>{notice}</AlertDescription>
+        </Alert>
+      )}
 
       {isStalled(item) && (
         <Alert>

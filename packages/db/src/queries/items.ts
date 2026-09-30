@@ -38,6 +38,7 @@ export interface ItemDetail extends ItemSummary {
   language: string | null
   tags: string[]
   failureReason: string | null
+  partialReason: "allowance_used" | null
   error: string | null
   updatedAt: Date
   entities: ItemEntity[]
@@ -274,6 +275,7 @@ export async function findItem(
       language: items.language,
       tags: items.tags,
       failureReason: items.failureReason,
+      partialReason: items.partialReason,
       error: items.error,
       updatedAt: items.updatedAt,
     })

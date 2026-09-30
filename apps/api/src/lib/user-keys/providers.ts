@@ -1,10 +1,6 @@
 import {
-  createJina,
   createOpenRouter,
-  createSupadata,
-  JinaError,
   OpenRouterError,
-  SupadataError,
   type KeyVerification,
 } from "@workspace/ai"
 
@@ -48,26 +44,6 @@ export const keyProviders: Record<KeyProvider, KeyProviderSpec> = {
       (apiKey) => createOpenRouter({ apiKey }).verifyKey()
     ),
   },
-  transcript: {
-    label: "Supadata",
-    verify: verifying(
-      "transcript",
-      (error) => error instanceof SupadataError,
-      (apiKey) => createSupadata({ apiKey }).verifyKey()
-    ),
-  },
-  reader: {
-    label: "Jina Reader",
-    verify: verifying(
-      "reader",
-      (error) => error instanceof JinaError,
-      (apiKey) => createJina({ apiKey }).verifyKey()
-    ),
-  },
 }
 
-export const keyProviderNames: KeyProvider[] = [
-  "openrouter",
-  "transcript",
-  "reader",
-]
+export const keyProviderNames: KeyProvider[] = ["openrouter"]

@@ -46,6 +46,12 @@ export const retrieval = {
   followUpChunksPerItem: 3,
 }
 
+// Operator-paid lookups each User may spend per UTC day, per service (ADR-0006).
+export const paidLookupAllowance = {
+  transcript: 2,
+  reader: 2,
+} as const
+
 export const backups = {
   retentionDays: 7,
 }

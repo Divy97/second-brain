@@ -31,7 +31,8 @@ import {
 } from "./failures.js"
 import { extractMedia } from "./media.js"
 import { parseMediaLink } from "../media-url.js"
-import { resolveOptionalKey, resolveUserKey } from "../user-keys/index.js"
+import { operatorService } from "../paid-service.js"
+import { resolveUserKey } from "../user-keys/index.js"
 
 // Step results are persisted by the Workflow engine, so they must be serialisable.
 export type StepRunner = <T extends Rpc.Serializable<T>>(
@@ -47,6 +48,7 @@ export type ProcessItemOutcome =
 export interface PipelineContext {
   env: Env
   fetchPage?: typeof fetch
+  now?: () => Date
   // Called once per step: Hyperdrive wants a fresh connection inside every Workflow step.
   // Clients are not closed; the runtime reclaims them when the invocation ends.
   openDb: () => Database
@@ -115,6 +117,7 @@ export async function processItem(
   runStep: StepRunner
 ): Promise<ProcessItemOutcome> {
   const { env } = context
+  const now = context.now ?? (() => new Date())
   try {
     const claimed = await runStep("claim", () =>
       inStep(context, (db) => claimItemRun(db, job))
@@ -237,26 +240,28 @@ export async function processItem(
                 link,
                 note: claimed.sourceNote,
                 youtubeApiKey: env.YOUTUBE_API_KEY || null,
-                transcriptKey: await resolveOptionalKey(
+                transcript: operatorService(
                   db,
                   env,
                   claimed.userId,
-                  "transcript"
+                  "transcript",
+                  now
                 ),
                 fetchPage: context.fetchPage,
               })
             : await extractArticle({
                 sourceUrl: claimed.sourceUrl,
                 note: claimed.sourceNote,
-                readerKey: await resolveOptionalKey(
-                  db,
-                  env,
-                  claimed.userId,
-                  "reader"
-                ),
+                reader: operatorService(db, env, claimed.userId, "reader", now),
                 fetchPage: context.fetchPage,
               })
-          return saveExtractedText(db, job, fromUrl.text, fromUrl.quality)
+          return saveExtractedText(
+            db,
+            job,
+            fromUrl.text,
+            fromUrl.quality,
+            fromUrl.partialReason ?? null
+          )
         })
       )
       if (!extracted) return { outcome: "skipped" }

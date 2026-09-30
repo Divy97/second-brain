@@ -37,14 +37,6 @@ function saveUrl(session: Session, url: string, note?: string) {
   return request("/items/url", { method: "POST", session, json: { url, note } })
 }
 
-function saveTranscriptKey(session: Session) {
-  return request("/keys/transcript", {
-    method: "PUT",
-    session,
-    json: { key: testTranscriptKey },
-  })
-}
-
 const getItem = async (session: Session, id: string) =>
   (await request(`/items/${id}`, { session })).json<ItemBody>()
 
@@ -62,7 +54,6 @@ describe("YouTube capture", () => {
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
 
       const response = await saveUrl(session, canonical, "Watch again")
       expect(response.status).toBe(201)
@@ -134,7 +125,6 @@ describe("YouTube capture", () => {
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
 
       const { id } = await (
         await saveUrl(session, canonical)
@@ -146,42 +136,6 @@ describe("YouTube capture", () => {
       const item = await getItem(session, id)
       expect(item.captureQuality).toBe("partial")
       expect(item.rawText).toContain("Dia, the agentic browser")
-    } finally {
-      queue.restore()
-      providers.restore()
-      model.restore()
-    }
-  })
-
-  it("completes a partial video after the transcript key is added", async () => {
-    const model = stubOpenRouter()
-    const providers = stubExtractionProviders()
-    providers.acceptKeys([testTranscriptKey])
-    providers.videoReturns(videoId, agenticBrowser)
-    providers.transcriptReturns(canonical, "It books the flight for you.")
-    const queue = recordQueue()
-    try {
-      const session = await signUp()
-      await saveOpenRouterKey(session)
-
-      const { id } = await (
-        await saveUrl(session, canonical)
-      ).json<{
-        id: string
-      }>()
-      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
-      expect((await getItem(session, id)).captureQuality).toBe("partial")
-
-      expect((await saveTranscriptKey(session)).status).toBe(200)
-      expect(
-        (await request(`/items/${id}/reprocess`, { session, method: "POST" }))
-          .status
-      ).toBe(200)
-      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
-
-      const completed = await getItem(session, id)
-      expect(completed.captureQuality).toBe("full")
-      expect(completed.rawText).toContain("books the flight")
     } finally {
       queue.restore()
       providers.restore()
@@ -338,78 +292,6 @@ describe("YouTube capture", () => {
     }
   })
 
-  it("surfaces a rejected transcript key as a retryable failure", async () => {
-    const model = stubOpenRouter()
-    const providers = stubExtractionProviders()
-    providers.acceptKeys([testTranscriptKey])
-    providers.videoReturns(videoId, agenticBrowser)
-    const queue = recordQueue()
-    try {
-      const session = await signUp()
-      await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
-      providers.revokeKeys([testTranscriptKey])
-
-      const { id } = await (
-        await saveUrl(session, canonical)
-      ).json<{
-        id: string
-      }>()
-      expect(await queue.processLatest()).toMatchObject({
-        outcome: "failed",
-        reason: "invalid_key",
-      })
-
-      const failed = await (
-        await request(`/items/${id}`, { session })
-      ).json<ItemBody & { error: string | null }>()
-      expect(failed.status).toBe("failed")
-      expect(failed.error).toContain("transcript key was rejected")
-    } finally {
-      queue.restore()
-      providers.restore()
-      model.restore()
-    }
-  })
-
-  it("recovers a failed video through retry once the key works again", async () => {
-    const model = stubOpenRouter()
-    const providers = stubExtractionProviders()
-    providers.acceptKeys([testTranscriptKey])
-    providers.videoReturns(videoId, agenticBrowser)
-    providers.transcriptReturns(canonical, "It books the flight for you.")
-    const queue = recordQueue()
-    try {
-      const session = await signUp()
-      await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
-      providers.revokeKeys([testTranscriptKey])
-
-      const { id } = await (
-        await saveUrl(session, canonical)
-      ).json<{
-        id: string
-      }>()
-      expect(await queue.processLatest()).toMatchObject({ outcome: "failed" })
-
-      providers.acceptKeys([testTranscriptKey])
-      expect(
-        (await request(`/items/${id}/retry`, { session, method: "POST" }))
-          .status
-      ).toBe(200)
-      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
-
-      const recovered = await getItem(session, id)
-      expect(recovered.status).toBe("ready")
-      expect(recovered.captureQuality).toBe("full")
-      expect(recovered.rawText).toContain("books the flight")
-    } finally {
-      queue.restore()
-      providers.restore()
-      model.restore()
-    }
-  })
-
   it("waits out an async transcript job", async () => {
     const model = stubOpenRouter()
     const providers = stubExtractionProviders()
@@ -423,7 +305,6 @@ describe("YouTube capture", () => {
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
 
       const { id } = await (
         await saveUrl(session, canonical)

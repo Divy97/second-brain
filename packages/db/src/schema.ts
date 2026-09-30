@@ -2,6 +2,7 @@ import { sql, type SQL } from "drizzle-orm"
 import {
   boolean,
   customType,
+  date,
   index,
   integer,
   jsonb,
@@ -74,11 +75,11 @@ export const itemStatusEnum = pgEnum("item_status", [
 
 export const captureQualityEnum = pgEnum("capture_quality", ["full", "partial"])
 
-export const keyProviderEnum = pgEnum("key_provider", [
-  "openrouter",
-  "transcript",
-  "reader",
-])
+export const keyProviderEnum = pgEnum("key_provider", ["openrouter"])
+
+export const paidServiceEnum = pgEnum("paid_service", ["transcript", "reader"])
+
+export const partialReasonEnum = pgEnum("partial_reason", ["allowance_used"])
 
 export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"])
 
@@ -163,6 +164,19 @@ export const userKeys = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.provider] })]
 )
 
+export const paidLookupUsage = pgTable(
+  "paid_lookup_usage",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    service: paidServiceEnum("service").notNull(),
+    count: integer("count").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day, t.service] })]
+)
+
 export const items = pgTable(
   "items",
   {
@@ -174,6 +188,7 @@ export const items = pgTable(
     kind: itemKindEnum("kind"),
     status: itemStatusEnum("status").notNull().default("pending"),
     captureQuality: captureQualityEnum("capture_quality"),
+    partialReason: partialReasonEnum("partial_reason"),
     failureReason: text("failure_reason"),
     error: text("error"),
     contentHash: text("content_hash").notNull(),

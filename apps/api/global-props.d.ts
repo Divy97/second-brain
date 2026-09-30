@@ -6,4 +6,8 @@ declare global {
       mainModule: typeof MainModule
     }
   }
+  interface Env {
+    TRANSCRIPT_API_KEY?: string
+    READER_API_KEY?: string
+  }
 }

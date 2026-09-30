@@ -41,12 +41,7 @@ async function statusOf(
 // Spelled out rather than folded over keyProviderNames: a new provider should fail
 // typechecking here until its status is served.
 async function keySettings(c: Context<AppEnv>): Promise<KeySettings> {
-  const [openrouter, transcript, reader] = await Promise.all([
-    statusOf(c, "openrouter"),
-    statusOf(c, "transcript"),
-    statusOf(c, "reader"),
-  ])
-  return { openrouter, transcript, reader }
+  return { openrouter: await statusOf(c, "openrouter") }
 }
 
 export const userKeyRoutes = new Hono<AppEnv>()

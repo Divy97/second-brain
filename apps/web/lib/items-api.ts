@@ -37,6 +37,7 @@ export interface ItemDetail extends ItemSummary {
   language: string | null
   tags: string[]
   failureReason: FailureReason | null
+  partialReason: "allowance_used" | null
   error: string | null
   updatedAt: string
   entities: { name: string; type: string }[]

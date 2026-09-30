@@ -7,3 +7,8 @@ KEY_ENCRYPTION_SECRET=
 # Operator-level YouTube Data API v3 key. Optional: without it, YouTube captures
 # fall back to the user's transcript key, then to a partial item.
 YOUTUBE_API_KEY=
+
+# Operator-paid fallbacks (ADR-0006). Optional: without one, that fallback is skipped and the
+# capture is saved partial. Each User may spend 2 lookups per service per UTC day.
+TRANSCRIPT_API_KEY=
+READER_API_KEY=

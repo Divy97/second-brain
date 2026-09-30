@@ -82,11 +82,12 @@ export async function saveExtractedText(
   db: Database,
   job: PipelineJob,
   text: string,
-  quality: "full" | "partial" = "full"
+  quality: "full" | "partial" = "full",
+  partialReason: "allowance_used" | null = null
 ): Promise<boolean> {
   const rows = await db
     .update(items)
-    .set({ rawText: text, captureQuality: quality })
+    .set({ rawText: text, captureQuality: quality, partialReason })
     .where(currentRun(job))
     .returning({ id: items.id })
   return rows.length > 0
@@ -267,6 +268,7 @@ export async function requeueItem(
         ? {
             rawText: sql`case when ${items.type} in ('voice', 'image', 'pdf') then '' when ${items.type} = 'url' then coalesce(${items.sourceNote}, ${items.sourceUrl}, '') else ${items.rawText} end`,
             captureQuality: sql`case when ${items.type} in ('voice', 'image', 'pdf', 'url') then null else ${items.captureQuality} end`,
+            partialReason: sql`case when ${items.type} in ('voice', 'image', 'pdf', 'url') then null else ${items.partialReason} end`,
           }
         : {}),
     })

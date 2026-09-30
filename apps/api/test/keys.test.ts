@@ -10,14 +10,7 @@ type ProviderStatus = { set: false } | { set: true; last4: string }
 
 interface KeyStatus {
   openrouter: ProviderStatus
-  transcript: ProviderStatus
-  reader: ProviderStatus
 }
-
-const others = {
-  transcript: { set: false },
-  reader: { set: false },
-} as const
 
 const firstKey = "sk-or-v1-first-key-aaaa1111"
 const secondKey = "sk-or-v1-second-key-bbbb2222"
@@ -51,24 +44,20 @@ describe("OpenRouter key settings", () => {
     const session = await signUp()
     expect(await keyStatus(session)).toEqual({
       openrouter: { set: false },
-      ...others,
     })
 
     const saved = await saveKey(session, firstKey)
     expect(saved.status).toBe(200)
     expect(await saved.json()).toEqual({
       openrouter: { set: true, last4: "1111" },
-      ...others,
     })
     expect(await keyStatus(session)).toEqual({
       openrouter: { set: true, last4: "1111" },
-      ...others,
     })
 
     await saveKey(session, secondKey)
     expect(await keyStatus(session)).toEqual({
       openrouter: { set: true, last4: "2222" },
-      ...others,
     })
 
     const removed = await request("/keys/openrouter", {
@@ -78,7 +67,6 @@ describe("OpenRouter key settings", () => {
     expect(removed.status).toBe(200)
     expect(await keyStatus(session)).toEqual({
       openrouter: { set: false },
-      ...others,
     })
   })
 
@@ -109,7 +97,6 @@ describe("OpenRouter key settings", () => {
     expect(body.error.code).toBe("invalid_key")
     expect(await keyStatus(session)).toEqual({
       openrouter: { set: false },
-      ...others,
     })
     expect(openRouter.calls.map((call) => new URL(call.url).pathname)).toEqual([
       "/api/v1/key",
@@ -132,7 +119,6 @@ describe("OpenRouter key settings", () => {
 
     expect(await keyStatus(other)).toEqual({
       openrouter: { set: false },
-      ...others,
     })
 
     await request("/keys/openrouter", { method: "DELETE", session: other })
@@ -140,7 +126,6 @@ describe("OpenRouter key settings", () => {
 
     expect(await keyStatus(owner)).toEqual({
       openrouter: { set: true, last4: "1111" },
-      ...others,
     })
   })
 
@@ -156,4 +141,34 @@ describe("OpenRouter key settings", () => {
     ])
     expect(openRouter.calls).toHaveLength(0)
   })
+})
+
+describe("stored keys are OpenRouter only", () => {
+  it("lists only the OpenRouter key", async () => {
+    const session = await signUp()
+
+    const response = await request("/keys", { session })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ openrouter: { set: false } })
+  })
+
+  it.each(["transcript", "reader"])(
+    "no longer accepts or removes a %s key",
+    async (provider) => {
+      const session = await signUp()
+
+      const saved = await request(`/keys/${provider}`, {
+        method: "PUT",
+        session,
+        json: { key: "any-key-1234" },
+      })
+      const removed = await request(`/keys/${provider}`, {
+        method: "DELETE",
+        session,
+      })
+
+      expect([saved.status, removed.status]).toEqual([404, 404])
+    }
+  )
 })

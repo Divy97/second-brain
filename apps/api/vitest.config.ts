@@ -17,6 +17,8 @@ export default defineConfig({
           KEY_ENCRYPTION_SECRET: inject("keyEncryptionSecret"),
           YOUTUBE_API_KEY: "test-youtube-key",
           AUTH_RATE_LIMIT: "off",
+          TRANSCRIPT_API_KEY: "sd_test_transcript_key_9999",
+          READER_API_KEY: "jina_test_reader_key_8888",
         },
       },
     })),

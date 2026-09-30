@@ -36,14 +36,6 @@ function saveUrl(session: Session, url: string, note?: string) {
   return request("/items/url", { method: "POST", session, json: { url, note } })
 }
 
-function saveTranscriptKey(session: Session) {
-  return request("/keys/transcript", {
-    method: "PUT",
-    session,
-    json: { key: testTranscriptKey },
-  })
-}
-
 const getItem = async (session: Session, id: string) =>
   (await request(`/items/${id}`, { session })).json<ItemBody>()
 
@@ -57,7 +49,6 @@ describe("Instagram capture", () => {
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
 
       const { id } = await (
         await saveUrl(session, reel, "Try this")
@@ -95,11 +86,11 @@ describe("Instagram capture", () => {
     }
   })
 
-  it("keeps the link and note visible without a transcript key", async () => {
+  it("keeps the link and note visible when the transcript service is not configured", async () => {
     const model = stubOpenRouter()
     const providers = stubExtractionProviders()
     providers.metadataReturns(reel, caption)
-    const queue = recordQueue()
+    const queue = recordQueue({ env: { TRANSCRIPT_API_KEY: undefined } })
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
@@ -132,7 +123,6 @@ describe("Instagram capture", () => {
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
 
       await saveUrl(session, reel)
       expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
@@ -155,7 +145,6 @@ describe("Instagram capture", () => {
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
 
       const { id } = await (
         await saveUrl(session, reel, "Saw this before it vanished")
@@ -182,7 +171,6 @@ describe("Instagram capture", () => {
     try {
       const session = await signUp()
       await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
 
       const { id } = await (
         await saveUrl(session, reel, "Private account")
@@ -193,66 +181,6 @@ describe("Instagram capture", () => {
       expect(item.status).toBe("ready")
       expect(item.captureQuality).toBe("partial")
       expect(item.rawText).toContain("Private account")
-    } finally {
-      queue.restore()
-      providers.restore()
-      model.restore()
-    }
-  })
-
-  it("completes a partial post after the key is added", async () => {
-    const model = stubOpenRouter()
-    const providers = stubExtractionProviders()
-    providers.acceptKeys([testTranscriptKey])
-    providers.metadataReturns(reel, caption)
-    const queue = recordQueue()
-    try {
-      const session = await signUp()
-      await saveOpenRouterKey(session)
-
-      const { id } = await (await saveUrl(session, reel)).json<{ id: string }>()
-      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
-      expect((await getItem(session, id)).captureQuality).toBe("partial")
-
-      expect((await saveTranscriptKey(session)).status).toBe(200)
-      expect(
-        (await request(`/items/${id}/reprocess`, { session, method: "POST" }))
-          .status
-      ).toBe(200)
-      expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
-
-      const completed = await getItem(session, id)
-      expect(completed.captureQuality).toBe("full")
-      expect(completed.rawText).toContain("sourdough starter stalls")
-    } finally {
-      queue.restore()
-      providers.restore()
-      model.restore()
-    }
-  })
-
-  it("surfaces a rejected key rather than silently degrading", async () => {
-    const model = stubOpenRouter()
-    const providers = stubExtractionProviders()
-    providers.acceptKeys([testTranscriptKey])
-    providers.metadataReturns(reel, caption)
-    const queue = recordQueue()
-    try {
-      const session = await signUp()
-      await saveOpenRouterKey(session)
-      await saveTranscriptKey(session)
-      providers.revokeKeys([testTranscriptKey])
-
-      const { id } = await (await saveUrl(session, reel)).json<{ id: string }>()
-      expect(await queue.processLatest()).toMatchObject({
-        outcome: "failed",
-        reason: "invalid_key",
-      })
-
-      const failed = await (
-        await request(`/items/${id}`, { session })
-      ).json<ItemBody & { error: string | null }>()
-      expect(failed.error).toContain("transcript key was rejected")
     } finally {
       queue.restore()
       providers.restore()
@@ -296,6 +224,7 @@ describe("Instagram capture", () => {
     const model = stubOpenRouter()
     const providers = stubExtractionProviders()
     const queue = recordQueue({
+      env: { READER_API_KEY: undefined },
       fetchPage: () =>
         Promise.resolve(
           new Response(

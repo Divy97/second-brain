@@ -13,7 +13,7 @@ import {
 } from "@/lib/keys-api"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 
-const providers: KeyProvider[] = ["openrouter", "transcript", "reader"]
+const providers: KeyProvider[] = ["openrouter"]
 
 export function KeySettingsList() {
   const { data, error, isLoading, mutate } = useSWR<KeySettings, Error>(
@@ -26,8 +26,10 @@ export function KeySettingsList() {
       <Alert className="max-w-[65ch]">
         <InfoIcon aria-hidden />
         <AlertDescription className="text-sm leading-relaxed">
-          Your notes, questions and saved links go to the providers you add keys
-          for. Add a key only if you are comfortable with that.
+          Your notes, questions and saved links are processed with your
+          OpenRouter account. When you save a video link, or a page that blocks
+          normal reading, its address is also sent to our transcript and
+          page-reading providers, Supadata and Jina.
         </AlertDescription>
       </Alert>
 
