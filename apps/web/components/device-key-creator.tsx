@@ -9,7 +9,7 @@ import {
 import { useState, type SubmitEvent } from "react"
 
 import { describeApiError } from "@/lib/describe-api-error"
-import { mintDevice } from "@/lib/devices-api"
+import { mintDeviceKey } from "@/lib/devices-api"
 import { formText } from "@/lib/form-text"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
@@ -38,7 +38,7 @@ export function DeviceKeyCreator({ onCreated }: DeviceKeyCreatorProps) {
     setPending(true)
     setError(null)
     try {
-      const device = await mintDevice(formText(form, "label").trim())
+      const device = await mintDeviceKey(formText(form, "label").trim())
       setStep({ name: "created", key: device.key })
     } catch (caught) {
       setError(describeApiError(caught))

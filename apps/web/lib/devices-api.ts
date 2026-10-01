@@ -13,7 +13,7 @@ export interface DevicesResponse {
   apiKeys: Device[]
 }
 
-export interface MintedDevice {
+export interface MintedDeviceKey {
   key: string
   id: string
   name: string
@@ -29,8 +29,8 @@ export const revokeDevice = (keyId: string) =>
     json: { keyId },
   })
 
-export const mintDevice = (label: string) =>
-  apiRequest<MintedDevice>("/devices", {
+export const mintDeviceKey = (label: string) =>
+  apiRequest<MintedDeviceKey>("/devices", {
     method: "POST",
     json: label ? { label } : {},
   })

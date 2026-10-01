@@ -28,6 +28,24 @@ describe("extension authentication", () => {
     )
   })
 
+  it("gives the key exactly the extension permissions and nothing more", async () => {
+    const session = await signUp()
+    await connectDevice(session)
+
+    const { apiKeys } = await (
+      await request("/api/auth/api-key/list", { session })
+    ).json<{ apiKeys: { permissions: unknown }[] }>()
+
+    const raw = apiKeys[0]?.permissions
+    const granted = typeof raw === "string" ? (JSON.parse(raw) as unknown) : raw
+    expect(granted).toEqual({
+      connection: ["read"],
+      captures: ["create"],
+      captureSettings: ["read", "write"],
+      stored: ["list", "index", "delete"],
+    })
+  })
+
   it("refuses to create a key when nobody is signed in", async () => {
     const response = await request("/devices", { method: "POST", json: {} })
 

@@ -2,18 +2,16 @@ import { storage } from "@wxt-dev/storage"
 
 import { apiOrigin, webOrigin } from "@/lib/config"
 import {
+  checkKey,
   connectWithKey,
   disconnect,
-  type ConnectResult,
+  type ConnectFailureReason,
 } from "@/lib/connect"
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T
 
-const connectErrors: Record<
-  Exclude<ConnectResult, { ok: true }>["reason"],
-  string
-> = {
+const connectErrors: Record<ConnectFailureReason, string> = {
   empty: "Paste your device key.",
   malformed: "That doesn't look like a device key. Keys start with sbx_.",
   invalid:
@@ -68,31 +66,22 @@ async function init() {
     return
   }
 
-  let response: Response
-  try {
-    response = await fetch(`${apiOrigin}/ext/me`, {
-      headers: { authorization: `Bearer ${token}` },
-    })
-  } catch {
-    showConnectedOffline(connected)
-    return
-  }
+  const check = await checkKey(token)
 
-  if (response.status === 401) {
+  if (check.state === "invalid") {
     await disconnect()
     showConnectScreen(
       "This device was disconnected. Create a new key in Settings to reconnect."
     )
     return
   }
-  if (!response.ok) {
+  if (check.state === "unreachable") {
     showConnectedOffline(connected)
     return
   }
 
-  const { email } = (await response.json()) as { email: string }
   connected.style.display = "block"
-  $<HTMLParagraphElement>("email-status").textContent = email
+  $<HTMLParagraphElement>("email-status").textContent = check.email
 
   const settings = await fetchSettings(token)
   setupSettingsUI(settings, token)
@@ -108,6 +97,10 @@ async function init() {
     }
   })
 
+  wireDisconnectButton()
+}
+
+function wireDisconnectButton() {
   $<HTMLButtonElement>("disconnect-btn").addEventListener("click", async () => {
     await disconnect()
     window.location.reload()
@@ -119,10 +112,7 @@ function showConnectedOffline(connected: HTMLDivElement) {
   $<HTMLParagraphElement>("email-status").textContent =
     "Connected. Second Brain can't be reached right now."
   $<HTMLButtonElement>("capture-btn").hidden = true
-  $<HTMLButtonElement>("disconnect-btn").addEventListener("click", async () => {
-    await disconnect()
-    window.location.reload()
-  })
+  wireDisconnectButton()
 }
 
 interface Settings {

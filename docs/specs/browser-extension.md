@@ -12,14 +12,14 @@ A browser extension for Chrome and Firefox. The user saves the current page in o
 
 Optionally the user turns on **Passive capture**, which records pages as they browse. A setting decides whether passive captures are **Indexed** straight away or only **Stored**, so the user can choose later what is worth Indexing. Stored items are listed in the web app, where the user Indexes them one at a time or in bulk.
 
-The extension connects with a device key the User creates in Settings and pastes into the popup. The key is per-device and revocable that can capture and manage capture settings but cannot read item content, ask questions, or touch API keys.
+The extension connects with a device key the User creates in Settings and pastes into the popup. The key is per-device and revocable, and can capture and manage capture settings but cannot read item content, ask questions, or touch API keys.
 
 ## User Stories
 
 1. As a user, I can create a device key in Settings and paste it into the extension to connect it, so that I never type my password into the extension.
 2. As a user, I can use any Sign-in method in the web app to create the key, so that connecting works whether I use a password or Google.
 3. As a user, I see the key once when I create it, so that I know to copy it then.
-4. As a user, I can leave the create dialog without copying, then create another, so that a lost key costs nothing.
+4. As a user, I can leave the create panel without copying, then create another, so that a lost key costs nothing.
 5. As a user, I can save the current page with the toolbar button, so that capturing takes one click.
 6. As a user, I can save the current page with a keyboard shortcut, so that I do not reach for the mouse.
 7. As a user, I can save the current page from the context menu, so that I can capture from any page.
