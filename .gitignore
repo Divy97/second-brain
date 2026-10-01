@@ -26,6 +26,9 @@ dist
 # turbo
 .turbo
 
+# wxt (generated types and auto-imports)
+.wxt/
+
 # misc
 .DS_Store
 *.pem

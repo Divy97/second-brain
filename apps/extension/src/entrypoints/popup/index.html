@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Second Brain</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        width: 320px;
+        padding: 16px;
+        background: #fff;
+        color: #1a1a1a;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .logo {
+        width: 24px;
+        height: 24px;
+      }
+      h1 {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .status {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 16px;
+      }
+      .connected {
+        color: #059669;
+      }
+      button {
+        width: 100%;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .primary {
+        background: #7c3aed;
+        color: white;
+      }
+      .primary:hover {
+        background: #6d28d9;
+      }
+      .secondary {
+        background: #f3f4f6;
+        color: #1a1a1a;
+        margin-top: 8px;
+      }
+      .secondary:hover {
+        background: #e5e7eb;
+      }
+      .capture-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .settings {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+      }
+      .setting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .setting-label {
+        font-size: 13px;
+      }
+      .toggle {
+        position: relative;
+        width: 40px;
+        height: 22px;
+      }
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #e5e7eb;
+        border-radius: 11px;
+        transition: 0.2s;
+      }
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 2px;
+        bottom: 2px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.2s;
+      }
+      input:checked + .toggle-slider {
+        background: #7c3aed;
+      }
+      input:checked + .toggle-slider:before {
+        transform: translateX(18px);
+      }
+      #not-connected {
+        display: none;
+      }
+      #connected {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <img src="/icon/32.png" alt="" class="logo" />
+      <h1>Second Brain</h1>
+    </div>
+
+    <div id="loading">
+      <p class="status">Loading...</p>
+    </div>
+
+    <div id="not-connected">
+      <p class="status">Not connected</p>
+      <button class="primary" id="connect-btn">Connect to Second Brain</button>
+    </div>
+
+    <div id="connected">
+      <p class="status connected" id="email-status">Connected</p>
+      <button class="primary capture-btn" id="capture-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Save this page
+      </button>
+
+      <div class="settings">
+        <div class="setting-row">
+          <span class="setting-label">Passive capture</span>
+          <label class="toggle">
+            <input type="checkbox" id="passive-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row" id="pause-row" style="display: none">
+          <span class="setting-label">Paused</span>
+          <label class="toggle">
+            <input type="checkbox" id="pause-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <button class="secondary" id="disconnect-btn">Disconnect</button>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
