@@ -62,11 +62,7 @@ export {
   type PaidLookup,
   type PaidService,
 } from "./queries/paid-lookups.js"
-export {
-  consumeAuthorizationCode,
-  saveAuthorizationCode,
-  type AuthorizationCode,
-} from "./queries/extension-codes.js"
+export { countDeviceKeys } from "./queries/device-keys.js"
 export {
   defaultCaptureSettings,
   findCaptureSettings,

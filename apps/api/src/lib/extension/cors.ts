@@ -13,5 +13,5 @@ export const extensionCors = cors({
 })
 
 export function isExtensionPath(path: string): boolean {
-  return path.startsWith("/ext/") || path === "/extension/token"
+  return path.startsWith("/ext/")
 }

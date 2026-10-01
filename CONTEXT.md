@@ -39,6 +39,10 @@ _Avoid_: Process, ingest (except in code)
 The browser add-on that performs **Captures** from the pages a **User** visits.
 _Avoid_: Plugin, clipper
 
+**Device key**:
+The secret a **User** creates in Settings and pastes into the **Extension** to connect it. One per browser or profile, shown once, revocable, limited to **Captures**, capture settings and **Stored** items.
+_Avoid_: Token, API key (that word means the model key)
+
 ## Relationships
 
 - A **User** has one or more **Linked sign-ins**

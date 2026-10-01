@@ -1,27 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  approveDevice,
-  asDevice,
-  codeFrom,
-  connectDevice,
-  exchangeCode,
-  pkcePair,
-} from "./support/extension.js"
+import { asDevice, connectDevice, mintDeviceKey } from "./support/extension.js"
 import { request, signUp } from "./support/http.js"
 
-async function approvedCode(
-  session: Awaited<ReturnType<typeof signUp>>,
-  challenge: string
-): Promise<string> {
-  const approval = await approveDevice(session, { challenge })
-  expect(approval.status).toBe(200)
-  const { redirectTo } = await approval.json<{ redirectTo: string }>()
-  return codeFrom(redirectTo)
-}
-
 describe("extension authentication", () => {
-  it("connects a device after the signed-in user approves it", async () => {
+  it("connects a device with a key the signed-in user creates", async () => {
     const session = await signUp()
 
     const { token } = await connectDevice(session, "Chrome on MacBook")
@@ -34,59 +17,66 @@ describe("extension authentication", () => {
     })
   })
 
-  it("refuses to approve a device when nobody is signed in", async () => {
-    const { challenge } = await pkcePair()
+  it("gives the key a default label when none is given", async () => {
+    const session = await signUp()
 
-    const response = await request("/extension/authorize", {
+    const { token } = await connectDevice(session)
+
+    const me = await asDevice(token, "/me")
+    expect((await me.json<{ deviceLabel: string }>()).deviceLabel).toBe(
+      "Browser extension"
+    )
+  })
+
+  it("refuses to create a key when nobody is signed in", async () => {
+    const response = await request("/devices", { method: "POST", json: {} })
+
+    expect(response.status).toBe(401)
+  })
+
+  it("refuses a label that is blank or too long", async () => {
+    const session = await signUp()
+
+    expect((await mintDeviceKey(session, "   ")).status).toBe(400)
+    expect((await mintDeviceKey(session, "x".repeat(81))).status).toBe(400)
+  })
+
+  it("does not let a device key create more device keys", async () => {
+    const session = await signUp()
+    const { token } = await connectDevice(session)
+
+    const response = await request("/devices", {
       method: "POST",
-      json: {
-        label: "Chrome",
-        codeChallenge: challenge,
-        redirectUri: "https://abcdefghijklmnop.chromiumapp.org/cb",
-      },
+      json: {},
+      headers: { authorization: `Bearer ${token}` },
     })
 
     expect(response.status).toBe(401)
   })
 
-  it("refuses a redirect address that is not a known extension", async () => {
+  it("stops a user holding more than twenty device keys", async () => {
     const session = await signUp()
-    const { challenge } = await pkcePair()
+    for (let made = 0; made < 20; made++) await connectDevice(session)
 
-    const response = await approveDevice(session, {
-      challenge,
-      redirectUri: "https://evil.example/cb",
-    })
+    const response = await mintDeviceKey(session)
 
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(409)
+    expect(
+      (await response.json<{ error: { code: string } }>()).error.code
+    ).toBe("device_limit")
   })
 
-  it("rejects a code exchanged with the wrong verifier", async () => {
+  it("no longer offers the approval-page connect routes", async () => {
     const session = await signUp()
-    const { challenge } = await pkcePair()
-    const other = await pkcePair()
-    const code = await approvedCode(session, challenge)
 
-    const response = await exchangeCode(code, other.verifier)
-
-    expect(response.status).toBe(400)
-  })
-
-  it("accepts a code only once", async () => {
-    const session = await signUp()
-    const { verifier, challenge } = await pkcePair()
-    const code = await approvedCode(session, challenge)
-
-    expect((await exchangeCode(code, verifier)).status).toBe(200)
-    expect((await exchangeCode(code, verifier)).status).toBe(400)
-  })
-
-  it("rejects an unknown code", async () => {
-    const { verifier } = await pkcePair()
-
-    const response = await exchangeCode("not-a-real-code", verifier)
-
-    expect(response.status).toBe(400)
+    for (const path of ["/extension/authorize", "/extension/token"]) {
+      const response = await request(path, {
+        method: "POST",
+        session,
+        json: {},
+      })
+      expect(response.status, path).toBe(404)
+    }
   })
 
   it("rejects requests with no token or a made-up token", async () => {

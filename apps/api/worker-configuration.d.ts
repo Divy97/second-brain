@@ -12,7 +12,6 @@ interface __BaseEnv_Env {
   AUTH_RATE_LIMIT: string
   AUTH_CLIENT_IP_HEADER: string
   NIGHTLY_BACKUPS: string
-  EXTENSION_REDIRECT_URIS: string
   BETTER_AUTH_SECRET: string
   KEY_ENCRYPTION_SECRET: string
   YOUTUBE_API_KEY: string
@@ -42,7 +41,6 @@ declare namespace NodeJS {
       | "AUTH_RATE_LIMIT"
       | "AUTH_CLIENT_IP_HEADER"
       | "NIGHTLY_BACKUPS"
-      | "EXTENSION_REDIRECT_URIS"
       | "BETTER_AUTH_SECRET"
       | "KEY_ENCRYPTION_SECRET"
       | "YOUTUBE_API_KEY"

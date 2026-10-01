@@ -7,10 +7,7 @@ import { connect } from "@workspace/db"
 import { runNightlyBackup, shouldRunNightlyBackup } from "./lib/backups.js"
 import { captureSettingsRoutes } from "./lib/capture-settings-routes.js"
 import { extensionCors, isExtensionPath } from "./lib/extension/cors.js"
-import {
-  extensionConnectRoutes,
-  extensionRoutes,
-} from "./lib/extension/index.js"
+import { deviceRoutes, extensionRoutes } from "./lib/extension/index.js"
 import { healthRoutes } from "./lib/health.js"
 import { deletePendingFiles } from "./lib/items/delete-files.js"
 import { itemRoutes } from "./lib/items/index.js"
@@ -36,7 +33,6 @@ const webCors = cors({
 })
 
 app.use("/ext/*", extensionCors)
-app.use("/extension/token", extensionCors)
 app.use(
   "*",
   except((c) => isExtensionPath(c.req.path), webCors)
@@ -45,10 +41,10 @@ app.use("*", noStore)
 app.route("/health", healthRoutes)
 app.use("*", requestContext)
 app.on(["GET", "POST"], "/api/auth/*", (c) => c.var.auth.handler(c.req.raw))
-app.route("/extension", extensionConnectRoutes)
 app.route("/ext", extensionRoutes)
 app.use("*", requireUser)
 app.route("/keys", userKeyRoutes)
+app.route("/devices", deviceRoutes)
 app.route("/capture-settings", captureSettingsRoutes)
 app.route("/stored", storedRoutes)
 app.route("/items", itemRoutes)
