@@ -26,5 +26,12 @@ export async function matchesChallenge(
   verifier: string,
   challenge: string
 ): Promise<boolean> {
-  return (await hashAuthorizationCode(verifier)) === challenge
+  const expected = new TextEncoder().encode(
+    await hashAuthorizationCode(verifier)
+  )
+  const actual = new TextEncoder().encode(challenge)
+  return (
+    expected.byteLength === actual.byteLength &&
+    crypto.subtle.timingSafeEqual(expected, actual)
+  )
 }

@@ -1,10 +1,11 @@
 import { z } from "zod"
 
 import {
-  captureUrlItem,
   capturePageItem,
+  captureUrlItem,
   findCaptureSettings,
   type CapturedItem,
+  type Database,
 } from "@workspace/db"
 
 import { apiError } from "../api-error.js"
@@ -13,13 +14,11 @@ import { contentHash } from "../items/content-hash.js"
 import { enqueueOrRefuse } from "../items/enqueue.js"
 import { dedupeKey, parseMediaLink } from "../media-url.js"
 
-import type { ExtensionEnv } from "./require-device.js"
+import type { ExtensionEnv } from "./extension-env.js"
 import type { Context } from "hono"
 
 const MAX_TEXT_LENGTH = 100_000
 const MAX_TITLE_LENGTH = 500
-
-type Trigger = "manual" | "passive"
 
 const captureBody = z.object({
   url: z.string().trim().min(1),
@@ -33,8 +32,39 @@ const captureBody = z.object({
   trigger: z.enum(["manual", "passive"]),
 })
 
-// Videos and PDFs are fetched from their link by the server's own handling; the page the
-// browser shows for them has no useful text.
+type Trigger = z.infer<typeof captureBody>["trigger"]
+
+interface ParsedCapture {
+  url: string
+  title: string | null
+  text: string | undefined
+  trigger: Trigger
+}
+
+type Handling = "index" | "store" | "refuse"
+
+type CaptureContext = Context<ExtensionEnv>
+
+function parseCapture(
+  body: unknown
+): { ok: true; capture: ParsedCapture } | { ok: false; message: string } {
+  const parsed = captureBody.safeParse(body)
+  if (!parsed.success) return { ok: false, message: "Invalid capture." }
+  const url = safeArticleUrl(parsed.data.url)
+  if (!url) {
+    return { ok: false, message: "Only public web pages can be captured." }
+  }
+  return {
+    ok: true,
+    capture: {
+      url,
+      title: parsed.data.title ?? null,
+      text: parsed.data.text,
+      trigger: parsed.data.trigger,
+    },
+  }
+}
+
 function isLinkOnly(url: string): boolean {
   return (
     parseMediaLink(url) !== null ||
@@ -42,25 +72,25 @@ function isLinkOnly(url: string): boolean {
   )
 }
 
-// A manual capture is always indexed. A passive one needs passive capture switched on and not
-// paused, and follows the user's chosen handling. Null means the capture must be refused.
-async function shouldIndexNow(
-  c: Context<ExtensionEnv>,
+async function handlingFor(
+  db: Database,
+  userId: string,
   trigger: Trigger
-): Promise<boolean | null> {
-  if (trigger === "manual") return true
-  const settings = await findCaptureSettings(c.var.db, c.var.userId)
-  if (!settings.passiveEnabled || settings.paused) return null
-  return settings.passiveMode === "index"
+): Promise<Handling> {
+  if (trigger === "manual") return "index"
+  const settings = await findCaptureSettings(db, userId)
+  if (!settings.passiveEnabled || settings.paused) return "refuse"
+  return settings.passiveMode
 }
 
-async function dedupeToken(url: string): Promise<string> {
+// Dedupes on the media itself, so every link form of one video is one item.
+function urlContentHash(url: string): Promise<string> {
   const link = parseMediaLink(url)
   return contentHash(`url:${link ? dedupeKey(link) : url}`)
 }
 
-async function respond(
-  c: Context<ExtensionEnv>,
+async function replyWithCapture(
+  c: CaptureContext,
   { item, created, run }: CapturedItem
 ): Promise<Response> {
   if (item.status === "pending") {
@@ -73,43 +103,34 @@ async function respond(
   )
 }
 
-export async function createCapture(c: Context<ExtensionEnv>) {
-  const parsed = captureBody.safeParse(await c.req.json().catch(() => ({})))
-  if (!parsed.success) {
-    return apiError(c, 400, "invalid_request", "Invalid capture.")
-  }
-  const { title, text, trigger } = parsed.data
-  const url = safeArticleUrl(parsed.data.url)
-  if (!url) {
+async function captureLink(
+  c: CaptureContext,
+  capture: ParsedCapture
+): Promise<Response> {
+  if (capture.trigger === "passive") {
     return apiError(
       c,
       400,
       "invalid_request",
-      "Only public web pages can be captured."
+      "Videos and PDFs are only saved on request."
     )
   }
+  return replyWithCapture(
+    c,
+    await captureUrlItem(c.var.db, {
+      userId: c.var.userId,
+      sourceUrl: capture.url,
+      sourceNote: null,
+      contentHash: await urlContentHash(capture.url),
+    })
+  )
+}
 
-  if (isLinkOnly(url)) {
-    if (trigger === "passive") {
-      return apiError(
-        c,
-        400,
-        "invalid_request",
-        "Videos and PDFs are only saved on request."
-      )
-    }
-    return respond(
-      c,
-      await captureUrlItem(c.var.db, {
-        userId: c.var.userId,
-        sourceUrl: url,
-        sourceNote: null,
-        contentHash: await dedupeToken(url),
-      })
-    )
-  }
-
-  if (!text) {
+async function capturePage(
+  c: CaptureContext,
+  capture: ParsedCapture
+): Promise<Response> {
+  if (!capture.text) {
     return apiError(
       c,
       400,
@@ -117,19 +138,27 @@ export async function createCapture(c: Context<ExtensionEnv>) {
       "This page had no readable text."
     )
   }
-  const indexNow = await shouldIndexNow(c, trigger)
-  if (indexNow === null) {
+  const handling = await handlingFor(c.var.db, c.var.userId, capture.trigger)
+  if (handling === "refuse") {
     return apiError(c, 409, "conflict", "Passive capture is off.")
   }
-  return respond(
+  return replyWithCapture(
     c,
     await capturePageItem(c.var.db, {
       userId: c.var.userId,
-      sourceUrl: url,
-      title: title ?? null,
-      text,
-      contentHash: await dedupeToken(url),
-      indexNow,
+      sourceUrl: capture.url,
+      title: capture.title,
+      text: capture.text,
+      contentHash: await urlContentHash(capture.url),
+      indexNow: handling === "index",
     })
   )
+}
+
+export async function createCapture(c: CaptureContext): Promise<Response> {
+  const parsed = parseCapture(await c.req.json().catch(() => ({})))
+  if (!parsed.ok) return apiError(c, 400, "invalid_request", parsed.message)
+  return isLinkOnly(parsed.capture.url)
+    ? captureLink(c, parsed.capture)
+    : capturePage(c, parsed.capture)
 }

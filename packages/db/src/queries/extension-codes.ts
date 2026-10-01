@@ -13,7 +13,6 @@ export interface AuthorizationCode {
 
 const identifierFor = (codeHash: string) => `extension-code:${codeHash}`
 
-// Codes ride in the verifications table. Only the hash of a code is stored.
 export async function saveAuthorizationCode(
   db: Database,
   input: { codeHash: string; expiresAt: Date } & AuthorizationCode

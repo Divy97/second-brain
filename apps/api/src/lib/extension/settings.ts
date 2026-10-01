@@ -4,12 +4,12 @@ import { findCaptureSettings, saveCaptureSettings } from "@workspace/db"
 
 import { apiError } from "../api-error.js"
 
-import type { ExtensionEnv } from "./require-device.js"
+import type { ExtensionEnv } from "./extension-env.js"
 import type { Context } from "hono"
 
 const MAX_BLOCKLIST_ENTRIES = 500
 
-const hostname = z
+const hostnameSchema = z
   .string()
   .trim()
   .toLowerCase()
@@ -24,16 +24,16 @@ const settingsBody = z.object({
   passiveMode: z.enum(["index", "store"]),
   paused: z.boolean(),
   blocklist: z
-    .array(hostname)
+    .array(hostnameSchema)
     .max(MAX_BLOCKLIST_ENTRIES)
     .transform((entries) => [...new Set(entries)]),
 })
 
-export async function readSettings(c: Context<ExtensionEnv>) {
+export async function getCaptureSettings(c: Context<ExtensionEnv>) {
   return c.json(await findCaptureSettings(c.var.db, c.var.userId))
 }
 
-export async function writeSettings(c: Context<ExtensionEnv>) {
+export async function putCaptureSettings(c: Context<ExtensionEnv>) {
   const parsed = settingsBody.safeParse(await c.req.json().catch(() => ({})))
   if (!parsed.success) {
     return apiError(

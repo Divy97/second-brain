@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm"
 
 import { generateId, itemCaptures, items } from "../schema.js"
-import { toCapturedItem, type CapturedItem, type CaptureRow } from "./items.js"
+import { toCapturedItem, type CaptureRow } from "./capture-row.js"
 
+import type { CapturedItem } from "./item-types.js"
 import type { Database } from "../database.js"
 
 // A page the browser extension read: its text arrives with the capture, so the pipeline never

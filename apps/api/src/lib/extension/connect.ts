@@ -67,6 +67,7 @@ extensionConnectRoutes.post("/token", async (c) => {
   }
   const { code, codeVerifier } = parsed.data
 
+  // Consuming first means a wrong verifier burns the code, so it cannot be guessed at.
   const grant = await consumeAuthorizationCode(
     c.var.db,
     await hashAuthorizationCode(code)

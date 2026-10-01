@@ -12,7 +12,7 @@ import {
 import { apiError } from "../api-error.js"
 import { enqueueAllOrRefuse } from "../items/enqueue.js"
 
-import type { ExtensionEnv } from "./require-device.js"
+import type { ExtensionEnv } from "./extension-env.js"
 import type { Context } from "hono"
 
 const MAX_PAGE_SIZE = 100
@@ -32,10 +32,10 @@ const bulkBody = z.object({
   ids: z.array(z.uuid()).min(1).max(MAX_PAGE_SIZE),
 })
 
-const itemId = z.uuid()
+const itemIdSchema = z.uuid()
 
 const notFound = (c: Context<ExtensionEnv>) =>
-  apiError(c, 404, "not_found", "This page is not in your stored list.")
+  apiError(c, 404, "not_found", "This page is not in your Stored items.")
 
 function hostOf(url: string | null): string {
   try {
@@ -45,7 +45,7 @@ function hostOf(url: string | null): string {
   }
 }
 
-export async function listStored(c: Context<ExtensionEnv>) {
+export async function listStoredItems(c: Context<ExtensionEnv>) {
   const query = pageQuery.safeParse(c.req.query())
   if (!query.success) {
     return apiError(c, 400, "invalid_request", "Invalid page request.")
@@ -79,8 +79,8 @@ export async function listStored(c: Context<ExtensionEnv>) {
   }
 }
 
-export async function indexOneStored(c: Context<ExtensionEnv>) {
-  const id = itemId.safeParse(c.req.param("id"))
+export async function indexStoredItem(c: Context<ExtensionEnv>) {
+  const id = itemIdSchema.safeParse(c.req.param("id"))
   if (!id.success) return notFound(c)
 
   const jobs = await indexStoredItems(c.var.db, c.var.userId, [id.data])
@@ -95,7 +95,7 @@ export async function indexOneStored(c: Context<ExtensionEnv>) {
   return item ? c.json({ id: id.data, status: item.status }) : notFound(c)
 }
 
-export async function indexManyStored(c: Context<ExtensionEnv>) {
+export async function indexManyStoredItems(c: Context<ExtensionEnv>) {
   const body = bulkBody.safeParse(await c.req.json().catch(() => ({})))
   if (!body.success) {
     return apiError(
@@ -111,8 +111,8 @@ export async function indexManyStored(c: Context<ExtensionEnv>) {
   return c.json({ queued: jobs.length })
 }
 
-export async function deleteOneStored(c: Context<ExtensionEnv>) {
-  const id = itemId.safeParse(c.req.param("id"))
+export async function removeStoredItem(c: Context<ExtensionEnv>) {
+  const id = itemIdSchema.safeParse(c.req.param("id"))
   if (!id.success) return notFound(c)
   const deleted = await deleteStoredItem(c.var.db, {
     userId: c.var.userId,
