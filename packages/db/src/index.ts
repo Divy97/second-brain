@@ -67,6 +67,18 @@ export {
   saveAuthorizationCode,
   type AuthorizationCode,
 } from "./queries/extension-codes.js"
+export {
+  defaultCaptureSettings,
+  findCaptureSettings,
+  saveCaptureSettings,
+  type CaptureSettings,
+} from "./queries/capture-settings.js"
+export {
+  countStoredItems,
+  deleteStoredItem,
+  indexStoredItems,
+} from "./queries/stored-items.js"
+export { capturePageItem } from "./queries/page-captures.js"
 export { findUserEmail } from "./queries/users.js"
 export {
   deleteUserKey,
@@ -93,6 +105,7 @@ export {
   type ItemDetail,
   type ItemPage,
   type ItemSummary,
+  type ListedItem,
   type ReplaceTextResult,
 } from "./queries/items.js"
 export type {

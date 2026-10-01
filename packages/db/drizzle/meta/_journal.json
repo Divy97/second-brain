@@ -78,6 +78,13 @@
       "when": 1790863183124,
       "tag": "0010_extension_device_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790863403112,
+      "tag": "0011_extension_capture_settings",
+      "breakpoints": true
     }
   ]
 }

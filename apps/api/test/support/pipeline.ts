@@ -41,6 +41,12 @@ export function recordQueue(
       messages.push(body as ProcessItemParams)
       return Promise.resolve({ metadata: { metrics: {} } } as never)
     })
+  const batchSpy = vi
+    .spyOn(env.ITEMS_QUEUE, "sendBatch")
+    .mockImplementation(async (batch) => {
+      for (const { body } of batch) messages.push(body as ProcessItemParams)
+      return Promise.resolve({ metadata: { metrics: {} } } as never)
+    })
   return {
     messages,
     processAll: async () => {
@@ -58,6 +64,7 @@ export function recordQueue(
     },
     restore: () => {
       spy.mockRestore()
+      batchSpy.mockRestore()
     },
   }
 }
