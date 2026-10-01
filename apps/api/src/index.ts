@@ -1,9 +1,15 @@
 import { Hono, type Context } from "hono"
+import { except } from "hono/combine"
 import { cors } from "hono/cors"
 
 import { connect } from "@workspace/db"
 
 import { runNightlyBackup, shouldRunNightlyBackup } from "./lib/backups.js"
+import { extensionCors, isExtensionPath } from "./lib/extension/cors.js"
+import {
+  extensionConnectRoutes,
+  extensionRoutes,
+} from "./lib/extension/index.js"
 import { healthRoutes } from "./lib/health.js"
 import { deletePendingFiles } from "./lib/items/delete-files.js"
 import { itemRoutes } from "./lib/items/index.js"
@@ -21,18 +27,24 @@ export type { ProcessItemParams }
 
 const app = new Hono<AppEnv>()
 
+const webCors = cors({
+  origin: (origin, c: Context<AppEnv>) =>
+    origin === c.env.WEB_ORIGIN ? origin : null,
+  credentials: true,
+})
+
+app.use("/ext/*", extensionCors)
+app.use("/extension/token", extensionCors)
 app.use(
   "*",
-  cors({
-    origin: (origin, c: Context<AppEnv>) =>
-      origin === c.env.WEB_ORIGIN ? origin : null,
-    credentials: true,
-  })
+  except((c) => isExtensionPath(c.req.path), webCors)
 )
 app.use("*", noStore)
 app.route("/health", healthRoutes)
 app.use("*", requestContext)
 app.on(["GET", "POST"], "/api/auth/*", (c) => c.var.auth.handler(c.req.raw))
+app.route("/extension", extensionConnectRoutes)
+app.route("/ext", extensionRoutes)
 app.use("*", requireUser)
 app.route("/keys", userKeyRoutes)
 app.route("/items", itemRoutes)

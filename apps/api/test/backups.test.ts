@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 
+import { asDevice, connectDevice } from "./support/extension.js"
 import { signUp } from "./support/http.js"
 import api from "../src/index.js"
 
@@ -25,6 +26,36 @@ describe("nightly backups", () => {
       expect.arrayContaining([
         "backups/2026-09-30/db/items/000000.json",
         "backups/2026-09-30/r2/" + session.userId + "/note.webm",
+      ])
+    )
+  })
+
+  it("backs up each user's capture settings, including their blocklist", async () => {
+    const session = await signUp()
+    const { token } = await connectDevice(session)
+    await asDevice(token, "/settings", {
+      method: "PUT",
+      json: {
+        passiveEnabled: true,
+        passiveMode: "store",
+        paused: false,
+        blocklist: ["bank.example.com"],
+      },
+    })
+
+    await api.scheduled(nightly, backupsOn)
+
+    const object = await env.BACKUPS.get(
+      "backups/2026-09-30/db/capture_settings/000000.json"
+    )
+    const rows =
+      await object?.json<{ user_id: string; blocklist: string[] }[]>()
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          user_id: session.userId,
+          blocklist: ["bank.example.com"],
+        }),
       ])
     )
   })

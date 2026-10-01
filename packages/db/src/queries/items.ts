@@ -8,23 +8,27 @@ import {
   itemEntities,
   items,
 } from "../schema.js"
+import {
+  EXCERPT_LENGTH,
+  toCapturedItem,
+  type CaptureRow,
+} from "./capture-row.js"
 import { listItemEntities } from "./item-entities.js"
 
 import type { Database } from "../database.js"
 import type { PartialReason } from "../schema.js"
-import type { ItemEntity, ItemKind, ItemRef, ItemStatus } from "./item-types.js"
+import type {
+  CapturedItem,
+  ItemEntity,
+  ItemRef,
+  ItemStatus,
+  ItemSummary,
+} from "./item-types.js"
 
-const EXCERPT_LENGTH = 200
+export type { CapturedItem, ItemSummary }
 
-export interface ItemSummary {
-  id: string
-  type: "text" | "voice" | "image" | "pdf" | "url"
-  status: ItemStatus
-  captureQuality: "full" | "partial" | null
-  kind: ItemKind | null
-  title: string | null
-  excerpt: string
-  capturedAt: Date
+export interface ListedItem extends ItemSummary {
+  sourceUrl: string | null
 }
 
 export interface ItemDetail extends ItemSummary {
@@ -46,14 +50,8 @@ export interface ItemDetail extends ItemSummary {
   captures: Date[]
 }
 
-export interface CapturedItem {
-  item: ItemSummary & { rawText: string }
-  created: boolean
-  run: number
-}
-
 export interface ItemPage {
-  items: ItemSummary[]
+  items: ListedItem[]
   nextCursor: string | null
 }
 
@@ -74,19 +72,6 @@ const visibleItem = (ref: ItemRef) =>
     eq(items.userId, ref.userId),
     isNull(items.deletedAt)
   )
-
-interface CaptureRow extends Record<string, unknown> {
-  id: string
-  type: "text" | "voice" | "image" | "pdf" | "url"
-  status: ItemStatus
-  capture_quality: "full" | "partial" | null
-  kind: ItemKind | null
-  title: string | null
-  raw_text: string
-  captured_at: Date
-  created: boolean
-  run: number
-}
 
 // One round trip: insert the user's item for this content hash or reuse the live one, and
 // record the capture in the same statement. xmax = 0 only for rows this statement inserted.
@@ -109,21 +94,7 @@ export async function captureTextItem(
     select * from upserted
   `)
   if (!row) throw new Error("capture did not return a row")
-  return {
-    created: row.created,
-    run: row.run,
-    item: {
-      id: row.id,
-      type: row.type,
-      status: row.status,
-      captureQuality: row.capture_quality,
-      kind: row.kind,
-      title: row.title,
-      excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
-      rawText: row.raw_text,
-      capturedAt: new Date(row.captured_at),
-    },
-  }
+  return toCapturedItem(row)
 }
 
 export async function captureFileItem(
@@ -155,21 +126,7 @@ export async function captureFileItem(
     select * from upserted
   `)
   if (!row) throw new Error("capture did not return a row")
-  return {
-    created: row.created,
-    run: row.run,
-    item: {
-      id: row.id,
-      type: row.type,
-      status: row.status,
-      captureQuality: row.capture_quality,
-      kind: row.kind,
-      title: row.title,
-      excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
-      rawText: row.raw_text,
-      capturedAt: new Date(row.captured_at),
-    },
-  }
+  return toCapturedItem(row)
 }
 
 export async function captureUrlItem(
@@ -196,21 +153,7 @@ export async function captureUrlItem(
     select * from upserted
   `)
   if (!row) throw new Error("capture did not return a row")
-  return {
-    created: row.created,
-    run: row.run,
-    item: {
-      id: row.id,
-      type: row.type,
-      status: row.status,
-      captureQuality: row.capture_quality,
-      kind: row.kind,
-      title: row.title,
-      excerpt: row.raw_text.slice(0, EXCERPT_LENGTH),
-      rawText: row.raw_text,
-      capturedAt: new Date(row.captured_at),
-    },
-  }
+  return toCapturedItem(row)
 }
 
 // The cursor keeps captured_at at full microsecond precision; a JS Date would truncate it to
@@ -236,15 +179,25 @@ function afterCursor(cursor: string) {
 
 export async function listItems(
   db: Database,
-  input: { userId: string; limit: number; cursor?: string }
+  input: {
+    userId: string
+    limit: number
+    cursor?: string
+    status?: ItemStatus
+  }
 ): Promise<ItemPage> {
   const rows = await db
-    .select({ ...summaryColumns, cursor: cursorKey })
+    .select({
+      ...summaryColumns,
+      sourceUrl: items.sourceUrl,
+      cursor: cursorKey,
+    })
     .from(items)
     .where(
       and(
         eq(items.userId, input.userId),
         isNull(items.deletedAt),
+        input.status ? eq(items.status, input.status) : undefined,
         input.cursor ? afterCursor(input.cursor) : undefined
       )
     )

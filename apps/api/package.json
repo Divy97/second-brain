@@ -20,6 +20,7 @@
     ]
   },
   "dependencies": {
+    "@better-auth/api-key": "1.7.6",
     "@better-auth/drizzle-adapter": "1.7.6",
     "@workspace/ai": "workspace:*",
     "@workspace/db": "workspace:*",

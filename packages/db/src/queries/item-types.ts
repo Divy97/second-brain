@@ -17,3 +17,20 @@ export interface ItemRef {
   userId: string
   itemId: string
 }
+
+export interface ItemSummary {
+  id: string
+  type: "text" | "voice" | "image" | "pdf" | "url"
+  status: ItemStatus
+  captureQuality: "full" | "partial" | null
+  kind: ItemKind | null
+  title: string | null
+  excerpt: string
+  capturedAt: Date
+}
+
+export interface CapturedItem {
+  item: ItemSummary & { rawText: string }
+  created: boolean
+  run: number
+}

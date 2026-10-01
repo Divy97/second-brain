@@ -5,7 +5,9 @@
     "moduleResolution": "Bundler",
     "lib": ["ES2022"],
     "types": ["./worker-configuration.d.ts", "node"],
-    "noEmit": true
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src", "*.ts", "worker-configuration.d.ts"],
   "exclude": ["node_modules", "dist", "test"]

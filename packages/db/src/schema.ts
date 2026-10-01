@@ -71,7 +71,10 @@ export const itemStatusEnum = pgEnum("item_status", [
   "processing",
   "ready",
   "failed",
+  "stored",
 ])
+
+export const captureModeEnum = pgEnum("capture_mode", ["index", "store"])
 
 export const captureQualityEnum = pgEnum("capture_quality", ["full", "partial"])
 
@@ -151,6 +154,52 @@ export const verifications = pgTable(
   (t) => [index("verifications_identifier_idx").on(t.identifier)]
 )
 
+// Extension device tokens. Better Auth's API Key plugin reads these by property name.
+export const apikeys = pgTable(
+  "apikeys",
+  {
+    id: id(),
+    configId: text("config_id").notNull().default("default"),
+    name: text("name"),
+    start: text("start"),
+    referenceId: uuid("reference_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    prefix: text("prefix"),
+    key: text("key").notNull(),
+    refillInterval: integer("refill_interval"),
+    refillAmount: integer("refill_amount"),
+    lastRefillAt: timestampTz("last_refill_at"),
+    enabled: boolean("enabled").notNull().default(true),
+    rateLimitEnabled: boolean("rate_limit_enabled").notNull().default(true),
+    rateLimitTimeWindow: integer("rate_limit_time_window"),
+    rateLimitMax: integer("rate_limit_max"),
+    requestCount: integer("request_count").notNull().default(0),
+    remaining: integer("remaining"),
+    lastRequest: timestampTz("last_request"),
+    expiresAt: timestampTz("expires_at"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    permissions: text("permissions"),
+    metadata: text("metadata"),
+  },
+  (t) => [
+    index("apikeys_reference_id_idx").on(t.referenceId),
+    index("apikeys_key_idx").on(t.key),
+  ]
+)
+
+export const captureSettings = pgTable("capture_settings", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  passiveEnabled: boolean("passive_enabled").notNull().default(false),
+  passiveMode: captureModeEnum("passive_mode").notNull().default("store"),
+  paused: boolean("paused").notNull().default(false),
+  blocklist: stringList("blocklist"),
+  updatedAt: updatedAt(),
+})
+
 export const userKeys = pgTable(
   "user_keys",
   {
@@ -200,6 +249,7 @@ export const items = pgTable(
     fileSize: integer("file_size"),
     sourceUrl: text("source_url"),
     sourceNote: text("source_note"),
+    clientText: boolean("client_text").notNull().default(false),
     pipelineRun: integer("pipeline_run").notNull().default(0),
     rawText: text("raw_text").notNull(),
     cleanText: text("clean_text"),

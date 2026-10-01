@@ -15,7 +15,6 @@ import {
   requeueItem,
   softDeleteItem,
   type ItemRef,
-  type PipelineJob,
 } from "@workspace/db"
 
 import { apiError } from "../api-error.js"
@@ -23,6 +22,7 @@ import { safeArticleUrl } from "../article-url.js"
 import { stalledRunAfterMs } from "../config.js"
 import { dedupeKey, parseMediaLink } from "../media-url.js"
 import { contentHash } from "./content-hash.js"
+import { enqueueOrRefuse } from "./enqueue.js"
 
 import type { AppEnv } from "../app-env.js"
 
@@ -84,26 +84,6 @@ const invalidText = (c: Context<AppEnv>, message: string) =>
 
 const notFound = (c: Context<AppEnv>) =>
   apiError(c, 404, "not_found", "This item does not exist or was deleted.")
-
-// Answers 503 when the queue refuses the job: the note is saved, and saving it again (or
-// retrying) re-queues it.
-async function enqueueOrRefuse(
-  c: Context<AppEnv>,
-  job: PipelineJob
-): Promise<Response | null> {
-  try {
-    await c.env.ITEMS_QUEUE.send(job)
-    return null
-  } catch (error) {
-    console.error("queue send failed", job.itemId, error)
-    return apiError(
-      c,
-      503,
-      "queue_unavailable",
-      "Your note is saved, but processing could not start. Try again shortly."
-    )
-  }
-}
 
 export const itemRoutes = new Hono<AppEnv>()
 

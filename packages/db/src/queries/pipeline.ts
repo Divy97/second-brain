@@ -267,9 +267,9 @@ export async function requeueItem(
       error: null,
       ...(resetExtraction
         ? {
-            rawText: sql`case when ${items.type} in ('voice', 'image', 'pdf') then '' when ${items.type} = 'url' then coalesce(${items.sourceNote}, ${items.sourceUrl}, '') else ${items.rawText} end`,
-            captureQuality: sql`case when ${items.type} in ('voice', 'image', 'pdf', 'url') then null else ${items.captureQuality} end`,
-            partialReason: sql`case when ${items.type} in ('voice', 'image', 'pdf', 'url') then null else ${items.partialReason} end`,
+            rawText: sql`case when ${items.type} in ('voice', 'image', 'pdf') then '' when ${items.type} = 'url' and not ${items.clientText} then coalesce(${items.sourceNote}, ${items.sourceUrl}, '') else ${items.rawText} end`,
+            captureQuality: sql`case when ${items.type} in ('voice', 'image', 'pdf') or (${items.type} = 'url' and not ${items.clientText}) then null else ${items.captureQuality} end`,
+            partialReason: sql`case when ${items.type} in ('voice', 'image', 'pdf') or (${items.type} = 'url' and not ${items.clientText}) then null else ${items.partialReason} end`,
           }
         : {}),
     })
