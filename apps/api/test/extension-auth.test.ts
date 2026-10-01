@@ -173,4 +173,20 @@ describe("extension authentication", () => {
 
     expect(response.status).toBe(404)
   })
+
+  it("answers 429, not a reconnect prompt, when a device is over its rate limit", async () => {
+    const session = await signUp()
+    const { token } = await connectDevice(session)
+
+    let last = await asDevice(token, "/me")
+    for (let sent = 1; sent < 125 && last.status === 200; sent++) {
+      last = await asDevice(token, "/me")
+    }
+
+    expect(last.status).toBe(429)
+    expect((await last.json<{ error: { code: string } }>()).error.code).toBe(
+      "rate_limited"
+    )
+    expect((await asDevice(token, "/me")).status).toBe(429)
+  })
 })

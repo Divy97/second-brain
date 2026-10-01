@@ -8,6 +8,7 @@ const tables = [
   "accounts",
   "verifications",
   "user_keys",
+  "capture_settings",
   "items",
   "item_captures",
   "file_deletions",

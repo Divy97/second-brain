@@ -23,26 +23,26 @@ export async function countStoredItems(
   return row?.total ?? 0
 }
 
-// Moves Stored items into the pipeline. Items that are not Stored, not the user's or deleted
-// are skipped, so indexing twice queues nothing the second time.
+// Moves Stored items into the pipeline and returns a job for every requested item that is now
+// pending, so repeating the call after the queue refused a job queues it again.
 export async function indexStoredItems(
   db: Database,
   userId: string,
   itemIds: string[]
 ): Promise<PipelineJob[]> {
-  const rows = await db
+  const owned = and(
+    eq(items.userId, userId),
+    inArray(items.id, itemIds),
+    isNull(items.deletedAt)
+  )
+  await db
     .update(items)
     .set({ status: "pending", pipelineRun: sql`${items.pipelineRun} + 1` })
-    .where(
-      and(
-        eq(items.userId, userId),
-        inArray(items.id, itemIds),
-        eq(items.status, "stored"),
-        isNull(items.deletedAt)
-      )
-    )
-    .returning({ itemId: items.id, run: items.pipelineRun })
-  return rows
+    .where(and(owned, eq(items.status, "stored")))
+  return db
+    .select({ itemId: items.id, run: items.pipelineRun })
+    .from(items)
+    .where(and(owned, eq(items.status, "pending")))
 }
 
 export async function deleteStoredItem(

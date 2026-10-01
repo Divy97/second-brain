@@ -3,6 +3,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status"
 
 export type ApiErrorCode =
   | "unauthenticated"
+  | "rate_limited"
   | "invalid_request"
   | "invalid_grant"
   | "invalid_key"

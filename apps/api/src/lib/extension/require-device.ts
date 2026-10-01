@@ -25,6 +25,9 @@ export const requireDevice = (permissions: ExtensionPermissions) =>
     const verified = await c.var.auth.api.verifyApiKey({
       body: { key: token, permissions },
     })
+    if (verified.error?.code === "RATE_LIMITED") {
+      return apiError(c, 429, "rate_limited", "Too many requests. Slow down.")
+    }
     if (!verified.valid || !verified.key) {
       return apiError(c, 401, "unauthenticated", "Reconnect the extension.")
     }

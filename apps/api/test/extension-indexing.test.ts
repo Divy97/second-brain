@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { env } from "cloudflare:workers"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { asDevice, connectDevice } from "./support/extension.js"
 import { request, saveOpenRouterKey, signUp } from "./support/http.js"
@@ -141,5 +142,27 @@ describe("indexing pages the extension captured", () => {
 
     expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
     expect((await item(session, id)).rawText).toBe(pageText)
+  })
+
+  it("queues the page when indexing is repeated after the queue refused it", async () => {
+    const { token, id } = await storedPage()
+    queue.restore()
+    const refusing = vi
+      .spyOn(env.ITEMS_QUEUE, "sendBatch")
+      .mockRejectedValueOnce(new Error("queue down"))
+    const first = await asDevice(token, `/stored/${id}/index`, {
+      method: "POST",
+    })
+    expect(first.status).toBe(503)
+    refusing.mockRestore()
+    queue = recordQueue({ fetchPage: neverFetch })
+
+    const second = await asDevice(token, `/stored/${id}/index`, {
+      method: "POST",
+    })
+
+    expect(second.status).toBe(200)
+    expect(queue.messages).toHaveLength(1)
+    expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
   })
 })
