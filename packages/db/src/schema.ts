@@ -151,6 +151,41 @@ export const verifications = pgTable(
   (t) => [index("verifications_identifier_idx").on(t.identifier)]
 )
 
+// Extension device tokens. Better Auth's API Key plugin reads these by property name.
+export const apikeys = pgTable(
+  "apikeys",
+  {
+    id: id(),
+    configId: text("config_id").notNull().default("default"),
+    name: text("name"),
+    start: text("start"),
+    referenceId: uuid("reference_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    prefix: text("prefix"),
+    key: text("key").notNull(),
+    refillInterval: integer("refill_interval"),
+    refillAmount: integer("refill_amount"),
+    lastRefillAt: timestampTz("last_refill_at"),
+    enabled: boolean("enabled").notNull().default(true),
+    rateLimitEnabled: boolean("rate_limit_enabled").notNull().default(true),
+    rateLimitTimeWindow: integer("rate_limit_time_window"),
+    rateLimitMax: integer("rate_limit_max"),
+    requestCount: integer("request_count").notNull().default(0),
+    remaining: integer("remaining"),
+    lastRequest: timestampTz("last_request"),
+    expiresAt: timestampTz("expires_at"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    permissions: text("permissions"),
+    metadata: text("metadata"),
+  },
+  (t) => [
+    index("apikeys_reference_id_idx").on(t.referenceId),
+    index("apikeys_key_idx").on(t.key),
+  ]
+)
+
 export const userKeys = pgTable(
   "user_keys",
   {

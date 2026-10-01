@@ -63,6 +63,12 @@ export {
   type PaidService,
 } from "./queries/paid-lookups.js"
 export {
+  consumeAuthorizationCode,
+  saveAuthorizationCode,
+  type AuthorizationCode,
+} from "./queries/extension-codes.js"
+export { findUserEmail } from "./queries/users.js"
+export {
   deleteUserKey,
   findUserKey,
   saveUserKey,

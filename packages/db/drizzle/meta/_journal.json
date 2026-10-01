@@ -71,6 +71,13 @@
       "when": 1790740000000,
       "tag": "0009_operator_paid_fallbacks",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790863183124,
+      "tag": "0010_extension_device_tokens",
+      "breakpoints": true
     }
   ]
 }
