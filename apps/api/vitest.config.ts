@@ -19,8 +19,6 @@ export default defineConfig({
           API_ORIGIN: "https://second-brain.test",
           WEB_ORIGIN: "https://second-brain.test",
           AUTH_RATE_LIMIT: "off",
-          EXTENSION_REDIRECT_URIS:
-            "https://abcdefghijklmnop.chromiumapp.org/cb,https://0123abcd.extensions.allizom.org/cb",
           TRANSCRIPT_API_KEY: "sd_test_transcript_key_9999",
           READER_API_KEY: "jina_test_reader_key_8888",
           AUTH_CLIENT_IP_HEADER: "x-test-client-ip",

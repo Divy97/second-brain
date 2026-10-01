@@ -11,10 +11,12 @@ export default defineBackground(() => {
     }
   })
 
-  browser.contextMenus.create({
-    id: "save-page",
-    title: "Save to Second Brain",
-    contexts: ["page", "selection", "link"],
+  browser.runtime.onInstalled.addListener(() => {
+    browser.contextMenus.create({
+      id: "save-page",
+      title: "Save to Second Brain",
+      contexts: ["page", "selection", "link"],
+    })
   })
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {

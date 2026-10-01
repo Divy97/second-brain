@@ -122,6 +122,47 @@
       input:checked + .toggle-slider:before {
         transform: translateX(18px);
       }
+      .field-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 6px;
+      }
+      #key-input {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        color: #1a1a1a;
+        background: #fff;
+      }
+      #key-input:focus-visible {
+        outline: 2px solid #7c3aed;
+        outline-offset: 1px;
+      }
+      .hint {
+        font-size: 12px;
+        color: #4b5563;
+        margin: 6px 0 12px;
+      }
+      .hint a {
+        color: #6d28d9;
+      }
+      .error {
+        font-size: 12px;
+        color: #b91c1c;
+        margin-bottom: 12px;
+      }
+      .notice {
+        font-size: 12px;
+        color: #92400e;
+        background: #fffbeb;
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+      }
       #not-connected {
         display: none;
       }
@@ -142,7 +183,23 @@
 
     <div id="not-connected">
       <p class="status">Not connected</p>
-      <button class="primary" id="connect-btn">Connect to Second Brain</button>
+      <p class="notice" id="connect-notice" role="status" hidden></p>
+      <form id="connect-form" novalidate>
+        <label class="field-label" for="key-input">Device key</label>
+        <input
+          id="key-input"
+          type="password"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="sbx_..."
+        />
+        <p class="hint">
+          Create one under Connected Devices in
+          <a id="settings-link" href="#" target="_blank" rel="noreferrer">Settings</a>.
+        </p>
+        <p class="error" id="connect-error" role="alert" hidden></p>
+        <button class="primary" id="connect-btn" type="submit">Connect</button>
+      </form>
     </div>
 
     <div id="connected">

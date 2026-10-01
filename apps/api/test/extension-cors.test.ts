@@ -20,7 +20,7 @@ describe("extension CORS", () => {
   ])(
     "lets %s call the extension routes without credentials",
     async (origin) => {
-      for (const path of ["/ext/captures", "/extension/token"]) {
+      for (const path of ["/ext/captures", "/ext/me"]) {
         const response = await preflight(path, origin)
 
         expect(response.status, path).toBe(204)

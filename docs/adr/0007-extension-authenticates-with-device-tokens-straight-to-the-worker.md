@@ -1,7 +1,7 @@
 # ADR-0007: The extension authenticates with device tokens and talks straight to the Worker
 
 Date: 2026-10-01
-Status: Accepted
+Status: Accepted. The connect method (approval page, PKCE, redirect allowlist) is superseded by ADR-0008; everything else stands.
 
 ## Context
 

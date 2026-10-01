@@ -8,6 +8,7 @@ import {
 import { useState } from "react"
 import useSWR from "swr"
 
+import { DeviceKeyCreator } from "@/components/device-key-creator"
 import { describeApiError } from "@/lib/describe-api-error"
 import {
   devicesPath,
@@ -62,9 +63,12 @@ export function DeviceSettings() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Browser extensions connected to your Second Brain. Disconnect a device
-        if you no longer use it or if it was lost.
+        Browser extensions connected to your Second Brain. Create a key for each
+        browser or profile, and disconnect a device if you no longer use it or
+        it was lost.
       </p>
+
+      <DeviceKeyCreator onCreated={mutate} />
 
       {isLoading && (
         <div
@@ -95,7 +99,8 @@ export function DeviceSettings() {
       {data && devices.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            No devices connected. Install the browser extension to start.
+            No devices connected. Create a device key and paste it into the
+            extension.
           </CardContent>
         </Card>
       )}

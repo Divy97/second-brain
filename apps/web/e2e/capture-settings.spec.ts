@@ -40,7 +40,6 @@ test("shows blocklist entries and can add new ones", async ({ page }) => {
 
   await page.getByPlaceholder("example.com").fill("mail.example.com")
   await page.getByRole("button", { name: /Add to blocklist/i }).click()
-  await page.waitForResponse("**/api/capture-settings")
 
   await expect(page.getByText("mail.example.com")).toBeVisible()
 })

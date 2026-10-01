@@ -12,14 +12,14 @@ A browser extension for Chrome and Firefox. The user saves the current page in o
 
 Optionally the user turns on **Passive capture**, which records pages as they browse. A setting decides whether passive captures are **Indexed** straight away or only **Stored**, so the user can choose later what is worth Indexing. Stored items are listed in the web app, where the user Indexes them one at a time or in bulk.
 
-The extension signs in through an approval page in the web app. It gets a per-device, revocable token that can capture and manage capture settings but cannot read item content, ask questions, or touch API keys.
+The extension connects with a device key the User creates in Settings and pastes into the popup. The key is per-device and revocable, and can capture and manage capture settings but cannot read item content, ask questions, or touch API keys.
 
 ## User Stories
 
-1. As a user, I can install the extension and connect it to my Second Brain by approving it in the web app, so that I never type credentials into the extension.
-2. As a user, I can sign in to the web app with any Sign-in method before approving, so that connecting works whether I use a password or Google.
-3. As a user, I see exactly what the extension will be allowed to do on the approval page, so that I can decide knowingly.
-4. As a user, I can cancel the approval, so that no device is connected.
+1. As a user, I can create a device key in Settings and paste it into the extension to connect it, so that I never type my password into the extension.
+2. As a user, I can use any Sign-in method in the web app to create the key, so that connecting works whether I use a password or Google.
+3. As a user, I see the key once when I create it, so that I know to copy it then.
+4. As a user, I can leave the create panel without copying, then create another, so that a lost key costs nothing.
 5. As a user, I can save the current page with the toolbar button, so that capturing takes one click.
 6. As a user, I can save the current page with a keyboard shortcut, so that I do not reach for the mouse.
 7. As a user, I can save the current page from the context menu, so that I can capture from any page.
@@ -81,13 +81,13 @@ The extension signs in through an approval page in the web app. It gets a per-de
 
 **Authentication.** The Better Auth API Key plugin, configured once for the extension: hashed at rest, shown once, per-key listing and revocation, no session created from a key, rate limit set explicitly (its default is far too low). Keys are minted only by our own route, which sets the permissions on the server; the stock create route is disabled. Permissions: create captures, read and write capture settings, list Stored items (listing fields only), Index and delete the User's own Stored items. Nothing else.
 
-**Connect flow.** The extension opens the web approval page through the browser's web-auth-flow API, which works on Chrome and Firefox. The signed-in User approves; the page returns a one-time code to the extension's redirect URL; the extension exchanges the code for the key. The key lives in extension local storage, readable by the service worker and extension pages only. On Firefox the redirect is pinned through the extension's declared id. Tokens are revoke-only (no expiry) and show a last-used time; a revoked token yields an authentication error the extension turns into a reconnect prompt.
+**Connect flow.** Superseded by ADR-0008 (the web-auth-flow approval page was replaced). The User creates a device key in Settings; our own route mints it with the fixed permission set and returns it once. The User pastes it into the extension popup, which validates it against the connection check before storing it in extension local storage, readable by the service worker and extension pages only. Keys are revoke-only (no expiry) and show a last-used time; a revoked key yields an authentication error the extension turns into a reconnect prompt.
 
 **API surface.** A separate extension router behind a key-verification middleware. Existing routes stay session-only and reject keys; the extension router rejects session cookies. The extension router exposes: capture, list Stored (id, URL, host, title, captured-at, status; never text), Index one, Index many, delete, read and write settings, and a connection check that returns the User's email and device label. The web app's own session routes cover the device list, revocation and the Stored list UI, using the same underlying functions.
 
 **Origin and CORS.** Extension traffic goes straight to the Worker, not through the Vercel rewrite. It carries no cookies. A path-scoped CORS rule on the extension router allows extension origins without credentials. This departs from ADR-0004's "the browser only talks to the web origin" and is recorded in a new ADR that amends it. The per-IP auth rate limit is unaffected because the extension router is not part of the auth endpoints; it has its own per-device limit.
 
-**Web app.** An approval page for connecting a device; a Settings section for connected devices (label, created, last used, revoke) and capture settings; a Stored list with per-item Index, bulk Index, delete and a count of waiting items. UI follows `design-taste-frontend` and the single-theme rules.
+**Web app.** A Settings section for connected devices (create key, label, created, last used, revoke) and capture settings; a Stored list with per-item Index, bulk Index, delete and a count of waiting items. UI follows `design-taste-frontend` and the single-theme rules.
 
 **Extension.** A new workspace app built with WXT (pinned version) for Chrome and Firefox, Manifest V3. Install-time permissions are minimal (active tab, scripting, storage, alarms, context menus, and the API host). Passive capture adds optional host permissions and navigation events, requested from a user click when the User enables it. Private-window use is disabled in the manifest. A single capture engine module decides what to do with a page visit: capture, skip or wait, given the settings, blocklist, dwell time, URL type and recent captures. Everything bound for the API goes through a persistent queue drained by an alarm, because the Chrome service worker can stop at any time; failed sends retry with backoff and surface a message after repeated failure. Content scripts only extract and message; they hold no decision logic.
 
@@ -123,6 +123,6 @@ No end-to-end test of the extension in a real browser in this spec.
 ## Further Notes
 
 - A new ADR records the extension's authentication and direct-to-Worker origin, and amends ADR-0004.
-- Unconfirmed items from the research that the implementation must verify early: whether Google sign-in works inside the web-auth flow, the exact Origin and preflight behaviour of extension requests, Firefox's event-page idle timeout, and whether a Bun-only lockfile satisfies the Firefox source-build rule. If Google sign-in fails inside the flow, the fallback is opening the approval page in a normal tab and handing the code back through the redirect.
+- Unconfirmed items from the research that the implementation must verify early: the exact Origin and preflight behaviour of extension requests, Firefox's event-page idle timeout, and whether a Bun-only lockfile satisfies the Firefox source-build rule.
 - Passive capture can store a large volume of text per active user. Stored items count toward storage; the implementation should confirm the cost and add a per-user cap if it is material.
 - Cross-device settings sync means the blocklist is also server data and must be included in backups and account deletion.

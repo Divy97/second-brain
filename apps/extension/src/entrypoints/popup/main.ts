@@ -1,76 +1,118 @@
 import { storage } from "@wxt-dev/storage"
 
 import { apiOrigin, webOrigin } from "@/lib/config"
-import { startConnect } from "@/lib/connect"
+import {
+  checkKey,
+  connectWithKey,
+  disconnect,
+  type ConnectFailureReason,
+} from "@/lib/connect"
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T
 
+const connectErrors: Record<ConnectFailureReason, string> = {
+  empty: "Paste your device key.",
+  malformed: "That doesn't look like a device key. Keys start with sbx_.",
+  invalid:
+    "This key isn't valid or was disconnected. Create a new one in Settings.",
+  unreachable: "Can't reach Second Brain. Check your connection and try again.",
+}
+
+function showConnectScreen(notice?: string) {
+  $<HTMLDivElement>("not-connected").style.display = "block"
+  $<HTMLAnchorElement>("settings-link").href = `${webOrigin}/settings`
+
+  if (notice) {
+    const noticeEl = $<HTMLParagraphElement>("connect-notice")
+    noticeEl.textContent = notice
+    noticeEl.hidden = false
+  }
+
+  const form = $<HTMLFormElement>("connect-form")
+  const input = $<HTMLInputElement>("key-input")
+  const button = $<HTMLButtonElement>("connect-btn")
+  const errorEl = $<HTMLParagraphElement>("connect-error")
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault()
+    errorEl.hidden = true
+    button.disabled = true
+    button.textContent = "Checking key"
+
+    const result = await connectWithKey(input.value)
+
+    if (result.ok) {
+      input.value = ""
+      window.location.reload()
+      return
+    }
+    errorEl.textContent = connectErrors[result.reason]
+    errorEl.hidden = false
+    button.disabled = false
+    button.textContent = "Connect"
+  })
+}
+
 async function init() {
   const token = await storage.getItem<string>("local:token")
   const loading = $<HTMLDivElement>("loading")
-  const notConnected = $<HTMLDivElement>("not-connected")
   const connected = $<HTMLDivElement>("connected")
 
   loading.style.display = "none"
 
   if (!token) {
-    notConnected.style.display = "block"
-    $<HTMLButtonElement>("connect-btn").addEventListener("click", () => {
-      startConnect()
-      window.close()
-    })
+    showConnectScreen()
     return
   }
 
-  try {
-    const response = await fetch(`${apiOrigin}/ext/me`, {
-      headers: { authorization: `Bearer ${token}` },
-    })
+  const check = await checkKey(token)
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        await storage.removeItem("local:token")
-        notConnected.style.display = "block"
-        $<HTMLButtonElement>("connect-btn").addEventListener("click", () => {
-          startConnect()
-          window.close()
-        })
-        return
-      }
-      throw new Error("Failed to fetch")
-    }
-
-    const { email } = (await response.json()) as { email: string }
-    connected.style.display = "block"
-    $<HTMLParagraphElement>("email-status").textContent = email
-
-    const settings = await fetchSettings(token)
-    setupSettingsUI(settings, token)
-
-    $<HTMLButtonElement>("capture-btn").addEventListener("click", async () => {
-      const [tab] = await browser.tabs.query({
-        active: true,
-        currentWindow: true,
-      })
-      if (tab?.id) {
-        browser.tabs.sendMessage(tab.id, { type: "capture", trigger: "manual" })
-        window.close()
-      }
-    })
-
-    $<HTMLButtonElement>("disconnect-btn").addEventListener("click", async () => {
-      await storage.removeItem("local:token")
-      await storage.removeItem("local:settings")
-      window.location.reload()
-    })
-  } catch {
-    notConnected.style.display = "block"
-    $<HTMLButtonElement>("connect-btn").addEventListener("click", () => {
-      browser.tabs.create({ url: `${webOrigin}/sign-in` })
-      window.close()
-    })
+  if (check.state === "invalid") {
+    await disconnect()
+    showConnectScreen(
+      "This device was disconnected. Create a new key in Settings to reconnect."
+    )
+    return
   }
+  if (check.state === "unreachable") {
+    showConnectedOffline(connected)
+    return
+  }
+
+  connected.style.display = "block"
+  $<HTMLParagraphElement>("email-status").textContent = check.email
+
+  const settings = await fetchSettings(token)
+  setupSettingsUI(settings, token)
+
+  $<HTMLButtonElement>("capture-btn").addEventListener("click", async () => {
+    const [tab] = await browser.tabs.query({
+      active: true,
+      currentWindow: true,
+    })
+    if (tab?.id) {
+      browser.tabs.sendMessage(tab.id, { type: "capture", trigger: "manual" })
+      window.close()
+    }
+  })
+
+  wireDisconnectButton()
+}
+
+function wireDisconnectButton() {
+  $<HTMLButtonElement>("disconnect-btn").addEventListener("click", async () => {
+    await disconnect()
+    window.location.reload()
+  })
+}
+
+function showConnectedOffline(connected: HTMLDivElement) {
+  connected.style.display = "block"
+  $<HTMLParagraphElement>("email-status").textContent =
+    "Connected. Second Brain can't be reached right now."
+  $<HTMLButtonElement>("capture-btn").hidden = true
+  wireDisconnectButton()
 }
 
 interface Settings {

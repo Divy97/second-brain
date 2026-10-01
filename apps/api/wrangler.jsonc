@@ -10,8 +10,7 @@
     "WEB_ORIGIN": "http://localhost:3000",
     "AUTH_RATE_LIMIT": "on",
     "AUTH_CLIENT_IP_HEADER": "cf-connecting-ip",
-    "NIGHTLY_BACKUPS": "off",
-    "EXTENSION_REDIRECT_URIS": ""
+    "NIGHTLY_BACKUPS": "off"
   },
   "hyperdrive": [
     {
