@@ -5,6 +5,7 @@ import { cors } from "hono/cors"
 import { connect } from "@workspace/db"
 
 import { runNightlyBackup, shouldRunNightlyBackup } from "./lib/backups.js"
+import { captureSettingsRoutes } from "./lib/capture-settings-routes.js"
 import { extensionCors, isExtensionPath } from "./lib/extension/cors.js"
 import {
   extensionConnectRoutes,
@@ -17,6 +18,7 @@ import { itemsQueueConsumer } from "./lib/items-queue.js"
 import { noStore } from "./lib/no-store.js"
 import { type ProcessItemParams } from "./lib/process-item-workflow.js"
 import { requestContext, requireUser } from "./lib/request-context.js"
+import { storedRoutes } from "./lib/stored-routes.js"
 import { threadRoutes } from "./lib/threads/index.js"
 import { userKeyRoutes } from "./lib/user-keys/index.js"
 
@@ -47,6 +49,8 @@ app.route("/extension", extensionConnectRoutes)
 app.route("/ext", extensionRoutes)
 app.use("*", requireUser)
 app.route("/keys", userKeyRoutes)
+app.route("/capture-settings", captureSettingsRoutes)
+app.route("/stored", storedRoutes)
 app.route("/items", itemRoutes)
 app.route("/threads", threadRoutes)
 
