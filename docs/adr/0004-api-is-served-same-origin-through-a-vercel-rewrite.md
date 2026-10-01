@@ -1,7 +1,7 @@
 # ADR-0004: The API is served same-origin through a Vercel rewrite
 
 Date: 2026-09-30
-Status: Proposed — becomes Accepted once the preview-deployment checks in the proxy spec pass
+Status: Proposed (amended by ADR-0007: extension traffic goes straight to the Worker) — becomes Accepted once the preview-deployment checks in the proxy spec pass
 
 ## Context
 
