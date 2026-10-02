@@ -12,7 +12,6 @@ import {
   SparkleIcon,
   ScribbleLoopIcon,
   ShootingStarIcon,
-  TerminalWindowIcon,
   YoutubeLogoIcon,
   InstagramLogoIcon,
 } from "@phosphor-icons/react/dist/ssr"
@@ -75,8 +74,8 @@ const roadmap: {
     title: "Context from Claude Code & Codex",
     detail: "Pull context straight from your coding agent sessions.",
     tint: "bg-mint",
-    icon: TerminalWindowIcon,
-    mark: null,
+    icon: null,
+    mark: "/anthropic-logo.svg",
   },
   {
     title: "Connections between your notes",
