@@ -78,6 +78,25 @@ test("homepage explains every capture format and sourced conversations", async (
   await expect(page.getByText(/OpenRouter API key/).first()).toBeVisible()
 })
 
+test("homepage offers the browser extension honestly, pending Store review", async ({
+  page,
+}) => {
+  await page.goto("/")
+  await expect(
+    page.getByRole("heading", { name: "Right from your browser." })
+  ).toBeVisible()
+  const cta = page.getByRole("button", {
+    name: "Coming soon on the Chrome Web Store",
+  })
+  await expect(cta).toBeVisible()
+  await expect(cta).toBeDisabled()
+  await expect(page.getByRole("link", { name: "Add to Chrome" })).toHaveCount(0)
+  await expect(page.getByText("Coming soon", { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Save automatically as you browse" })
+  ).toBeVisible()
+})
+
 test("navigation stays put while a refreshed session resolves", async ({
   page,
 }) => {
