@@ -30,6 +30,7 @@ test("shows connected devices with names and timestamps", async ({ page }) => {
   ).toBeVisible()
   await expect(page.getByText("Chrome on MacBook")).toBeVisible()
   await expect(page.getByText("Firefox on Linux")).toBeVisible()
+  await expect(page.getByText("Never used")).toBeVisible()
   await expect(
     page.getByRole("button", { name: /Disconnect Chrome/i })
   ).toBeVisible()
