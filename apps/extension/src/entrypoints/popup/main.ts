@@ -1,12 +1,16 @@
+import "@fontsource-variable/geist"
+import "./style.css"
+
 import { storage } from "@wxt-dev/storage"
 
-import { apiOrigin, webOrigin } from "@/lib/config"
+import { webOrigin } from "@/lib/config"
 import {
   checkKey,
   connectWithKey,
   disconnect,
   type ConnectFailureReason,
 } from "@/lib/connect"
+import type { SaveResult } from "@/lib/save-page"
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T
@@ -19,8 +23,63 @@ const connectErrors: Record<ConnectFailureReason, string> = {
   unreachable: "Can't reach Second Brain. Check your connection and try again.",
 }
 
+const RECONNECT_NOTICE =
+  "This device was disconnected. Create a new key in Settings to reconnect."
+
+interface SaveMessage {
+  title: string
+  detail: string
+  tone: "good" | "problem"
+}
+
+function describeSave(result: SaveResult): SaveMessage {
+  switch (result.status) {
+    case "saved":
+      return {
+        title: result.alreadySaved
+          ? "Already in your Second Brain"
+          : "Saved to Second Brain",
+        detail: result.title,
+        tone: "good",
+      }
+    case "queued":
+      return {
+        title: "Couldn't reach Second Brain",
+        detail: "This page is kept here and will be sent shortly.",
+        tone: "good",
+      }
+    case "unsupported":
+      return {
+        title: "This page can't be saved",
+        detail: "Open a regular website and try again.",
+        tone: "problem",
+      }
+    case "rejected":
+      return {
+        title: "This page wasn't saved",
+        detail: result.message,
+        tone: "problem",
+      }
+    case "not-connected":
+      return {
+        title: "This device was disconnected",
+        detail: "Create a new key in Settings to reconnect.",
+        tone: "problem",
+      }
+  }
+}
+
+function showResult(message: SaveMessage) {
+  const result = $<HTMLDivElement>("save-result")
+  $<HTMLParagraphElement>("save-result-title").textContent = message.title
+  $<HTMLParagraphElement>("save-result-detail").textContent = message.detail
+  result.dataset.tone = message.tone
+  result.hidden = false
+}
+
 function showConnectScreen(notice?: string) {
-  $<HTMLDivElement>("not-connected").style.display = "block"
+  $<HTMLElement>("loading").hidden = true
+  $<HTMLElement>("not-connected").hidden = false
   $<HTMLAnchorElement>("settings-link").href = `${webOrigin}/settings`
 
   if (notice) {
@@ -29,14 +88,14 @@ function showConnectScreen(notice?: string) {
     noticeEl.hidden = false
   }
 
-  const form = $<HTMLFormElement>("connect-form")
   const input = $<HTMLInputElement>("key-input")
   const button = $<HTMLButtonElement>("connect-btn")
   const errorEl = $<HTMLParagraphElement>("connect-error")
 
-  form.addEventListener("submit", async (event) => {
+  $<HTMLFormElement>("connect-form").addEventListener("submit", async (event) => {
     event.preventDefault()
     errorEl.hidden = true
+    input.removeAttribute("aria-invalid")
     button.disabled = true
     button.textContent = "Checking key"
 
@@ -49,149 +108,70 @@ function showConnectScreen(notice?: string) {
     }
     errorEl.textContent = connectErrors[result.reason]
     errorEl.hidden = false
+    input.setAttribute("aria-invalid", "true")
     button.disabled = false
     button.textContent = "Connect"
   })
 }
 
-async function init() {
-  const token = await storage.getItem<string>("local:token")
-  const loading = $<HTMLDivElement>("loading")
-  const connected = $<HTMLDivElement>("connected")
+function showConnectedScreen(account: string) {
+  $<HTMLElement>("loading").hidden = true
+  $<HTMLElement>("connected").hidden = false
+  $<HTMLSpanElement>("email-status").textContent = account
 
-  loading.style.display = "none"
+  const saveButton = $<HTMLButtonElement>("save-btn")
+  saveButton.addEventListener("click", async () => {
+    saveButton.disabled = true
+    saveButton.textContent = "Saving"
+    $<HTMLDivElement>("save-result").hidden = true
 
-  if (!token) {
-    showConnectScreen()
-    return
-  }
-
-  const check = await checkKey(token)
-
-  if (check.state === "invalid") {
-    await disconnect()
-    showConnectScreen(
-      "This device was disconnected. Create a new key in Settings to reconnect."
-    )
-    return
-  }
-  if (check.state === "unreachable") {
-    showConnectedOffline(connected)
-    return
-  }
-
-  connected.style.display = "block"
-  $<HTMLParagraphElement>("email-status").textContent = check.email
-
-  const settings = await fetchSettings(token)
-  setupSettingsUI(settings, token)
-
-  $<HTMLButtonElement>("capture-btn").addEventListener("click", async () => {
-    const [tab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true,
-    })
-    if (tab?.id) {
-      browser.tabs.sendMessage(tab.id, { type: "capture", trigger: "manual" })
-      window.close()
+    try {
+      const result = (await browser.runtime.sendMessage({
+        type: "save-page",
+      })) as SaveResult
+      if (result.status === "not-connected") {
+        showConnectScreenAfterRevoke()
+        return
+      }
+      showResult(describeSave(result))
+    } catch {
+      showResult({
+        title: "Something went wrong",
+        detail: "Try saving the page again.",
+        tone: "problem",
+      })
     }
+    saveButton.disabled = false
+    saveButton.textContent = "Save this page"
   })
 
-  wireDisconnectButton()
-}
-
-function wireDisconnectButton() {
   $<HTMLButtonElement>("disconnect-btn").addEventListener("click", async () => {
     await disconnect()
     window.location.reload()
   })
 }
 
-function showConnectedOffline(connected: HTMLDivElement) {
-  connected.style.display = "block"
-  $<HTMLParagraphElement>("email-status").textContent =
-    "Connected. Second Brain can't be reached right now."
-  $<HTMLButtonElement>("capture-btn").hidden = true
-  wireDisconnectButton()
+function showConnectScreenAfterRevoke() {
+  $<HTMLElement>("connected").hidden = true
+  showConnectScreen(RECONNECT_NOTICE)
 }
 
-interface Settings {
-  passiveEnabled: boolean
-  passiveMode: "index" | "store"
-  paused: boolean
-  blocklist: string[]
-}
-
-async function fetchSettings(token: string): Promise<Settings> {
-  const cached = await storage.getItem<Settings>("local:settings")
-  if (cached) return cached
-
-  try {
-    const response = await fetch(`${apiOrigin}/ext/settings`, {
-      headers: { authorization: `Bearer ${token}` },
-    })
-    if (response.ok) {
-      const settings = (await response.json()) as Settings
-      await storage.setItem("local:settings", settings)
-      return settings
-    }
-  } catch {
-    // Use defaults
+async function init() {
+  const token = await storage.getItem<string>("local:token")
+  if (!token) {
+    showConnectScreen()
+    return
   }
 
-  return {
-    passiveEnabled: false,
-    passiveMode: "store",
-    paused: false,
-    blocklist: [],
+  const check = await checkKey(token)
+  if (check.state === "invalid") {
+    await disconnect()
+    showConnectScreen(RECONNECT_NOTICE)
+    return
   }
+  showConnectedScreen(
+    check.state === "valid" ? check.email : "Offline, saves will be sent later"
+  )
 }
 
-function setupSettingsUI(settings: Settings, token: string) {
-  const passiveToggle = $<HTMLInputElement>("passive-toggle")
-  const pauseToggle = $<HTMLInputElement>("pause-toggle")
-  const pauseRow = $<HTMLDivElement>("pause-row")
-
-  passiveToggle.checked = settings.passiveEnabled
-  pauseToggle.checked = settings.paused
-  pauseRow.style.display = settings.passiveEnabled ? "flex" : "none"
-
-  passiveToggle.addEventListener("change", async () => {
-    const newSettings = { ...settings, passiveEnabled: passiveToggle.checked }
-    await updateSettings(token, newSettings)
-    pauseRow.style.display = passiveToggle.checked ? "flex" : "none"
-
-    if (passiveToggle.checked) {
-      const granted = await browser.permissions.request({
-        origins: ["<all_urls>"],
-      })
-      if (!granted) {
-        passiveToggle.checked = false
-        await updateSettings(token, { ...settings, passiveEnabled: false })
-        pauseRow.style.display = "none"
-      }
-    }
-  })
-
-  pauseToggle.addEventListener("change", async () => {
-    await updateSettings(token, { ...settings, paused: pauseToggle.checked })
-  })
-}
-
-async function updateSettings(token: string, settings: Settings) {
-  await storage.setItem("local:settings", settings)
-  try {
-    await fetch(`${apiOrigin}/ext/settings`, {
-      method: "PUT",
-      headers: {
-        authorization: `Bearer ${token}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(settings),
-    })
-  } catch {
-    // Settings will sync on next load
-  }
-}
-
-init()
+void init()

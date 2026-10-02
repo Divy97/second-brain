@@ -6,7 +6,7 @@ export default defineConfig({
   manifest: {
     name: "Second Brain",
     description: "Save anything. Then just ask.",
-    permissions: ["activeTab", "storage", "alarms", "contextMenus"],
+    permissions: ["activeTab", "scripting", "storage", "alarms", "contextMenus"],
     host_permissions: [],
     optional_host_permissions: ["<all_urls>"],
     incognito: "not_allowed",
