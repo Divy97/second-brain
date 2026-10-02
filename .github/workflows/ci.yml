@@ -27,7 +27,7 @@ jobs:
       DATABASE_ADMIN_URL: postgres://postgres:${{ github.run_id }}@localhost:5432/postgres
       CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://postgres:${{ github.run_id }}@localhost:5432/second_brain
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.5
@@ -40,7 +40,7 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.5
