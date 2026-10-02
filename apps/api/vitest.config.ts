@@ -5,6 +5,10 @@ export default defineConfig({
   plugins: [
     cloudflareTest(({ inject }) => ({
       wrangler: { configPath: "./wrangler.jsonc" },
+      // BROWSER is "remote" in wrangler.jsonc for local dev (Browser Run has no local
+      // simulation); tests never call it for real (see support/pipeline.ts's renderPage
+      // default), and connecting remotely would require Cloudflare credentials CI doesn't have.
+      remoteBindings: false,
       miniflare: {
         hyperdrives: { HYPERDRIVE: inject("databaseUrl") },
         // Tests drive processItem directly; a queue with no consumer keeps the real
