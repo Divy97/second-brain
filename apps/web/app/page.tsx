@@ -1,12 +1,14 @@
 import {
   ArrowRightIcon,
   ArrowUpRightIcon,
+  DeviceMobileIcon,
   FilePdfIcon,
   ImageIcon,
   LinkIcon,
   MicrophoneIcon,
   NotePencilIcon,
   QuotesIcon,
+  ShareNetworkIcon,
   SparkleIcon,
   ScribbleLoopIcon,
   ShootingStarIcon,
@@ -21,7 +23,8 @@ import { PublicHeader } from "@/components/public-header"
 import { VideoMemoryDemo } from "@/components/video-memory-demo"
 import { Wordmark } from "@/components/wordmark"
 import { chromeWebStoreUrl, extensionPublished } from "@/lib/extension-store"
-import { Badge } from "@workspace/ui/components/badge"
+
+import type { Icon as IconType } from "@phosphor-icons/react"
 
 const formats = [
   {
@@ -53,11 +56,41 @@ const formats = [
   },
 ]
 
-const roadmap = [
-  "Import from ChatGPT & Claude",
-  "Context from Claude Code & Codex",
-  "Connections between your notes",
-  "A Second Brain for your phone",
+const roadmap: {
+  title: string
+  detail: string
+  tint: string
+  icon: IconType | null
+  mark: string | null
+}[] = [
+  {
+    title: "Import from ChatGPT & Claude",
+    detail: "Bring your past conversations in as searchable context.",
+    tint: "bg-butter",
+    icon: null,
+    mark: "/claude-logo.svg",
+  },
+  {
+    title: "Context from Claude Code & Codex",
+    detail: "Pull context straight from your coding agent sessions.",
+    tint: "bg-mint",
+    icon: null,
+    mark: "/anthropic-logo.svg",
+  },
+  {
+    title: "Connections between your notes",
+    detail: "See how a new idea relates to what you’ve already saved.",
+    tint: "bg-lilac",
+    icon: ShareNetworkIcon,
+    mark: null,
+  },
+  {
+    title: "A Second Brain for your phone",
+    detail: "Capture and ask questions on the go, not just at your desk.",
+    tint: "bg-accent",
+    icon: DeviceMobileIcon,
+    mark: null,
+  },
 ]
 
 export default function LandingPage() {
@@ -272,25 +305,6 @@ export default function LandingPage() {
             </dl>
           </div>
         </section>
-        <section className="scroll-mt-8 border-t border-border py-14 sm:py-20">
-          <h2 className="text-3xl leading-tight tracking-tight sm:text-5xl">
-            Coming soon.
-          </h2>
-          <p className="mt-5 max-w-lg leading-relaxed text-muted-foreground">
-            What we’re building next.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            {roadmap.map((item) => (
-              <Badge
-                key={item}
-                variant="outline"
-                className="h-auto px-4 py-2 text-sm font-medium"
-              >
-                {item}
-              </Badge>
-            ))}
-          </div>
-        </section>
         <section className="grid gap-8 rounded-[2rem] border border-border bg-card p-6 sm:p-10 lg:grid-cols-[1fr_1fr] lg:gap-16 lg:p-14">
           <div className="flex flex-col justify-center">
             <QuotesIcon
@@ -325,6 +339,46 @@ export default function LandingPage() {
               An example conversation, grounded in a saved note.
             </figcaption>
           </figure>
+        </section>
+        <section className="scroll-mt-8 border-t border-border py-14 sm:py-20">
+          <h2 className="text-3xl leading-tight tracking-tight sm:text-5xl">
+            Coming soon.
+          </h2>
+          <p className="mt-5 max-w-lg leading-relaxed text-muted-foreground">
+            What we’re building next.
+          </p>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2">
+            {roadmap.map(({ title, detail, tint, icon: Icon, mark }, i) => (
+              <div
+                key={title}
+                className={`roadmap-card flex flex-col gap-4 rounded-2xl p-6 ${tint} ${i % 2 ? "roadmap-card-tilt-right" : "roadmap-card-tilt-left"}`}
+              >
+                {mark ? (
+                  <Image
+                    src={mark}
+                    alt=""
+                    aria-hidden
+                    width={28}
+                    height={28}
+                    className="roadmap-icon"
+                  />
+                ) : (
+                  Icon && (
+                    <Icon
+                      size={28}
+                      weight="duotone"
+                      className="roadmap-icon text-coral-ink"
+                      aria-hidden
+                    />
+                  )
+                )}
+                <h3 className="text-lg">{title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {detail}
+                </p>
+              </div>
+            ))}
+          </div>
         </section>
         <section className="grid gap-8 py-16 sm:py-24 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
           <h2 className="max-w-sm text-3xl leading-tight tracking-tight sm:text-4xl">
