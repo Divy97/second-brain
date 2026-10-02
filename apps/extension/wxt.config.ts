@@ -8,7 +8,6 @@ export default defineConfig({
     description: "Save anything. Then just ask.",
     permissions: ["activeTab", "scripting", "storage", "alarms", "contextMenus"],
     host_permissions: [],
-    optional_host_permissions: ["<all_urls>"],
     incognito: "not_allowed",
     action: {
       default_popup: "popup.html",
