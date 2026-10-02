@@ -11,6 +11,7 @@ export interface ArticleRequest {
   note: string | null
   readerService?: OperatorService | null
   fetchPage?: typeof fetch
+  renderPage?: (url: string) => Promise<string | null>
 }
 
 const blockedWords =
@@ -18,6 +19,12 @@ const blockedWords =
 
 function compact(text: string): string {
   return text.replace(/\s+/g, " ").trim()
+}
+
+function htmlResponse(html: string): Response {
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  })
 }
 
 async function parseHtml(response: Response) {
@@ -94,14 +101,12 @@ async function fetchSafe(
   )
 }
 
-// spec.md §4.1 step 3 (Browser Run for JS-rendered pages) is not built yet, so the
-// ladder runs fetch, then parsed HTML, then the reader API. A page still walled after
-// those is kept partial: title and note only, never invented article text.
 export async function extractArticle({
   sourceUrl,
   note,
   readerService = null,
   fetchPage = fetch,
+  renderPage,
 }: ArticleRequest): Promise<Extraction> {
   const refused = { byAllowance: false }
   const read = async (): Promise<JinaArticle | null> => {
@@ -112,6 +117,10 @@ export async function extractArticle({
     }
     return readWithReader(sourceUrl, readerService.apiKey, fetchPage)
   }
+  // renderPage never throws past its own boundary (browserRenderPage guarantees this);
+  // a null result (not configured, or any failure) is the only outcome to handle here.
+  const render = (): Promise<string | null> =>
+    renderPage ? renderPage(sourceUrl) : Promise.resolve(null)
 
   let response: Response | null = null
   try {
@@ -140,21 +149,51 @@ export async function extractArticle({
     }
   }
 
-  const { title, description, text } = await parseHtml(response)
-  if (response.ok && !blockedWords.test([title, description, text].join(" "))) {
+  const parsed = await parseHtml(response)
+  if (response.ok && !isThin(parsed)) {
     return {
-      text: assemble([note, sourceUrl, title, description, text]),
+      text: assemble([
+        note,
+        sourceUrl,
+        parsed.title,
+        parsed.description,
+        parsed.text,
+      ]),
       quality: "full",
     }
   }
 
+  const rendered = await render()
+  const viaRender = rendered ? await parseHtml(htmlResponse(rendered)) : null
+  if (viaRender && !isThin(viaRender)) {
+    return {
+      text: assemble([
+        note,
+        sourceUrl,
+        viaRender.title,
+        viaRender.description,
+        viaRender.text,
+      ]),
+      quality: "full",
+    }
+  }
+  // The render attempt (even if still thin) can carry a better title/description than
+  // the original fetch, so later fallbacks prefer whichever parse has one.
+  const best = viaRender ?? parsed
+
   const viaReader = await read()
   if (viaReader) {
-    return fullFromReader(note, sourceUrl, viaReader, title, description)
+    return fullFromReader(
+      note,
+      sourceUrl,
+      viaReader,
+      best.title,
+      best.description
+    )
   }
 
   return {
-    text: assemble([note, sourceUrl, title, description]),
+    text: assemble([note, sourceUrl, best.title, best.description]),
     quality: "partial",
     ...(refused.byAllowance
       ? { partialReason: "allowance_used" as const }
@@ -163,6 +202,23 @@ export async function extractArticle({
 }
 
 const isWall = (status: number) => status === 401 || status === 403
+
+// Empty text catches a JS single-page app that rendered nothing server-side, even
+// with no blocked wording; a page can be thin for either reason.
+function isThin({
+  title,
+  description,
+  text,
+}: {
+  title: string
+  description: string
+  text: string
+}): boolean {
+  return (
+    text.trim().length === 0 ||
+    blockedWords.test([title, description, text].join(" "))
+  )
+}
 
 function fullFromReader(
   note: string | null,

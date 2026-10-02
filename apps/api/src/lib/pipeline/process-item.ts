@@ -21,6 +21,7 @@ import {
   enrichment as enrichmentLimits,
 } from "../config.js"
 import { extractArticle } from "./article.js"
+import { browserRenderPage } from "./browser-render.js"
 import { chunkText } from "./chunk-text.js"
 import { enrichNote } from "./enrich.js"
 import { extractFacts, reconcileFact, shouldExtractFacts } from "./facts.js"
@@ -48,6 +49,7 @@ export type ProcessItemOutcome =
 export interface PipelineContext {
   env: Env
   fetchPage?: typeof fetch
+  renderPage?: (url: string) => Promise<string | null>
   now?: () => Date
   // Called once per step: Hyperdrive wants a fresh connection inside every Workflow step.
   // Clients are not closed; the runtime reclaims them when the invocation ends.
@@ -260,6 +262,7 @@ export async function processItem(
                   now
                 ),
                 fetchPage: context.fetchPage,
+                renderPage: context.renderPage ?? browserRenderPage(env),
               })
           return saveExtractedText(
             db,

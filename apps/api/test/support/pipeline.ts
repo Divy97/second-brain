@@ -24,6 +24,7 @@ export interface QueueRecorder {
 export function recordQueue(
   options: {
     fetchPage?: typeof fetch
+    renderPage?: (url: string) => Promise<string | null>
     env?: Partial<Env>
     now?: () => Date
   } = {}
@@ -32,6 +33,9 @@ export function recordQueue(
     env: { ...env, ...options.env },
     openDb: testDb,
     fetchPage: options.fetchPage,
+    // Defaults to a no-op so a test that never mentions Browser Run can't
+    // accidentally fall through to the real binding and spend its quota.
+    renderPage: options.renderPage ?? (() => Promise.resolve(null)),
     now: options.now,
   }
   const messages: ProcessItemParams[] = []
