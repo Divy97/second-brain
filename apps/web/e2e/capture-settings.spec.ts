@@ -11,7 +11,9 @@ test("shows capture settings section", async ({ page }) => {
   await signInWithSettings(page, defaultSettings)
   await page.goto("/settings")
 
-  await expect(page.getByText("Capture Settings")).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Capture Settings" })
+  ).toBeVisible()
   await expect(page.getByText("Record pages as you browse")).toBeVisible()
 })
 
@@ -22,11 +24,11 @@ test("enabling passive capture shows additional options", async ({ page }) => {
   await expect(page.getByText("When a page is captured")).not.toBeVisible()
 
   const responsePromise = page.waitForResponse("**/api/capture-settings")
-  await page.locator("#passive-enabled").click()
+  await page.getByRole("switch", { name: "Record pages as you browse" }).click()
   await responsePromise
 
   await expect(page.getByText("When a page is captured")).toBeVisible()
-  await expect(page.locator("#passive-paused")).toBeVisible()
+  await expect(page.getByRole("switch", { name: "Paused" })).toBeVisible()
 })
 
 test("shows blocklist entries and can add new ones", async ({ page }) => {

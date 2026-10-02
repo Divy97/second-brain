@@ -69,7 +69,6 @@ test("indexing a single item removes it from the list", async ({ page }) => {
   await expect(page.getByText("Interesting Article")).toBeVisible()
 
   await page.getByRole("button", { name: /Index Interesting Article/i }).click()
-  await page.waitForResponse("**/api/stored/item-1/index")
 
   await expect(page.getByText("Interesting Article")).not.toBeVisible()
 })

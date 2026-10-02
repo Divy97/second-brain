@@ -1,14 +1,12 @@
 "use client"
 
-import {
-  GlobeIcon,
-  PlusIcon,
-  TrashIcon,
-  WarningCircleIcon,
-} from "@phosphor-icons/react"
+import { WarningCircleIcon } from "@phosphor-icons/react"
 import { useState } from "react"
 import useSWR from "swr"
 
+import { BlocklistEditor } from "@/components/blocklist-editor"
+import { CaptureModeField } from "@/components/capture-mode-field"
+import { SettingSwitchRow } from "@/components/setting-switch-row"
 import {
   captureSettingsPath,
   fetchCaptureSettings,
@@ -17,15 +15,6 @@ import {
 } from "@/lib/capture-settings-api"
 import { describeApiError } from "@/lib/describe-api-error"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
-import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
-import { Input } from "@workspace/ui/components/input"
-import { Label } from "@workspace/ui/components/label"
 
 export function CaptureSettings() {
   const { data, error, isLoading, mutate } = useSWR<CaptureSettingsType, Error>(
@@ -73,28 +62,30 @@ export function CaptureSettings() {
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <GlobeIcon size={24} className="text-primary" aria-hidden />
-        <h2 className="font-heading text-xl tracking-tight">
+    <section
+      className="flex flex-col gap-5"
+      aria-labelledby="capture-settings-heading"
+    >
+      <div className="flex flex-col gap-2">
+        <h2 id="capture-settings-heading" className="font-heading text-2xl">
           Capture Settings
         </h2>
+        <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+          Control how the browser extension captures pages. These settings apply
+          to all connected devices.
+        </p>
       </div>
-
-      <p className="text-sm text-muted-foreground">
-        Control how the browser extension captures pages. These settings apply
-        to all connected devices.
-      </p>
 
       {isLoading && (
         <div
           role="status"
           aria-label="Loading settings"
           aria-busy
-          className="animate-pulse space-y-3"
+          className="animate-pulse space-y-5 rounded-2xl bg-card p-5 sm:p-7"
         >
-          <div className="h-32 rounded-xl bg-muted" />
-          <div className="h-32 rounded-xl bg-muted" />
+          <div className="h-12 rounded-lg bg-muted" />
+          <div className="h-12 rounded-lg bg-muted" />
+          <div className="h-12 rounded-lg bg-muted" />
         </div>
       )}
 
@@ -113,153 +104,49 @@ export function CaptureSettings() {
       )}
 
       {data && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Passive Capture</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="passive-enabled">
-                    Record pages as you browse
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Automatically save pages you spend time reading
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  id="passive-enabled"
-                  checked={data.passiveEnabled}
-                  onChange={(e) => {
-                    void updateSettings({ passiveEnabled: e.target.checked })
-                  }}
-                  disabled={saving}
-                  className="size-5 accent-primary"
-                />
-              </div>
+        <div className="flex flex-col divide-y divide-border rounded-2xl bg-card p-5 sm:p-7">
+          <SettingSwitchRow
+            id="passive-enabled"
+            label="Record pages as you browse"
+            description="Automatically save pages you spend time reading."
+            checked={data.passiveEnabled}
+            disabled={saving}
+            onCheckedChange={(passiveEnabled) => {
+              void updateSettings({ passiveEnabled })
+            }}
+          />
 
-              {data.passiveEnabled && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="passive-paused">Paused</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Temporarily stop recording
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      id="passive-paused"
-                      checked={data.paused}
-                      onChange={(e) => {
-                        void updateSettings({ paused: e.target.checked })
-                      }}
-                      disabled={saving}
-                      className="size-5 accent-primary"
-                    />
-                  </div>
+          {data.passiveEnabled && (
+            <>
+              <SettingSwitchRow
+                id="passive-paused"
+                label="Paused"
+                description="Temporarily stop recording."
+                checked={data.paused}
+                disabled={saving}
+                onCheckedChange={(paused) => {
+                  void updateSettings({ paused })
+                }}
+              />
+              <CaptureModeField
+                value={data.passiveMode}
+                disabled={saving}
+                onChange={(passiveMode) => {
+                  void updateSettings({ passiveMode })
+                }}
+              />
+            </>
+          )}
 
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="passive-mode">
-                      When a page is captured
-                    </Label>
-                    <select
-                      id="passive-mode"
-                      value={data.passiveMode}
-                      onChange={(e) => {
-                        void updateSettings({
-                          passiveMode: e.target.value as "index" | "store",
-                        })
-                      }}
-                      disabled={saving}
-                      className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
-                    >
-                      <option value="store">Store for later review</option>
-                      <option value="index">Index immediately</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground">
-                      {data.passiveMode === "store"
-                        ? "Stored pages appear in your Stored list. Index them later to make them searchable."
-                        : "Pages are immediately searchable in Ask. This uses more of your daily allowance."}
-                    </p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Blocklist</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                Sites that are never captured. Add banking, email, or other
-                sensitive sites here.
-              </p>
-
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  placeholder="example.com"
-                  value={newBlocklistEntry}
-                  onChange={(e) => {
-                    setNewBlocklistEntry(e.target.value)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      addBlocklistEntry()
-                    }
-                  }}
-                  disabled={saving}
-                  className="flex-1"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={addBlocklistEntry}
-                  disabled={saving || !newBlocklistEntry.trim()}
-                  aria-label="Add to blocklist"
-                >
-                  <PlusIcon aria-hidden />
-                </Button>
-              </div>
-
-              {data.blocklist.length > 0 && (
-                <ul className="flex flex-wrap gap-2">
-                  {data.blocklist.map((hostname) => (
-                    <li
-                      key={hostname}
-                      className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm"
-                    >
-                      {hostname}
-                      <button
-                        onClick={() => {
-                          removeBlocklistEntry(hostname)
-                        }}
-                        disabled={saving}
-                        className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                        aria-label={`Remove ${hostname}`}
-                      >
-                        <TrashIcon size={14} aria-hidden />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {data.blocklist.length === 0 && (
-                <p className="text-sm text-muted-foreground italic">
-                  No sites blocked. Default sensitive sites (banking, email) are
-                  always skipped.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </>
+          <BlocklistEditor
+            entries={data.blocklist}
+            draft={newBlocklistEntry}
+            disabled={saving}
+            onDraftChange={setNewBlocklistEntry}
+            onAdd={addBlocklistEntry}
+            onRemove={removeBlocklistEntry}
+          />
+        </div>
       )}
     </section>
   )
