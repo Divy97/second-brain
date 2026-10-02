@@ -105,8 +105,10 @@ export default function PrivacyPage() {
           <section className="flex flex-col gap-2">
             <h2 className="font-heading text-xl">Contact</h2>
             <p>
-              Questions about this policy, or a request to delete your account:
-              [email protected]
+              Questions about this policy, or a request to delete your account:{" "}
+              <a href="mailto:divyparekh1810@gmail.com" className="underline">
+                divyparekh1810@gmail.com
+              </a>
             </p>
           </section>
         </div>
