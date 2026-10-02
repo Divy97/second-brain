@@ -53,6 +53,13 @@ const formats = [
   },
 ]
 
+const roadmap = [
+  "Import from ChatGPT & Claude",
+  "Context from Claude Code & Codex",
+  "Connections between your notes",
+  "A Second Brain for your phone",
+]
+
 export default function LandingPage() {
   return (
     <main className="marketing overflow-clip">
@@ -212,36 +219,28 @@ export default function LandingPage() {
           id="extension"
           className="scroll-mt-8 border-t border-border py-14 sm:py-20"
         >
-          <div className="max-w-2xl">
-            <h2 className="text-3xl leading-tight tracking-tight sm:text-5xl">
-              Right from your browser.
-            </h2>
-            <p className="mt-5 max-w-lg leading-relaxed text-muted-foreground">
-              A free Second Brain extension for Chrome. Save the page you’re
-              reading, then ask about it later.
-            </p>
-          </div>
-          <div className="mt-10 grid overflow-hidden rounded-[2rem] border border-border bg-card sm:grid-cols-2">
-            <div className="flex flex-col gap-4 p-8 sm:p-10">
+          <div className="grid gap-10 overflow-hidden rounded-[2rem] border border-border bg-card p-8 sm:p-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16">
+            <div>
               <Image
                 src="/chrome-logo.svg"
                 alt=""
                 aria-hidden
-                width={28}
-                height={28}
-                unoptimized
+                width={32}
+                height={32}
               />
-              <h3 className="text-xl">Save this page</h3>
-              <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-                Click the toolbar icon, press Alt+S, or right-click the page.
-                It’s saved straight to your Second Brain.
+              <h2 className="mt-6 text-3xl leading-tight tracking-tight sm:text-5xl">
+                Right from your browser.
+              </h2>
+              <p className="mt-5 max-w-sm leading-relaxed text-muted-foreground">
+                A free Second Brain extension for Chrome. Save the page you’re
+                reading, then ask about it later.
               </p>
               {extensionPublished ? (
                 <a
                   href={chromeWebStoreUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-2 inline-flex w-fit items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+                  className="mt-7 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 font-semibold text-primary-foreground"
                 >
                   Add to Chrome <ArrowUpRightIcon aria-hidden />
                 </a>
@@ -249,23 +248,47 @@ export default function LandingPage() {
                 <button
                   type="button"
                   disabled
-                  className="mt-2 inline-flex w-fit cursor-not-allowed items-center gap-2 rounded-full bg-muted px-5 py-2.5 text-sm font-semibold text-muted-foreground"
+                  className="mt-7 inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-muted px-6 py-3.5 font-semibold text-muted-foreground"
                 >
                   Coming soon on the Chrome Web Store
                 </button>
               )}
             </div>
-            <div className="flex flex-col gap-4 border-t border-border p-8 sm:border-t-0 sm:border-l sm:p-10">
-              <Badge variant="outline" className="w-fit">
-                Coming soon
+            <dl className="grid gap-6 border-t border-border pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-16">
+              <div>
+                <dt className="font-semibold">One click, any page</dt>
+                <dd className="mt-1 max-w-sm leading-relaxed text-muted-foreground">
+                  Click the toolbar icon, press Alt+S, or right-click the page.
+                  It’s saved straight to your Second Brain.
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Automatic capture</dt>
+                <dd className="mt-1 max-w-sm leading-relaxed text-muted-foreground">
+                  Turn it on and it saves the pages you actually spend time
+                  reading, off by default and fully in your control.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+        <section className="scroll-mt-8 border-t border-border py-14 sm:py-20">
+          <h2 className="text-3xl leading-tight tracking-tight sm:text-5xl">
+            Coming soon.
+          </h2>
+          <p className="mt-5 max-w-lg leading-relaxed text-muted-foreground">
+            What we’re building next.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            {roadmap.map((item) => (
+              <Badge
+                key={item}
+                variant="outline"
+                className="h-auto px-4 py-2 text-sm font-medium"
+              >
+                {item}
               </Badge>
-              <h3 className="text-xl">Save automatically as you browse</h3>
-              <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-                We’re building passive capture next: pages you spend real time
-                reading get saved on their own, off by default and fully in your
-                control.
-              </p>
-            </div>
+            ))}
           </div>
         </section>
         <section className="grid gap-8 rounded-[2rem] border border-border bg-card p-6 sm:p-10 lg:grid-cols-[1fr_1fr] lg:gap-16 lg:p-14">
