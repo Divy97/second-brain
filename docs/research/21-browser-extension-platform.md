@@ -208,3 +208,88 @@ Sources: https://developer.chrome.com/docs/webstore/review-process, https://deve
 3. Phase 2: passive capture, off by default, enabled from a settings toggle that calls `permissions.request()` for `optional_host_permissions` and `webNavigation`, then registers the content script dynamically. Visible-tab dwell timer, blocklist plus a built-in sensitive-host list, `index` vs `store` modes, and Firefox `data_collection_permissions` for `browsingActivity` and `websiteContent`.
 4. Send URL only (no text) for YouTube, Instagram and PDFs; never capture those passively.
 5. Before building, get founder decisions on: (a) whether passive capture ships in v1; (b) the extension auth mechanism; (c) the privacy policy and store disclosures wording, since this is a contract and relationship matter. Then write the spec.
+
+## Chrome Web Store submission mechanics (verified 2026-10-02)
+
+Sources: developer.chrome.com/docs/webstore/* (fetched 2026-10-02), wxt.dev CLI reference, and the `wxt-dev/wxt` GitHub repo. Doc pages were fetched with WebFetch, which returns a model-written extract; treat quoted wording as a paraphrase to re-read on the live page before it goes into a client-facing document. Anything the primary pages did not state is marked UNCONFIRMED, even where a secondary source (blog, forum) states it confidently.
+
+### 1. Developer registration fee
+
+The dashboard registration page states only that a one-time fee exists, not the amount: "Before you can publish items on the Chrome Web Store, you must register as a CWS developer and pay a one-time registration fee" (https://developer.chrome.com/docs/webstore/register, page last updated 2024-02-13 per its own footer, read 2026-10-02). It does not state the dollar amount, payment method, or any promotion/waiver; it says the registration screen itself shows the live price. **UNCONFIRMED from a primary source in this session**: the amount is widely reported as a one-time US$5 (e.g. the original 2010 TechCrunch report on Google introducing it, and secondary 2020/2026 writeups), unchanged since introduction per those secondary sources, but no developer.chrome.com page fetched here states "$5". Confirm the live figure on the dashboard at https://chrome.google.com/webstore/devconsole before budgeting, since this is exactly the kind of number that goes stale.
+
+### 2. Submission flow
+
+**Manual dashboard flow** (https://developer.chrome.com/docs/webstore/publish, read 2026-10-02):
+
+1. Sign in to the Developer Dashboard (chrome.google.com/webstore/devconsole) and click "Add new item".
+2. Upload the extension ZIP. Max package size is 2 GB. New publisher accounts start capped at two published extensions.
+3. Fill out, via the left-hand menu: **Package** (read-only view of the uploaded build), **Store Listing** (the public-facing listing), **Privacy** (single-purpose statement and data-use declarations, see Q4), **Distribution** (pricing, country availability, visibility), **Test Instructions** (credentials for reviewers if the extension needs login).
+4. Click "Submit for Review". A dialog lets you choose auto-publish (goes live the moment review passes) or deferred publish (you get up to 30 days after review completion to publish manually).
+5. States after submission: Pending Review → (Staged, if deferred) → Published. Email notifications for publish/rejection are opt-in on the Account page.
+
+**`wxt submit` CLI** (https://wxt.dev/guide/essentials/publishing.html and https://wxt.dev/api/cli/wxt-submit, read 2026-10-02):
+
+- `wxt zip` (and `wxt zip -b firefox`, `wxt zip -b edge`) builds the store-ready ZIP(s).
+- `wxt submit` is documented as "an alias for `publish-browser-extension`" (https://wxt.dev/api/cli/wxt-submit), i.e. it is a thin CLI wrapper around the npm package `publish-browser-extension` (currently pinned to 5.1.0 per that page) — not `chrome-webstore-upload`, though it fills the same role for Chrome plus Firefox, Edge and Opera in one tool. The underlying package's own README was not readable in this session (npmjs.com returned HTTP 403 to WebFetch); treat the "what it calls internally for the Chrome Web Store API" detail as UNCONFIRMED beyond "it drives the CWS API", and read `node_modules/publish-browser-extension` directly once it's installed if the exact HTTP calls matter.
+- `wxt submit init` is an interactive setup that writes the required secrets/options per target store.
+- Chrome credentials, per the CLI reference: extension ID, the zip path, and a choice of CWS API version. Two auth shapes are documented — a newer one (API v2) using a **service account** (client email + private key), and a **deprecated** v1.1 one using OAuth **client ID, client secret and refresh token**. The v1.1 fields are explicitly flagged deprecated in the CLI reference.
+- Firefox credentials: extension ID (`browser_specific_settings.gecko.id`), JWT issuer and JWT secret (AMO API keys), plus separate zip paths for the extension and its source bundle.
+- Edge credentials: API key, client ID, product ID. Opera: package ID and session ID.
+- A real, currently-open gotcha: `wxt-dev/wxt` issue #1462 (https://github.com/wxt-dev/wxt/issues/1462, filed 2025-02-27) reports that `wxt submit init`'s Chrome refresh-token flow is broken — Google deprecated the out-of-band (OOB) OAuth flow it relies on, and the page it sends you to now errors, linking to Google's own OOB-migration doc (developers.google.com/identity/protocols/oauth2/resources/oob-migration). The reported workaround is `npx chrome-webstore-upload-keys` to mint a working refresh token, or move straight to the non-deprecated service-account (API v2) path instead of the OAuth one. **Action for us**: when we actually wire CI, use the v2 service-account auth, not the documented-as-deprecated OAuth flow, and expect to hand-run `chrome-webstore-upload-keys` or the Google Cloud Console service-account setup rather than trusting `wxt submit init` end-to-end.
+- `--dry-run` authenticates without uploading/submitting, useful for a first CI smoke test.
+
+### 3. Listing assets required
+
+From https://developer.chrome.com/docs/webstore/images (read 2026-10-02):
+
+- **Icon**: 128×128 px PNG in the package itself (this is the manifest icon Chrome uses on the extensions page and store), with guidance that the actual artwork should read well with ~16 px of padding so it works on light and dark backgrounds.
+- **Screenshots**: minimum 1, maximum 5. Preferred size 1280×800; 640×400 is also accepted. "Square corners, no padding (full bleed)" — no rounded corners or browser-chrome framing. Exact file format was not stated on the page as returned (examples shown were JPG); treat PNG/JPG both as safe, UNCONFIRMED whether the dashboard enforces one over the other.
+- **Promotional tile images**: a **small tile (440×280)** is effectively required in practice — the page as returned states extensions without one are ranked/shown after ones that have it, i.e. not a hard upload-blocking requirement but a strong de-facto one. A **marquee (1400×560)** is explicitly optional. Promotional images go through their own review with a stated ~1-week SLA, separate from the main listing review.
+- Screenshots can be locale-specific; promotional images currently cannot (per the page).
+
+From https://developer.chrome.com/docs/webstore/best-listing and https://developer.chrome.com/docs/webstore/cws-dashboard-listing (read 2026-10-02):
+
+- **Short description** ("item summary"): hard-capped at **132 characters**, plain text, no HTML.
+- **Detailed description** ("item description"): no character limit is stated on either page read. Guidance is qualitative only (an overview paragraph plus a short feature list, no keyword stuffing, no superlative/competitor claims). Treat the absence of a number as UNCONFIRMED-as-unlimited, not confirmed-unlimited — the dashboard itself may still truncate or validate at submit time; check the live form.
+- A blank description, missing icon, or missing screenshots causes rejection (quality-guidelines language referenced from the images/listing pages).
+
+### 4. Privacy policy and data-use certification
+
+From https://developer.chrome.com/docs/webstore/cws-dashboard-privacy (read 2026-10-02), the Privacy tab has, per the page:
+
+- A **single-purpose description** field: free text stating the extension's one narrow purpose.
+- **Permission justifications**: a free-text field per requested permission ("state the justification for each permission"); the page does not enumerate which specific permissions get a box (it does not name `activeTab`, `scripting`, `storage`, `alarms`, or `contextMenus` individually), so treat "every permission in the manifest gets a justification box" as the working assumption and confirm against the live form once the manifest is final. **UNCONFIRMED**: whether host-permission-free manifests (ours, in Phase 1) still trigger a justification box for each of the five listed permissions, or only for ones Google treats as sensitive.
+- **Data-use certification**: two checkbox groups — one to disclose which categories of data the extension collects, a second to certify compliance with the disclosure (the "Limited Use" affirmations already captured in section 2 of this doc, from the Limited Use and user-data-FAQ pages). The page as returned did not enumerate the exact category checkboxes (e.g. "personally identifiable information", "web history", "user activity" as labelled in the dashboard); **UNCONFIRMED** verbatim checkbox labels — read the live Privacy tab once the dashboard account exists.
+- **Privacy policy**: required as a link ("a link to the privacy policy for your extension"), and the page says the policy "should include how data is collected, used, and disclosed." Nothing on this page requires a specific clause-by-clause template beyond that — a static hosted page describing collection/use/disclosure reads as sufficient per this page's wording, matching what section 2 above already found via the user-data-FAQ and Limited Use pages (prominent in-UI disclosure is required in addition to the policy; the policy alone does not satisfy that separate requirement).
+- Remote-code declaration: still required (MV3 forbids remotely hosted code, carried over from section 2 above); not re-verified in this pass beyond the existing citation.
+
+### 5. Extension ID: store-assigned vs. pinned in advance
+
+Precisely, from https://developer.chrome.com/docs/extensions/reference/manifest/key (read 2026-10-02): the manifest `"key"` field "maintains the unique ID of an extension, or theme when it is loaded during development." The documented workflow to get a stable ID _before_ a public submission is:
+
+1. Upload the built ZIP to the Developer Dashboard once (as a new, unpublished item) — this is enough to make Chrome mint a keypair for that item.
+2. Open the **Package** tab and click **View public key**; copy the text between the `BEGIN PUBLIC KEY` / `END PUBLIC KEY` markers, join it into one line.
+3. Paste that string into `manifest.json`'s `"key"` field. Local unpacked loads (`chrome://extensions`, developer mode) then resolve to the same ID as the dashboard item, and subsequent re-uploads of that same item keep that ID.
+
+So: the ID is not arbitrary and not chosen freely — it is always derived from a public key (an installed extension's ID is the first 32 characters of the SHA-256 hash of its public key, re-coded a–p). What a developer controls is _which_ keypair backs the extension, not the ID string itself. Two valid sequences follow from the docs read:
+
+- Do nothing: Chrome/the Store generates a keypair (and therefore an ID) automatically at first upload.
+- Pin it: generate or obtain a keypair up front, embed the public key via `"key"` in the manifest before the first dashboard upload, and the ID is then deterministic from that key on every subsequent build — including the very first Store submission, since the Store derives the ID from whatever key is present rather than minting a new one when the field is already populated. The Chrome Web Store docs (https://developer.chrome.com/docs/extensions/reference/manifest/key) do not explicitly restate "the Store also honors a pre-set key field on first submission" in the fetched extract — this is the standard, widely-documented mechanism (SHA-256 of the DER-encoded public key) rather than something stated verbatim on that page, so flag the "first submission" half as **UNCONFIRMED-on-this-exact-page**, confirm by generating a key pair, setting it in the manifest, uploading as a brand-new dashboard item, and checking that the resulting Item ID matches the locally-computed ID before relying on it for any pre-launch integration work (e.g. hardcoding the ID in OAuth redirect URLs or native-messaging allowlists).
+
+Practical implication for us: if anything (API CORS allowlist, native messaging, `externally_connectable`) needs to know the extension ID before the store listing exists, generate the keypair first and pin it — do not wait for the Store to assign one.
+
+### 6. Review time for a new, narrow-permission extension
+
+From https://developer.chrome.com/docs/webstore/review-process (read 2026-10-02):
+
+- Headline figure, unchanged from section 2 above: "For most extensions, review is completed within a few days, but it can take up to a few weeks." Contact support if it runs past three weeks.
+- The page states all submissions "go through the same review system, regardless of the tenure of the developer or number of active users" — i.e. there is no officially stated separate SLA tier for new/unverified developers.
+- It does list factors that **can lengthen** review, among them: new developer accounts, new extensions (no track record), and broad host permissions (`*://*/*`, `<all_urls>`) because of the data access they imply.
+- Our manifest (`activeTab`, `scripting`, `storage`, `alarms`, `contextMenus`, no `host_permissions`) sits on the favorable side of every named factor except "new developer" / "new extension", which we cannot avoid for a first submission. **UNCONFIRMED**: the page gives no numeric SLA split for "narrow-permission new developer" as a specific bucket — there is no primary-source commitment to, say, "2 days" for this profile. Budget the stated "few days to a few weeks" range and do not promise a client a tighter number.
+
+### Still open after this pass
+
+- Exact current registration fee amount and payment flow (Q1) — only confirmable by opening the live dashboard registration screen, not from any developer.chrome.com page read in this session.
+- Verbatim data-use-certification checkbox labels and whether every one of our five permissions gets its own justification box (Q4) — needs a live Privacy tab, not just the docs page.
+- Whether the Store honors a manifest `"key"` already present on the very first dashboard upload, verbatim-confirmed on a developer.chrome.com page (Q5) — needs an empirical test (generate key, pin it, upload as new item, compare IDs) since the fetched page describes the mechanism but not that exact sequencing guarantee.
+- `publish-browser-extension`'s exact internal HTTP calls to the Chrome Web Store API (Q2) — its README was not readable via WebFetch (403); read it from `node_modules` once installed, or via `npm view publish-browser-extension readme` / the GitHub repo if separate from the npm registry page.
