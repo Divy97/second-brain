@@ -48,7 +48,19 @@ bun run dev                                         # web on :3000, api on :8787
 
 Open http://localhost:3000, sign up, add your OpenRouter key in Settings, and start capturing. Confirm the API and database are reachable at http://localhost:3000/status.
 
-Only `BETTER_AUTH_SECRET` and `KEY_ENCRYPTION_SECRET` are required in `apps/api/.dev.vars`. `YOUTUBE_API_KEY`, `TRANSCRIPT_API_KEY`, `READER_API_KEY`, and Google sign-in credentials are optional operator-paid fallbacks (see [ADR-0006](docs/adr/0006-transcript-and-reader-run-on-operator-keys.md)) — without them, the affected capture is saved `partial` instead of failing.
+### Third-party services
+
+Local dev only needs Postgres (via Docker) and an OpenRouter key — that's it. Everything below is an optional operator-paid fallback: unset, the affected capture is saved `partial` instead of failing (see [ADR-0006](docs/adr/0006-transcript-and-reader-run-on-operator-keys.md)).
+
+| Env var                                     | Service                                                                                | Used for                                                                                      |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `OPENROUTER_API_KEY` (root `.env`)          | [OpenRouter](https://openrouter.ai) — **required**                                     | Chat, enrichment, speech-to-text, embeddings — the whole pipeline and Ask run on this one key |
+| `YOUTUBE_API_KEY`                           | [YouTube Data API v3](https://developers.google.com/youtube/v3) (Google Cloud Console) | Video title, channel, and description metadata                                                |
+| `TRANSCRIPT_API_KEY`                        | [Supadata](https://supadata.ai)                                                        | YouTube transcripts; Instagram captions and post metadata                                     |
+| `READER_API_KEY`                            | [Jina Reader](https://jina.ai/reader/)                                                 | Clean article text from pages that block a plain fetch                                        |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth (Cloud Console)                                                           | "Sign in with Google"                                                                         |
+
+`BETTER_AUTH_SECRET` and `KEY_ENCRYPTION_SECRET` in `apps/api/.dev.vars` aren't third-party services — they're locally-generated secrets and are always required.
 
 ### Database migrations
 
@@ -70,7 +82,7 @@ Load `apps/extension/dist` as an unpacked extension at `chrome://extensions` →
 
 ### Deploying
 
-The hosted instance runs `apps/web` on Vercel and `apps/api` as a Cloudflare Worker (`apps/api/wrangler.jsonc`), backed by Neon Postgres. Architecture and provider choices: [`docs/spec.md §9`](docs/spec.md#9-architecture). There's no scripted one-command production deploy yet — treat this as a local-dev setup until that exists.
+The hosted instance runs `apps/web` on [Vercel](https://vercel.com) and `apps/api` as a Cloudflare Worker (`apps/api/wrangler.jsonc`) on [Cloudflare Workers](https://developers.cloudflare.com/workers/), backed by [Neon](https://neon.com) Postgres and [Cloudflare R2](https://developers.cloudflare.com/r2/) for files. Architecture and provider choices: [`docs/spec.md §9`](docs/spec.md#9-architecture). There's no scripted one-command production deploy yet — treat this as a local-dev setup until that exists.
 
 ## Repository layout
 
