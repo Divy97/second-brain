@@ -20,6 +20,8 @@ import { LandingRedirect } from "@/components/landing-redirect"
 import { PublicHeader } from "@/components/public-header"
 import { VideoMemoryDemo } from "@/components/video-memory-demo"
 import { Wordmark } from "@/components/wordmark"
+import { chromeWebStoreUrl, extensionPublished } from "@/lib/extension-store"
+import { Badge } from "@workspace/ui/components/badge"
 
 const formats = [
   {
@@ -204,6 +206,66 @@ export default function LandingPage() {
                 </p>
               </div>
             ))}
+          </div>
+        </section>
+        <section
+          id="extension"
+          className="scroll-mt-8 border-t border-border py-14 sm:py-20"
+        >
+          <div className="max-w-2xl">
+            <h2 className="text-3xl leading-tight tracking-tight sm:text-5xl">
+              Right from your browser.
+            </h2>
+            <p className="mt-5 max-w-lg leading-relaxed text-muted-foreground">
+              A free Second Brain extension for Chrome. Save the page you’re
+              reading, then ask about it later.
+            </p>
+          </div>
+          <div className="mt-10 grid overflow-hidden rounded-[2rem] border border-border bg-card sm:grid-cols-2">
+            <div className="flex flex-col gap-4 p-8 sm:p-10">
+              <Image
+                src="/chrome-logo.svg"
+                alt=""
+                aria-hidden
+                width={28}
+                height={28}
+                unoptimized
+              />
+              <h3 className="text-xl">Save this page</h3>
+              <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+                Click the toolbar icon, press Alt+S, or right-click the page.
+                It’s saved straight to your Second Brain.
+              </p>
+              {extensionPublished ? (
+                <a
+                  href={chromeWebStoreUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex w-fit items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+                >
+                  Add to Chrome <ArrowUpRightIcon aria-hidden />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="mt-2 inline-flex w-fit cursor-not-allowed items-center gap-2 rounded-full bg-muted px-5 py-2.5 text-sm font-semibold text-muted-foreground"
+                >
+                  Coming soon on the Chrome Web Store
+                </button>
+              )}
+            </div>
+            <div className="flex flex-col gap-4 border-t border-border p-8 sm:border-t-0 sm:border-l sm:p-10">
+              <Badge variant="outline" className="w-fit">
+                Coming soon
+              </Badge>
+              <h3 className="text-xl">Save automatically as you browse</h3>
+              <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+                We’re building passive capture next: pages you spend real time
+                reading get saved on their own, off by default and fully in your
+                control.
+              </p>
+            </div>
           </div>
         </section>
         <section className="grid gap-8 rounded-[2rem] border border-border bg-card p-6 sm:p-10 lg:grid-cols-[1fr_1fr] lg:gap-16 lg:p-14">
