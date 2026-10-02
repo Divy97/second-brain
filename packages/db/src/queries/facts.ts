@@ -1,12 +1,47 @@
-import { and, eq, isNull, sql } from "drizzle-orm"
+import { and, asc, eq, isNull, sql } from "drizzle-orm"
 
 import { facts } from "../schema.js"
 
 import type { Database } from "../database.js"
+import type { ItemFact, ItemRef } from "./item-types.js"
 
 export interface SimilarFact extends Record<string, unknown> {
   id: string
   text: string
+}
+
+export async function listItemFacts(
+  db: Database,
+  itemId: string
+): Promise<ItemFact[]> {
+  return db
+    .select({ id: facts.id, text: facts.text })
+    .from(facts)
+    .where(and(eq(facts.sourceItemId, itemId), isNull(facts.validTo)))
+    .orderBy(asc(facts.validFrom))
+}
+
+export interface ForgetFactRef extends ItemRef {
+  factId: string
+}
+
+export async function forgetFact(
+  db: Database,
+  ref: ForgetFactRef
+): Promise<boolean> {
+  const updated = await db
+    .update(facts)
+    .set({ validTo: new Date() })
+    .where(
+      and(
+        eq(facts.id, ref.factId),
+        eq(facts.userId, ref.userId),
+        eq(facts.sourceItemId, ref.itemId),
+        isNull(facts.validTo)
+      )
+    )
+    .returning({ id: facts.id })
+  return updated.length > 0
 }
 
 export interface FactChange {

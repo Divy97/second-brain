@@ -43,12 +43,21 @@ _Avoid_: Plugin, clipper
 The secret a **User** creates in Settings and pastes into the **Extension** to connect it. One per browser or profile, shown once, revocable, limited to **Captures**, capture settings and **Stored** items.
 _Avoid_: Token, API key (that word means the model key)
 
+**Fact**:
+An atomic statement in the **User**'s own words, extracted from one source item (`kind ∈ {thought, fact, meeting, quote}`). Superseded facts are invalidated (`valid_to` set), never deleted. A **User** can also **Forget** a fact manually, which invalidates it the same way.
+_Avoid_: Memory (that word is unused elsewhere here)
+
+**Forget** (a fact):
+A **User**-initiated action that invalidates one of their own **Facts** by setting `valid_to`. Never a physical delete. Distinct from the pipeline's automatic `DELETE` reconciliation, which invalidates a fact because a newer one supersedes it.
+_Avoid_: Delete (reserved for the pipeline's own DELETE action on facts; items are "deleted", facts are "forgotten")
+
 ## Relationships
 
 - A **User** has one or more **Linked sign-ins**
 - A **User** has many **Sessions**
 - A **Linked sign-in** belongs to exactly one **User**
 - A **Capture** is either **Stored** or **Indexed**; a **Stored** item can be **Indexed** later, never the reverse
+- A **Fact** belongs to exactly one source item; one item can produce many **Facts**
 
 ## Example dialogue
 
@@ -58,3 +67,4 @@ _Avoid_: Token, API key (that word means the model key)
 ## Flagged ambiguities
 
 - "account" was used to mean both the **User** and the `accounts` table row — resolved: the person is a **User**, the row is a **Linked sign-in**.
+- An item's `kind` can itself be the value `fact` (a short, typed-as-a-fact note) — distinct from a **Fact** (the atomic statement the facts layer extracts from such notes). The item is "fact-kind"; what it produces are **Facts**. UI copy spells out "Facts extracted from this note" to keep the two apart.

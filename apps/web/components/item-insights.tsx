@@ -1,4 +1,5 @@
 import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
 
 import type { ItemDetail } from "@/lib/items-api"
 
@@ -18,7 +19,15 @@ function differsBeyondWhitespace(a: string, b: string): boolean {
   return collapseWhitespace(a) !== collapseWhitespace(b)
 }
 
-export function ItemInsights({ item }: { item: ItemDetail }) {
+export function ItemInsights({
+  item,
+  pending,
+  onForgetFact,
+}: {
+  item: ItemDetail
+  pending: boolean
+  onForgetFact: (factId: string) => void
+}) {
   if (item.summary === null) return null
   return (
     <div className="flex flex-col gap-8">
@@ -31,6 +40,40 @@ export function ItemInsights({ item }: { item: ItemDetail }) {
         </h2>
         <p className="max-w-[65ch] text-lg leading-relaxed">{item.summary}</p>
       </section>
+
+      {item.facts.length > 0 && (
+        <section
+          className="flex flex-col gap-3"
+          aria-labelledby="facts-heading"
+        >
+          <h2 id="facts-heading" className="font-heading text-2xl">
+            Facts extracted from this note
+          </h2>
+          <ul className="flex flex-col divide-y">
+            {item.facts.map((fact) => (
+              <li
+                key={fact.id}
+                className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0"
+              >
+                <p className="max-w-[60ch] text-base leading-relaxed">
+                  {fact.text}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={pending}
+                  className="shrink-0"
+                  onClick={() => {
+                    onForgetFact(fact.id)
+                  }}
+                >
+                  Forget
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {item.cleanText &&
         differsBeyondWhitespace(item.cleanText, item.rawText) && (

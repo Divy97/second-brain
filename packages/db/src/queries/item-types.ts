@@ -13,6 +13,11 @@ export interface ItemEntity {
   type: EntityType
 }
 
+export interface ItemFact {
+  id: string
+  text: string
+}
+
 export interface ItemRef {
   userId: string
   itemId: string
