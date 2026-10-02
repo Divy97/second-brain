@@ -78,7 +78,7 @@ test("homepage explains every capture format and sourced conversations", async (
   await expect(page.getByText(/OpenRouter API key/).first()).toBeVisible()
 })
 
-test("homepage offers the browser extension honestly, pending Store review", async ({
+test("homepage describes the extension honestly, pending Store review", async ({
   page,
 }) => {
   await page.goto("/")
@@ -91,10 +91,23 @@ test("homepage offers the browser extension honestly, pending Store review", asy
   await expect(cta).toBeVisible()
   await expect(cta).toBeDisabled()
   await expect(page.getByRole("link", { name: "Add to Chrome" })).toHaveCount(0)
-  await expect(page.getByText("Coming soon", { exact: true })).toBeVisible()
+  await expect(page.getByText("One click, any page")).toBeVisible()
+  await expect(page.getByText("Automatic capture")).toBeVisible()
+})
+
+test("homepage lists what's coming next", async ({ page }) => {
+  await page.goto("/")
   await expect(
-    page.getByRole("heading", { name: "Save automatically as you browse" })
+    page.getByRole("heading", { name: "Coming soon.", exact: true })
   ).toBeVisible()
+  for (const item of [
+    "Import from ChatGPT & Claude",
+    "Context from Claude Code & Codex",
+    "Connections between your notes",
+    "A Second Brain for your phone",
+  ]) {
+    await expect(page.getByText(item, { exact: true })).toBeVisible()
+  }
 })
 
 test("navigation stays put while a refreshed session resolves", async ({
