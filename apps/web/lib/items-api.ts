@@ -41,6 +41,7 @@ export interface ItemDetail extends ItemSummary {
   error: string | null
   updatedAt: string
   entities: { name: string; type: string }[]
+  facts: { id: string; text: string }[]
   captures: string[]
 }
 
@@ -108,3 +109,8 @@ export const retryItem = (id: string) =>
 
 export const reprocessItem = (id: string) =>
   apiRequest<ItemDetail>(`${itemPath(id)}/reprocess`, { method: "POST" })
+
+export const forgetFact = (itemId: string, factId: string) =>
+  apiRequest<null>(`${itemPath(itemId)}/facts/${factId}`, {
+    method: "DELETE",
+  })

@@ -8,6 +8,7 @@ import {
   captureUrlItem,
   findItem,
   findItemFile,
+  forgetFact,
   InvalidCursorError,
   listItems,
   queueFileDeletion,
@@ -31,6 +32,7 @@ const MAX_AUDIO_SIZE = 25 * 1024 * 1024
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024
 const PAGE_SIZE = 50
 const itemId = z.uuid()
+const factId = z.uuid()
 
 const textBody = z.object({
   text: z
@@ -77,6 +79,14 @@ async function parseUrl(c: Context<AppEnv>): Promise<ParsedUrl> {
 function itemRef(c: Context<AppEnv>): ItemRef | null {
   const parsed = itemId.safeParse(c.req.param("id"))
   return parsed.success ? { userId: c.var.userId, itemId: parsed.data } : null
+}
+
+function factRef(c: Context<AppEnv>): (ItemRef & { factId: string }) | null {
+  const ref = itemRef(c)
+  const parsedFactId = factId.safeParse(c.req.param("factId"))
+  return ref && parsedFactId.success
+    ? { ...ref, factId: parsedFactId.data }
+    : null
 }
 
 const invalidText = (c: Context<AppEnv>, message: string) =>
@@ -372,6 +382,12 @@ itemRoutes.delete("/:id", async (c) => {
     }
   }
   return deleted ? c.body(null, 204) : notFound(c)
+})
+
+itemRoutes.delete("/:id/facts/:factId", async (c) => {
+  const ref = factRef(c)
+  const forgotten = ref && (await forgetFact(c.var.db, ref))
+  return forgotten ? c.body(null, 204) : notFound(c)
 })
 
 function requeueRoute(

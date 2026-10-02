@@ -24,6 +24,7 @@ import { itemFallbackTitle } from "@/lib/item-labels"
 import {
   deleteItem,
   editItem,
+  forgetFact,
   isSettling,
   isStalled,
   itemPath,
@@ -95,6 +96,20 @@ export function ItemView({ id }: { id: string }) {
     void runAction(async () => {
       await deleteItem(id)
       router.replace("/home")
+    })
+  }
+
+  function forget(factId: string) {
+    void runAction(async () => {
+      await forgetFact(id, factId)
+      await mutate(
+        (current) =>
+          current && {
+            ...current,
+            facts: current.facts.filter((fact) => fact.id !== factId),
+          },
+        { revalidate: false }
+      )
     })
   }
 
@@ -278,7 +293,9 @@ export function ItemView({ id }: { id: string }) {
         </Alert>
       )}
 
-      {!editing && <ItemInsights item={item} />}
+      {!editing && (
+        <ItemInsights item={item} pending={pending} onForgetFact={forget} />
+      )}
 
       <CaptureHistory captures={item.captures} />
 
