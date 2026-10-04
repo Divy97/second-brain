@@ -8,7 +8,8 @@ One-time setup for issue #66. Until both secrets exist and the web flag is on, t
 2. Audience: choose External, then publish the app (status "In production"). In "Testing" sign-in is capped at 100 test users. The scopes used (`openid`, `email`, `profile`) need no Google verification.
 3. Clients, Create client: type "Web application". Under Authorized redirect URIs add exactly:
    - `http://localhost:3000/api/auth/callback/google`
-   - `https://second-brain-sigma-green-70.vercel.app/api/auth/callback/google`
+   - `https://usesecondbrain.vercel.app/api/auth/callback/google`
+   - `https://second-brain-sigma-green-70.vercel.app/api/auth/callback/google` (old domain, kept registered during the migration to `usesecondbrain.vercel.app`; remove once traffic has fully moved)
 4. Copy the client id and secret. Changes can take minutes to propagate.
 
 Preview deployments have their own hostnames and cannot be registered, so Google sign-in works on production and localhost only.

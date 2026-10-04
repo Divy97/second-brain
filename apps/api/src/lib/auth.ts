@@ -5,15 +5,17 @@ import { betterAuth } from "better-auth"
 import { generateId, schema, type Database } from "@workspace/db"
 
 import { extensionPermissions } from "./extension/permissions.js"
+import { parseWebOrigins } from "./web-origins.js"
 
 // Built per request: the adapter captures the request's database client, and Hyperdrive
 // wants a fresh client per request. Options are explicit because Better Auth cannot detect
 // production on Workers and would otherwise fall back to insecure defaults.
 export function createAuth(env: Env, db: Database) {
+  const webOrigins = parseWebOrigins(env.WEB_ORIGIN)
   return betterAuth({
     baseURL: env.API_ORIGIN,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [env.WEB_ORIGIN],
+    trustedOrigins: webOrigins,
     database: drizzleAdapter(db, { provider: "pg", schema, usePlural: true }),
     emailAndPassword: { enabled: true },
     socialProviders: googleProvider(env),
@@ -29,7 +31,7 @@ export function createAuth(env: Env, db: Database) {
         permissions: { defaultPermissions: extensionPermissions },
       }),
     ],
-    onAPIError: { errorURL: `${env.WEB_ORIGIN}/sign-in` },
+    onAPIError: { errorURL: `${webOrigins[0]}/sign-in` },
     rateLimit: { enabled: env.AUTH_RATE_LIMIT === "on", window: 10, max: 100 },
     advanced: {
       database: { generateId: () => generateId() },

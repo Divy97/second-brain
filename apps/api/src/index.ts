@@ -18,6 +18,7 @@ import { requestContext, requireUser } from "./lib/request-context.js"
 import { storedRoutes } from "./lib/stored-routes.js"
 import { threadRoutes } from "./lib/threads/index.js"
 import { userKeyRoutes } from "./lib/user-keys/index.js"
+import { parseWebOrigins } from "./lib/web-origins.js"
 
 import type { AppEnv } from "./lib/app-env.js"
 
@@ -28,7 +29,9 @@ const app = new Hono<AppEnv>()
 
 const webCors = cors({
   origin: (origin, c: Context<AppEnv>) =>
-    origin === c.env.WEB_ORIGIN ? origin : null,
+    origin && parseWebOrigins(c.env.WEB_ORIGIN).includes(origin)
+      ? origin
+      : null,
   credentials: true,
 })
 
