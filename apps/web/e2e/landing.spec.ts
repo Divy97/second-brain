@@ -78,19 +78,20 @@ test("homepage explains every capture format and sourced conversations", async (
   await expect(page.getByText(/OpenRouter API key/).first()).toBeVisible()
 })
 
-test("homepage describes the extension honestly, pending Store review", async ({
-  page,
-}) => {
+test("homepage links to the published Chrome extension", async ({ page }) => {
   await page.goto("/")
   await expect(
     page.getByRole("heading", { name: "Right from your browser." })
   ).toBeVisible()
-  const cta = page.getByRole("button", {
-    name: "Coming soon on the Chrome Web Store",
-  })
+  const cta = page.getByRole("link", { name: "Add to Chrome" })
   await expect(cta).toBeVisible()
-  await expect(cta).toBeDisabled()
-  await expect(page.getByRole("link", { name: "Add to Chrome" })).toHaveCount(0)
+  await expect(cta).toHaveAttribute(
+    "href",
+    "https://chromewebstore.google.com/detail/ipjneombpgmmjdmcagmgeilmjhlifnfb"
+  )
+  await expect(
+    page.getByRole("button", { name: "Coming soon on the Chrome Web Store" })
+  ).toHaveCount(0)
   await expect(page.getByText("One click, any page")).toBeVisible()
   await expect(page.getByText("Automatic capture")).toBeVisible()
 })

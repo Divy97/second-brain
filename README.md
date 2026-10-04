@@ -18,7 +18,7 @@ A personal memory system. Drop in a note, a voice memo, a photo, a PDF, or a lin
 - **Answers cite their source, always.** Ask a question and get back quotes, facts and names exactly as you saved them — never paraphrased — each one linked to the item it came from. Nothing in range of what you saved? It says so instead of guessing.
 - **Five formats, one pipeline.** Notes, voice recordings, photos, PDFs, and links — articles, YouTube, Instagram — all land in the same place and are askable the same way.
 - **Your AI key, your AI bill.** Second Brain runs on an OpenRouter key you provide in Settings. Nothing runs on a shared pool, nothing is billed to a company you don't control.
-- **A browser extension for what the web app can't reach.** One click, `Alt+S`, or right-click a page — even logged-in or paywalled ones — to save it straight from the tab you're reading. ([Not yet on the Chrome Web Store](#run-the-browser-extension) — build it from source today.)
+- **A browser extension for what the web app can't reach.** One click, `Alt+S`, or right-click a page — even logged-in or paywalled ones — to save it straight from the tab you're reading. [Add to Chrome](https://chromewebstore.google.com/detail/ipjneombpgmmjdmcagmgeilmjhlifnfb), or [build it from source](#run-the-browser-extension).
 
 ![An example conversation answering a question about a saved note, with a link back to the source](apps/web/public/product-answer.png)
 
@@ -62,11 +62,13 @@ Migrations are applied programmatically (`@workspace/db/migrate`); `drizzle-kit 
 
 ### Run the browser extension
 
+The extension is [live on the Chrome Web Store](https://chromewebstore.google.com/detail/ipjneombpgmmjdmcagmgeilmjhlifnfb). To run a local build instead — for development, or to test a change before it's published — build it from source:
+
 ```bash
 bun run --cwd apps/extension build
 ```
 
-Load `apps/extension/dist` as an unpacked extension at `chrome://extensions` → Developer mode → Load unpacked. The listing isn't live on the Chrome Web Store yet, so this is currently the only way to run it.
+Load `apps/extension/dist` as an unpacked extension at `chrome://extensions` → Developer mode → Load unpacked.
 
 ### Deploying
 
