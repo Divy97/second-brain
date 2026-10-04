@@ -8,7 +8,7 @@
 
 A personal memory system. Drop in a note, a voice memo, a photo, a PDF, or a link — including YouTube videos and Instagram Reels — in under three seconds, from any device. Weeks later, ask for it back in plain language and get one direct answer: the exact thing you saved, verbatim, with a link to its source. Not a generated summary of your notes — the real thing, every time.
 
-**[Try it live →](https://second-brain-sigma-green-70.vercel.app)**
+**[Try it live →](https://usesecondbrain.vercel.app)**
 
 ![Second Brain home screen: capture notes, voice, photos, PDFs and links above a collection of saved memories](apps/web/public/product-home.png)
 
