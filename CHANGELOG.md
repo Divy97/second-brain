@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/Divy97/second-brain/compare/second-brain-v0.2.0...second-brain-v0.3.0) (2026-10-06)
+
+
+### Features
+
+* **facts:** let a user forget a fact manually ([#93](https://github.com/Divy97/second-brain/issues/93)) ([73995e3](https://github.com/Divy97/second-brain/commit/73995e3ff418b5144c2a2c75fe1be3fdcccc6e80)), closes [#60](https://github.com/Divy97/second-brain/issues/60)
+* **pipeline:** add a Browser Run step for JS-rendered articles ([#94](https://github.com/Divy97/second-brain/issues/94)) ([e0510f6](https://github.com/Divy97/second-brain/commit/e0510f61d3aa53d970b3ad482ada33c3d5db8910)), closes [#59](https://github.com/Divy97/second-brain/issues/59)
+
 ## [0.2.0](https://github.com/Divy97/second-brain/compare/second-brain-v0.1.0...second-brain-v0.2.0) (2026-10-06)
 
 
