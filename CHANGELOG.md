@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/Divy97/second-brain/compare/second-brain-v0.1.0...second-brain-v0.2.0) (2026-10-06)
+
+
+### Features
+
+* transcribe the audio of an Instagram reel ([#100](https://github.com/Divy97/second-brain/issues/100)) ([e963efc](https://github.com/Divy97/second-brain/commit/e963efc560c5c032599cb39d04dffa6f162da7b5))
+
+
+### Bug Fixes
+
+* raise the daily paid-lookup allowance and keep Worker logs ([#101](https://github.com/Divy97/second-brain/issues/101)) ([8405017](https://github.com/Divy97/second-brain/commit/8405017f26adf108739a4acb6ff0da4ec5719f2a))
+* replace default favicon with the brand mark ([#98](https://github.com/Divy97/second-brain/issues/98)) ([644a189](https://github.com/Divy97/second-brain/commit/644a189e18654c499ec680134302ff818ac768ec))
+* stop requiring a duration Supadata never sends for a reel ([#102](https://github.com/Divy97/second-brain/issues/102)) ([14179ed](https://github.com/Divy97/second-brain/commit/14179ed02e074090baa498e2c1872044cbb61338))
+
 ## [0.1.0](https://github.com/Divy97/second-brain/compare/second-brain-v0.0.1...second-brain-v0.1.0) (2026-10-04)
 
 
