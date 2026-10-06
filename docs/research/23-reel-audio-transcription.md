@@ -81,6 +81,47 @@ Three consequences:
 2. **`media.duration` is the one useful number here** — it is the only documented way to show the User the cost before spending, since the price is per minute. It is optional on the branch, so the UI needs a path for "duration unknown".
 3. Doc 16's caveat still stands and is worth repeating: there is no Instagram sample response anywhere in Supadata's docs or spec, so which of these optional fields actually populates for a reel has never been observed in this repo. [Metadata](https://docs.supadata.ai/get-metadata.md)
 
+### Observed 2026-10-06: a real `/v1/metadata` response for an Instagram reel
+
+First direct observation from this repo, resolving the caveat above. Live call against `https://www.instagram.com/reel/DeFRiX9ysWr/`, thumbnail URL trimmed:
+
+```json
+{
+  "platform": "instagram",
+  "type": "video",
+  "id": "DeFRiX9ysWr",
+  "description": "Crack your next interview with this 30 second setup… #interview #jobs #hiring",
+  "author": {
+    "username": "careerwithrashi",
+    "displayName": "careerwithrashi",
+    "avatarUrl": "",
+    "verified": false
+  },
+  "stats": { "views": null, "likes": 3312, "comments": 1173, "shares": null },
+  "media": {
+    "type": "video",
+    "thumbnailUrl": "https://scontent-sea5-1.cdninstagram.com/…"
+  },
+  "tags": ["interview", "jobs", "hiring", "foryou", "explore"],
+  "additionalData": {
+    "shortcode": "DeFRiX9ysWr",
+    "isVideo": true,
+    "isReel": true,
+    "isCarousel": false,
+    "hasAudio": false
+  }
+}
+```
+
+Four things this settles, none of them documented:
+
+1. **`media.duration` is absent.** The `video` branch returns `type` and `thumbnailUrl` only. The field is optional in the spec and Instagram does not populate it, so a cost gate that requires a stated duration refuses every reel. This was shipped and did exactly that; see ADR-0009.
+2. **`media` still carries no media URL**, confirming §2 against a live response rather than the spec alone. `thumbnailUrl` is a still.
+3. **`additionalData` is undocumented and appears in no schema**, but carries `isVideo`, `isReel`, `isCarousel`, `hasAudio` and `shortcode`.
+4. **`additionalData.hasAudio` read `false` for a reel whose entire content is a person speaking.** Whatever that field means, it is not "this media has an audio track". Nothing in `additionalData` should gate spend; `isReel` is tempting and sits beside a field we have already seen be wrong.
+
+`stats` (`views`, `likes`, `comments`, `shares`) and `author.username`/`verified` are also present and unused by this repo.
+
 **Whether Instagram CDN URLs are fetchable server-side without auth: Unverified, and deliberately not tested.** No primary source documents the behaviour of `cdninstagram.com` / `scontent.*` URLs, because Meta documents no public reel-media endpoint at all. The nearest first-party statement is about the Graph API's own field: `media_url` is "The URL for the media. **Warning:** The `media_url` field is omitted from responses if the media contains copyrighted material or has been flagged for a copyright violation" — and the Graph API is own-media-only, Business/Creator accounts. [IG Media reference](https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-media) That reference says nothing about expiry, signing, or caching. I looked for a documented statement on CDN URL lifetime in the Instagram Platform reference, the Developer Policies and the Platform Terms and found none. No live fetch of a CDN URL was attempted.
 
 ## 3. ASR providers that accept a remote URL

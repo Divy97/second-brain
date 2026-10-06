@@ -41,7 +41,7 @@ _Avoid_: Reel transcript (Instagram has no caption track to fetch)
 11. As a **User**, I want a YouTube video to behave exactly as it does today, so that nothing I rely on changes.
 12. As an operator, I want only `video` media to spend the audio allowance, so that cost follows a documented field rather than a guess about the caption.
     12a. As an operator, I want only reel-kind links to spend it, so that an hour-long `/tv/` item cannot cost sixty times what a reel costs.
-    12b. As an operator, I want a duration past three minutes, or no stated duration at all, to be refused, so that per-minute billing is bounded even though the allowance counts calls.
+    12b. As an operator, I want a stated duration past three minutes to be refused, so that per-minute billing is bounded if Supadata ever reports it.
     12c. As an operator, I want a refusal to leave the item `partial` rather than `full`, so that reels I declined to transcribe are visible and Reprocess can complete them if the bound is later relaxed.
 13. As an operator, I want the audio call to use `mode=auto`, so that the cheaper native branch is taken if Supadata's undocumented one ever fires.
 14. As an operator, I want the allowance counted in calls rather than credits, so that the async path's unreliable billing header cannot corrupt it.
@@ -52,11 +52,15 @@ _Avoid_: Reel transcript (Instagram has no caption track to fetch)
 
 ### When the audio is fetched
 
-| Media `type` from `/v1/metadata`                   | Audio lookup | Why                                                            |
-| -------------------------------------------------- | ------------ | -------------------------------------------------------------- |
-| `video`                                            | yes          | A reel; there is speech to capture.                            |
-| `image`, `carousel`, `post`                        | no           | No audio track to transcribe.                                  |
-| metadata unavailable (404/403, private or deleted) | no           | Nothing says it is a video, and the item is already `partial`. |
+All three must hold, or no audio is fetched:
+
+| Condition                                          | Why                                                                                                                                                                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| the link arrived as `/reel/` or `/reels/`          | Instagram caps a Reels upload at 3 minutes. A `/tv/` item runs to an hour and would spend 120 credits in one capture. This is the bound that does the work, and unlike anything in Supadata's response it is ours.      |
+| `type` from `/v1/metadata` is `video`              | `image`, `carousel` and `post` have no audio track. Metadata unavailable (404/403, private or deleted) says nothing is a video, and the item is already `partial`.                                                      |
+| `media.duration` is absent, or at most 180 seconds | The allowance counts calls while Supadata bills per minute, so a stated duration past the cap is refused. Supadata returns no `duration` for an Instagram reel (observed 2026-10-06), so in practice this always holds. |
+
+Nothing in `additionalData` is used. It is undocumented, and its `hasAudio` read `false` for a reel of someone speaking.
 
 The caption is never the trigger. A thin-caption heuristic was prototyped and rejected; see ADR-0009.
 
