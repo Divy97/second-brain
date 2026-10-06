@@ -104,11 +104,13 @@ describe("reel audio extraction", () => {
     expect(result.text).toContain("The spoken words.")
   })
 
-  it("refuses a reel whose duration Supadata does not state", async () => {
+  // Supadata returns no duration for an Instagram reel, observed 2026-10-06. Requiring
+  // one refused every reel in production.
+  it("transcribes a reel whose duration Supadata does not state", async () => {
     const result = await extract(reel, {})
 
-    expect(result.paths).not.toContain("/v1/transcript")
-    expect(result.quality).toBe("partial")
+    expect(result.paths).toContain("/v1/transcript")
+    expect(result.quality).toBe("full")
   })
 
   it("transcribes a reel exactly at the length cap", async () => {

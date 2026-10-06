@@ -115,18 +115,19 @@ async function extractInstagram({
       }
 }
 
-// Supadata bills per minute while the allowance counts calls, so length needs its own
-// bound. An unstated duration fails closed: Supadata documents the field as optional and
-// publishes no Instagram sample, and since IGTV was folded into Reels a /reel/ link is no
-// longer bounded by any published limit. An hour-long video costs 120 credits where a
-// reel costs 2, and exhausted operator credits degrade every User at once (ADR-0006).
+// Supadata bills per minute while the allowance counts calls, so a stated duration past
+// the cap is refused. An unstated one is allowed: observed 2026-10-06, Supadata returns
+// no `duration` for an Instagram reel at all, so requiring it refused every reel. The
+// path kind is the bound that actually holds, and it is ours rather than Supadata's.
+// Supadata's own `additionalData.hasAudio` read false for a reel of someone speaking, so
+// nothing in that object is trusted. See docs/research/23-reel-audio-transcription.md §2.
 function hasTranscribableAudio(
   link: MediaLink,
   metadata: MediaMetadata | null
 ): boolean {
   if (link.instagramKind !== "reel" || !metadata?.isVideo) return false
   return (
-    metadata.durationSeconds !== null &&
+    metadata.durationSeconds === null ||
     metadata.durationSeconds <= reelAudio.maxDurationSeconds
   )
 }
