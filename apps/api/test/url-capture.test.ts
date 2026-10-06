@@ -274,4 +274,154 @@ describe("URL capture", () => {
       model.restore()
     }
   })
+
+  describe("Browser Run rendering", () => {
+    const rendered =
+      "<html><head><title>Rendered guide</title></head><body><article><p>JS-rendered Lisbon tram routes.</p></article></body></html>"
+
+    it("renders an empty-shell SPA and captures its real text", async () => {
+      const fetchPage = articleFetch({
+        "https://example.com/spa": html(
+          '<html><head><title></title></head><body><div id="root"></div></body></html>'
+        ),
+      })
+      let renderedUrl: string | undefined
+      const renderPage = (url: string) => {
+        renderedUrl = url
+        return Promise.resolve(rendered)
+      }
+      const model = stubOpenRouter()
+      const queue = recordQueue({
+        fetchPage,
+        renderPage,
+        env: { READER_API_KEY: undefined },
+      })
+      try {
+        const session = await signUp()
+        await saveOpenRouterKey(session)
+        const response = await saveUrl(session, "https://example.com/spa")
+        const { id } = await response.json<{ id: string }>()
+        expect(await queue.processLatest()).toMatchObject({
+          outcome: "ready",
+        })
+        const item = await (
+          await request(`/items/${id}`, { session })
+        ).json<ItemBody>()
+        expect(item.captureQuality).toBe("full")
+        expect(item.rawText).toContain("JS-rendered Lisbon tram routes")
+        expect(renderedUrl).toBe("https://example.com/spa")
+      } finally {
+        queue.restore()
+        model.restore()
+      }
+    })
+
+    it("falls through to the reader when rendering fails", async () => {
+      const paywall = "https://example.com/spa-walled"
+      const fetchPage = articleFetch({
+        [paywall]: html(
+          "<html><head><title>Members only</title></head><body>Subscribe to continue.</body></html>"
+        ),
+      })
+      const model = stubOpenRouter()
+      const providers = stubExtractionProviders()
+      providers.acceptKeys([testReaderKey])
+      providers.readerReturns(paywall, "Reader rescued this article.")
+      const queue = recordQueue({
+        fetchPage: pageOrReader(fetchPage),
+        renderPage: () => Promise.resolve(null),
+      })
+      try {
+        const session = await signUp()
+        await saveOpenRouterKey(session)
+        await request("/keys/reader", {
+          method: "PUT",
+          session,
+          json: { key: testReaderKey },
+        })
+        const { id } = await (
+          await saveUrl(session, paywall, "Check this too")
+        ).json<{ id: string }>()
+        expect(await queue.processLatest()).toMatchObject({
+          outcome: "ready",
+        })
+        const item = await (
+          await request(`/items/${id}`, { session })
+        ).json<ItemBody>()
+        expect(item.captureQuality).toBe("full")
+        expect(item.rawText).toContain("Check this too")
+      } finally {
+        queue.restore()
+        providers.restore()
+        model.restore()
+      }
+    })
+
+    it("never renders a page that already parsed in full", async () => {
+      const fetchPage = articleFetch({
+        "https://example.com/already-full": html(
+          "<article><p>Already a full capture.</p></article>"
+        ),
+      })
+      let renderCalls = 0
+      const model = stubOpenRouter()
+      const queue = recordQueue({
+        fetchPage,
+        renderPage: () => {
+          renderCalls += 1
+          return Promise.resolve(rendered)
+        },
+      })
+      try {
+        const session = await signUp()
+        await saveOpenRouterKey(session)
+        const { id } = await (
+          await saveUrl(session, "https://example.com/already-full")
+        ).json<{ id: string }>()
+        expect(await queue.processLatest()).toMatchObject({
+          outcome: "ready",
+        })
+        const item = await (
+          await request(`/items/${id}`, { session })
+        ).json<ItemBody>()
+        expect(item.captureQuality).toBe("full")
+        expect(renderCalls).toBe(0)
+      } finally {
+        queue.restore()
+        model.restore()
+      }
+    })
+
+    it("stays partial when rendering also fails and there is no reader", async () => {
+      const fetchPage = articleFetch({
+        "https://example.com/dead-end": html(
+          "<html><head><title>Members only</title></head><body>Log in to continue.</body></html>"
+        ),
+      })
+      const model = stubOpenRouter()
+      const queue = recordQueue({
+        fetchPage,
+        renderPage: () => Promise.resolve(null),
+        env: { READER_API_KEY: undefined },
+      })
+      try {
+        const session = await signUp()
+        await saveOpenRouterKey(session)
+        const { id } = await (
+          await saveUrl(session, "https://example.com/dead-end", "Stuck")
+        ).json<{ id: string }>()
+        expect(await queue.processLatest()).toMatchObject({
+          outcome: "ready",
+        })
+        const item = await (
+          await request(`/items/${id}`, { session })
+        ).json<ItemBody>()
+        expect(item.captureQuality).toBe("partial")
+        expect(item.rawText).toContain("Stuck")
+      } finally {
+        queue.restore()
+        model.restore()
+      }
+    })
+  })
 })

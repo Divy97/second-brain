@@ -49,5 +49,6 @@
       "binding": "PROCESS_ITEM_WORKFLOW",
       "class_name": "ProcessItemWorkflow"
     }
-  ]
+  ],
+  "browser": { "binding": "BROWSER", "remote": true }
 }
