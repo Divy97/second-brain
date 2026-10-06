@@ -28,6 +28,9 @@
       "bucket_name": "second-brain-backups"
     }
   ],
+  // Without this, Workers Logs keeps nothing and a report of "it is not working" cannot
+  // be answered from anything but guesswork.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
   "triggers": { "crons": ["0 * * * *"] },
   "queues": {
     "producers": [{ "binding": "ITEMS_QUEUE", "queue": "second-brain-items" }],

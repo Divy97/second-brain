@@ -33,12 +33,21 @@ export function operatorService(
   if (!apiKey) return null
   return {
     apiKey,
-    spend: () =>
-      spendPaidLookup(db, {
-        userId,
-        service,
-        day: utcDay(now()),
-        limit: allowanceFor(userId, service),
-      }),
+    spend: async () => {
+      try {
+        return await spendPaidLookup(db, {
+          userId,
+          service,
+          day: utcDay(now()),
+          limit: allowanceFor(userId, service),
+        })
+      } catch (error) {
+        // Bookkeeping we cannot write is an outage to log, not a capture to lose: the
+        // lookup is refused so nothing is spent unaccounted for, and the item saves
+        // partial like any other refused lookup (ADR-0006).
+        console.error("paid lookup accounting failed", service, error)
+        return false
+      }
+    },
   }
 }
