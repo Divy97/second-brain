@@ -17,6 +17,7 @@ import {
   type OpenRouterStub,
 } from "./support/openrouter-stub.js"
 import { recordQueue, type QueueRecorder } from "./support/pipeline.js"
+import { paidLookupAllowance } from "../src/lib/config.js"
 
 interface ItemBody {
   id: string
@@ -26,7 +27,7 @@ interface ItemBody {
   rawText: string
 }
 
-const allowance = 2
+const allowance = paidLookupAllowance.transcript
 const monday = new Date("2026-10-05T10:00:00Z")
 const tuesday = new Date("2026-10-06T10:00:00Z")
 
@@ -65,7 +66,7 @@ beforeEach(() => {
   model = stubOpenRouter()
   providers = stubExtractionProviders()
   providers.acceptKeys([testTranscriptKey, testReaderKey])
-  for (let index = 0; index < 4; index += 1) {
+  for (let index = 0; index <= allowance + 1; index += 1) {
     providers.videoReturns(`abcdefghi${String(index).padStart(2, "0")}`, {
       title: `Video ${index}`,
       channel: "Bench Notes",
@@ -150,18 +151,18 @@ describe("operator-paid fallbacks", () => {
     }
 
     expect(results.map((entry) => entry.captureQuality)).toEqual([
-      "full",
-      "full",
+      ...Array<string>(allowance).fill("full"),
       "partial",
     ])
     expect(results.map((entry) => entry.partialReason)).toEqual([
-      null,
-      null,
+      ...Array<string | null>(allowance).fill(null),
       "allowance_used",
     ])
-    expect(results[2]?.status).toBe("ready")
-    expect(results[2]?.rawText).toContain("Video 2")
-    expect(results[2]?.rawText).not.toContain("Transcript text 2.")
+    expect(results[allowance]?.status).toBe("ready")
+    expect(results[allowance]?.rawText).toContain(`Video ${allowance}`)
+    expect(results[allowance]?.rawText).not.toContain(
+      `Transcript text ${allowance}.`
+    )
     expect(paidCalls("api.supadata.ai")).toBe(allowance)
   })
 
@@ -170,7 +171,7 @@ describe("operator-paid fallbacks", () => {
     for (let index = 0; index < allowance; index += 1) {
       await capture(session, videoUrl(index))
     }
-    const limited = await capture(session, videoUrl(2))
+    const limited = await capture(session, videoUrl(allowance))
     expect(limited.partialReason).toBe("allowance_used")
 
     clock = tuesday
@@ -184,13 +185,15 @@ describe("operator-paid fallbacks", () => {
     const completed = await item(session, limited.id)
     expect(completed.captureQuality).toBe("full")
     expect(completed.partialReason).toBeNull()
-    expect(completed.rawText).toContain("Transcript text 2.")
+    expect(completed.rawText).toContain(`Transcript text ${allowance}.`)
   })
 
   it("counts a reprocess against the allowance like any capture", async () => {
     const session = await user()
     const first = await capture(session, videoUrl(0))
-    await capture(session, videoUrl(1))
+    for (let index = 1; index < allowance; index += 1) {
+      await capture(session, videoUrl(index))
+    }
 
     const reprocess = await request(`/items/${first.id}/reprocess`, {
       method: "POST",
@@ -241,7 +244,7 @@ describe("operator-paid fallbacks", () => {
       await capture(heavy, videoUrl(index))
     }
 
-    const fresh = await capture(other, videoUrl(3))
+    const fresh = await capture(other, videoUrl(allowance + 1))
 
     expect(fresh.captureQuality).toBe("full")
   })

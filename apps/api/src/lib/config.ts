@@ -51,12 +51,14 @@ export const retrieval = {
 export const reelAudio = { maxDurationSeconds: 180 }
 
 // Operator-paid lookups each User may spend per UTC day, per service (ADR-0006).
+// A reel spends one transcript lookup for its metadata and one reel_audio lookup for its
+// audio, so this is the number of reels a User can capture in a day, not twice it.
 export const paidLookupAllowance = {
-  transcript: 2,
-  reader: 2,
+  transcript: 10,
+  reader: 10,
   // Billed per minute, so it is capped apart from the rest: sharing the transcript
   // allowance would halve how many reels a day a User can capture.
-  reel_audio: 2,
+  reel_audio: 10,
 } as const
 
 export const backups = {
