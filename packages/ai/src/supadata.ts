@@ -24,11 +24,21 @@ export interface MediaMetadata {
   description: string | null
   author: string | null
   tags: string[]
+  /** Whether the media has an audio track worth transcribing. */
+  isVideo: boolean
+  /** Documented as optional, so absent is normal rather than an error. */
+  durationSeconds: number | null
 }
+
+/**
+ * `native` only reads an existing caption track; `auto` falls back to AI generation,
+ * which bills per minute. See ADR-0002 and ADR-0009.
+ */
+export type TranscriptMode = "native" | "auto"
 
 export interface Supadata {
   verifyKey: () => Promise<KeyVerification>
-  fetchTranscript: (url: string) => Promise<Transcript>
+  fetchTranscript: (url: string, mode?: TranscriptMode) => Promise<Transcript>
   /** Null when the media is private, deleted or otherwise not reachable. */
   fetchMetadata: (url: string) => Promise<MediaMetadata | null>
 }
@@ -41,6 +51,8 @@ const accountSchema = z.object({
 const transcriptSchema = z.object({ content: z.string().default("") })
 
 const metadataSchema = z.object({
+  type: z.string().nullish(),
+  media: z.object({ duration: z.number().nullish() }).nullish(),
   title: z.string().nullish(),
   description: z.string().nullish(),
   author: z.object({ displayName: z.string().nullish() }).nullish(),
@@ -146,15 +158,15 @@ export function createSupadata(options: SupadataOptions): Supadata {
       }
     },
 
-    // mode=native is explicit on purpose: the API default, auto, silently falls back
-    // to AI generation at 2 credits per minute against a 100-credit free plan.
-    // See docs/research/15-youtube-ingestion.md.
-    async fetchTranscript(url: string): Promise<Transcript> {
-      const query = new URLSearchParams({
-        url,
-        text: "true",
-        mode: "native",
-      })
+    // The default is native on purpose: the API's own default, auto, silently falls
+    // back to AI generation at 2 credits per minute against a 100-credit free plan.
+    // Only a caller that has sanctioned that spend passes auto.
+    // See docs/research/15-youtube-ingestion.md and ADR-0009.
+    async fetchTranscript(
+      url: string,
+      mode: TranscriptMode = "native"
+    ): Promise<Transcript> {
+      const query = new URLSearchParams({ url, text: "true", mode })
       const response = await get(`/transcript?${query.toString()}`)
       const payload: unknown = await response.json().catch(() => null)
 
@@ -197,6 +209,8 @@ export function createSupadata(options: SupadataOptions): Supadata {
         description: metadata.description ?? null,
         author: metadata.author?.displayName ?? null,
         tags: metadata.tags ?? [],
+        isVideo: metadata.type === "video",
+        durationSeconds: metadata.media?.duration ?? null,
       }
     },
   }

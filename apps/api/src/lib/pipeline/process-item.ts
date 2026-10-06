@@ -247,6 +247,13 @@ export async function processItem(
                   "transcript",
                   now
                 ),
+                reelAudioService: operatorService(
+                  db,
+                  env,
+                  claimed.userId,
+                  "reel_audio",
+                  now
+                ),
                 fetchPage: context.fetchPage,
               })
             : await extractArticle({

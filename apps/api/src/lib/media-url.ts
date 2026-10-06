@@ -3,6 +3,8 @@ export interface MediaLink {
   mediaId: string
   /** The form sent to providers: normalised, but still the kind of link it is. */
   canonicalUrl: string
+  /** Instagram's own path kind. Only a reel is length-capped by Instagram itself. */
+  instagramKind: "p" | "reel" | "tv" | null
 }
 
 /** One media is one item, whichever link form or path kind it arrived as. */
@@ -96,6 +98,7 @@ export function parseMediaLink(value: string): MediaLink | null {
       platform: "youtube",
       mediaId,
       canonicalUrl: `https://www.youtube.com/watch?v=${mediaId}`,
+      instagramKind: null,
     }
   }
 
@@ -108,6 +111,7 @@ export function parseMediaLink(value: string): MediaLink | null {
       platform: "instagram",
       mediaId,
       canonicalUrl: `https://www.instagram.com/${kind}/${mediaId}/`,
+      instagramKind: kind as "p" | "reel" | "tv",
     }
   }
 

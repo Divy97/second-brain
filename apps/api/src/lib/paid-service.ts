@@ -14,9 +14,12 @@ export function allowanceFor(_userId: string, service: PaidService): number {
 
 export const utcDay = (date: Date): string => date.toISOString().slice(0, 10)
 
+// Reel audio is the same vendor as the transcript service, so it shares the key and
+// differs only in what it is allowed to spend. See ADR-0009.
 const secretNames = {
   transcript: "TRANSCRIPT_API_KEY",
   reader: "READER_API_KEY",
+  reel_audio: "TRANSCRIPT_API_KEY",
 } as const
 
 export function operatorService(

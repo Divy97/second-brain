@@ -39,6 +39,10 @@ _Avoid_: Process, ingest (except in code)
 The browser add-on that performs **Captures** from the pages a **User** visits.
 _Avoid_: Plugin, clipper
 
+**Reel audio**:
+The paid lookup that turns an Instagram video's speech into text, so a reel is searchable by what was said in it and not only by its caption. Spent only on media Instagram reports as a video, and capped per **User** per day apart from the other paid lookups.
+_Avoid_: Reel transcript (Instagram has no caption track to fetch)
+
 **Device key**:
 The secret a **User** creates in Settings and pastes into the **Extension** to connect it. One per browser or profile, shown once, revocable, limited to **Captures**, capture settings and **Stored** items.
 _Avoid_: Token, API key (that word means the model key)

@@ -21,6 +21,7 @@ describe("parseMediaLink: YouTube", () => {
       platform: "youtube",
       mediaId: videoId,
       canonicalUrl: canonical,
+      instagramKind: null,
     })
   })
 
@@ -71,6 +72,7 @@ describe("parseMediaLink: Instagram", () => {
       platform: "instagram",
       mediaId: shortcode,
       canonicalUrl: `https://www.instagram.com/${kind}/${shortcode}/`,
+      instagramKind: kind,
     })
   })
 

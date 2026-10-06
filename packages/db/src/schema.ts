@@ -80,7 +80,11 @@ export const captureQualityEnum = pgEnum("capture_quality", ["full", "partial"])
 
 export const keyProviderEnum = pgEnum("key_provider", ["openrouter"])
 
-export const paidServiceEnum = pgEnum("paid_service", ["transcript", "reader"])
+export const paidServiceEnum = pgEnum("paid_service", [
+  "transcript",
+  "reader",
+  "reel_audio",
+])
 
 export const partialReasonEnum = pgEnum("partial_reason", ["allowance_used"])
 
