@@ -13,6 +13,7 @@ import {
   toCapturedItem,
   type CaptureRow,
 } from "./capture-row.js"
+import { listItemFacts } from "./facts.js"
 import { listItemEntities } from "./item-entities.js"
 
 import type { Database } from "../database.js"
@@ -20,6 +21,7 @@ import type { PartialReason } from "../schema.js"
 import type {
   CapturedItem,
   ItemEntity,
+  ItemFact,
   ItemRef,
   ItemStatus,
   ItemSummary,
@@ -47,6 +49,7 @@ export interface ItemDetail extends ItemSummary {
   error: string | null
   updatedAt: Date
   entities: ItemEntity[]
+  facts: ItemFact[]
   captures: Date[]
 }
 
@@ -236,17 +239,19 @@ export async function findItem(
     .from(items)
     .where(visibleItem(ref))
   if (!row) return undefined
-  const [captures, itemEntityRows] = await Promise.all([
+  const [captures, itemEntityRows, itemFactRows] = await Promise.all([
     db
       .select({ capturedAt: itemCaptures.capturedAt })
       .from(itemCaptures)
       .where(eq(itemCaptures.itemId, ref.itemId))
       .orderBy(desc(itemCaptures.capturedAt)),
     listItemEntities(db, ref.itemId),
+    listItemFacts(db, ref.itemId),
   ])
   return {
     ...row,
     entities: itemEntityRows,
+    facts: itemFactRows,
     captures: captures.map((capture) => capture.capturedAt),
   }
 }

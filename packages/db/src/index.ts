@@ -107,6 +107,7 @@ export {
 export type {
   EntityType,
   ItemEntity,
+  ItemFact,
   ItemKind,
   ItemRef,
   ItemStatus,
@@ -151,6 +152,8 @@ export {
 } from "./queries/search.js"
 export {
   findSimilarFacts,
+  forgetFact,
+  listItemFacts,
   saveFactChanges,
   type FactChange,
   type SimilarFact,
