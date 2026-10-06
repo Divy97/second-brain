@@ -45,6 +45,7 @@ describe("Instagram capture", () => {
     const providers = stubExtractionProviders()
     providers.acceptKeys([testTranscriptKey])
     providers.metadataReturns(reel, caption)
+    providers.transcriptReturns(reel, "Spoken words from the reel.")
     const queue = recordQueue()
     try {
       const session = await signUp()
@@ -114,7 +115,7 @@ describe("Instagram capture", () => {
     }
   })
 
-  it("never spends a credit on a transcript Instagram cannot serve", async () => {
+  it("never asks Instagram for a native transcript it cannot serve", async () => {
     const model = stubOpenRouter()
     const providers = stubExtractionProviders()
     providers.acceptKeys([testTranscriptKey])
@@ -127,9 +128,10 @@ describe("Instagram capture", () => {
       await saveUrl(session, reel)
       expect(await queue.processLatest()).toMatchObject({ outcome: "ready" })
 
-      expect(
-        providers.calls.filter((call) => call.url.includes("/v1/transcript"))
-      ).toHaveLength(0)
+      const modes = providers.calls
+        .filter((call) => new URL(call.url).pathname === "/v1/transcript")
+        .map((call) => new URL(call.url).searchParams.get("mode"))
+      expect(modes).not.toContain("native")
     } finally {
       queue.restore()
       providers.restore()

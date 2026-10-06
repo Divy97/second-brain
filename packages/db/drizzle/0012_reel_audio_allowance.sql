@@ -1,0 +1,1 @@
+ALTER TYPE "public"."paid_service" ADD VALUE 'reel_audio';

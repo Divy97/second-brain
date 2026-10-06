@@ -46,10 +46,17 @@ export const retrieval = {
   followUpChunksPerItem: 3,
 }
 
+// Supadata bills reel audio per minute while the allowance counts calls, so length is
+// bounded separately. Instagram caps a reel at 3 minutes; anything longer is not a reel.
+export const reelAudio = { maxDurationSeconds: 180 }
+
 // Operator-paid lookups each User may spend per UTC day, per service (ADR-0006).
 export const paidLookupAllowance = {
   transcript: 2,
   reader: 2,
+  // Billed per minute, so it is capped apart from the rest: sharing the transcript
+  // allowance would halve how many reels a day a User can capture.
+  reel_audio: 2,
 } as const
 
 export const backups = {

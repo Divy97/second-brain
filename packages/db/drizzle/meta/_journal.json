@@ -85,6 +85,13 @@
       "when": 1790863403112,
       "tag": "0011_extension_capture_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791303217222,
+      "tag": "0012_reel_audio_allowance",
+      "breakpoints": true
     }
   ]
 }

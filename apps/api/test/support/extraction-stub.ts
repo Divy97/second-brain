@@ -3,6 +3,10 @@ export interface MediaStub {
   description?: string | null
   author?: string
   tags?: string[]
+  /** Supadata's discriminator; only a video has audio to transcribe. */
+  type?: "video" | "image" | "carousel" | "post"
+  /** Seconds. Null stands for the field Supadata documents as optional. */
+  durationSeconds?: number | null
 }
 
 export interface VideoStub {
@@ -18,6 +22,8 @@ export interface ExtractionStub {
   /** Simulates a key revoked at the provider after it was saved here. */
   revokeKeys: (keys: string[]) => void
   breakProvider: (provider: "transcript" | "reader" | "youtube") => void
+  /** Fails only /v1/transcript, leaving /v1/metadata healthy. */
+  breakTranscriptEndpoint: () => void
   readerReturns: (url: string, content: string) => void
   videoReturns: (videoId: string, video: VideoStub) => void
   transcriptReturns: (url: string, text: string) => void
@@ -51,6 +57,7 @@ export function stubExtractionProviders(): ExtractionStub {
   const calls: Request[] = []
   const accepted = new Set<string>()
   const broken = new Set<string>()
+  let transcriptEndpointBroken = false
   const readerContent = new Map<string, string>()
   const videos = new Map<string, VideoStub>()
   const transcripts = new Map<string, string>()
@@ -129,16 +136,24 @@ export function stubExtractionProviders(): ExtractionStub {
           message: "The requested item could not be found",
         })
       }
+      const duration =
+        found.durationSeconds === undefined ? 30 : found.durationSeconds
       return json(200, {
         platform: "instagram",
-        type: "video",
+        type: found.type ?? "video",
         id: "stub",
         title: found.title ?? null,
         description: found.description ?? null,
         author: { displayName: found.author ?? null },
         tags: found.tags ?? [],
+        media: {
+          type: found.type ?? "video",
+          ...(duration === null ? {} : { duration }),
+        },
       })
     }
+
+    if (transcriptEndpointBroken) return json(500, { error: "server-error" })
 
     const jobMatch = /^\/v1\/transcript\/(.+)$/.exec(url.pathname)
     if (jobMatch) {
@@ -215,6 +230,9 @@ export function stubExtractionProviders(): ExtractionStub {
       for (const key of keys) accepted.delete(key)
     },
     breakProvider: (provider) => broken.add(provider),
+    breakTranscriptEndpoint: () => {
+      transcriptEndpointBroken = true
+    },
     readerReturns: (url, content) => readerContent.set(url, content),
     videoReturns: (videoId, video) => videos.set(videoId, video),
     transcriptReturns: (url, text) => transcripts.set(url, text),

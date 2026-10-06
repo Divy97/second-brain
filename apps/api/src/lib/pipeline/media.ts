@@ -3,9 +3,11 @@ import {
   createYouTube,
   SupadataError,
   YouTubeError,
+  type MediaMetadata,
   type Supadata,
 } from "@workspace/ai"
 
+import { reelAudio } from "../config.js"
 import { assemble, type Extraction } from "./extraction.js"
 import { PipelineFailure } from "./failures.js"
 
@@ -17,6 +19,7 @@ export interface MediaRequest {
   note: string | null
   youtubeApiKey: string | null
   transcriptService: OperatorService | null
+  reelAudioService: OperatorService | null
   fetchPage?: typeof fetch
 }
 
@@ -65,19 +68,28 @@ async function extractYouTube({
     : { text, ...partial(lookup.limited) }
 }
 
-// Instagram has no native caption track, so a transcript call under mode=native is a
-// guaranteed 206 and a wasted credit. The caption comes from metadata instead.
-// See ADR-0003 and docs/research/16-instagram-ingestion.md.
+// Instagram has no native caption track, so the caption comes from metadata. A reel's
+// meaning lives in its audio, which metadata cannot carry.
+// See ADR-0003, ADR-0009 and docs/research/23-reel-audio-transcription.md.
 async function extractInstagram({
   link,
   note,
   transcriptService,
+  reelAudioService,
   fetchPage = fetch,
 }: MediaRequest): Promise<Extraction> {
   const lookup = await paidLookup(transcriptService, fetchPage, (client) =>
     client.fetchMetadata(link.canonicalUrl)
   )
   const metadata = lookup.result
+  const transcribable = hasTranscribableAudio(link, metadata)
+
+  const audio = await paidLookup(
+    transcribable ? reelAudioService : null,
+    fetchPage,
+    (client) => client.fetchTranscript(link.canonicalUrl, "auto")
+  )
+  const spoken = audio.result?.text
 
   const text = assemble([
     note,
@@ -86,7 +98,14 @@ async function extractInstagram({
     metadata?.author,
     metadata?.description,
     metadata?.tags.join(" "),
+    spoken,
   ])
+
+  if (metadata?.isVideo) {
+    return spoken
+      ? { text, quality: "full" }
+      : { text, ...partial(audio.limited) }
+  }
 
   return metadata?.description || metadata?.title
     ? { text, quality: "full" }
@@ -94,6 +113,22 @@ async function extractInstagram({
         text: assemble([note, link.canonicalUrl]),
         ...partial(lookup.limited),
       }
+}
+
+// Supadata bills per minute while the allowance counts calls, so length needs its own
+// bound. An unstated duration fails closed: Supadata documents the field as optional and
+// publishes no Instagram sample, and since IGTV was folded into Reels a /reel/ link is no
+// longer bounded by any published limit. An hour-long video costs 120 credits where a
+// reel costs 2, and exhausted operator credits degrade every User at once (ADR-0006).
+function hasTranscribableAudio(
+  link: MediaLink,
+  metadata: MediaMetadata | null
+): boolean {
+  if (link.instagramKind !== "reel" || !metadata?.isVideo) return false
+  return (
+    metadata.durationSeconds !== null &&
+    metadata.durationSeconds <= reelAudio.maxDurationSeconds
+  )
 }
 
 const partial = (

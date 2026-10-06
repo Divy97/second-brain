@@ -26,8 +26,13 @@ const json = (status: number, body: unknown): Response =>
     headers: { "content-type": "application/json" },
   })
 
+// Combining marks carry the vowels in Devanagari and many other scripts, so a class of
+// \p{L} alone shatters those words into single letters and makes every non-Latin note
+// look like noise to the stubbed reranker.
+const WORD = /[\p{L}\p{N}][\p{L}\p{M}\p{N}'\u2019]*/gu
+
 function words(text: string): string[] {
-  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
+  return text.toLowerCase().match(WORD) ?? []
 }
 
 function hashWord(word: string): number {
@@ -63,7 +68,7 @@ export function parseEnrichmentInput(call: ChatCall): EnrichmentInput {
 }
 
 export function defaultEnrichment(note: string) {
-  const noteWords = note.match(/[\p{L}\p{N}']+/gu) ?? []
+  const noteWords = note.match(WORD) ?? []
   return {
     title: noteWords.slice(0, 6).join(" ") || "Untitled",
     summary: `A note about ${noteWords.slice(0, 12).join(" ")}.`,
@@ -101,7 +106,7 @@ export function parseRewriteInput(call: ChatCall): RewriteInput {
 }
 
 export function defaultRewrite(question: string) {
-  const questionWords = question.match(/[\p{L}\p{N}]+/gu) ?? []
+  const questionWords = question.match(WORD) ?? []
   return {
     question,
     variants: [question],
