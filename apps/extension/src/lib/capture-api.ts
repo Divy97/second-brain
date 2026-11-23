@@ -5,6 +5,9 @@ export interface CapturePayload {
   title: string
   text?: string
   trigger: "manual" | "passive"
+  capturedAt?: string
+  handling?: "index" | "store"
+  linkOnly?: boolean
 }
 
 export type PostOutcome =

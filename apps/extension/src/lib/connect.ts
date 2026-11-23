@@ -3,14 +3,10 @@ import { storage } from "@wxt-dev/storage"
 import { apiOrigin } from "./config"
 
 export type ConnectFailureReason =
-  | "empty"
-  | "malformed"
-  | "invalid"
-  | "unreachable"
+  "empty" | "malformed" | "invalid" | "unreachable"
 
 export type ConnectResult =
-  | { ok: true; email: string }
-  | { ok: false; reason: ConnectFailureReason }
+  { ok: true; email: string } | { ok: false; reason: ConnectFailureReason }
 
 export type KeyCheck =
   | { state: "valid"; email: string }
@@ -46,6 +42,14 @@ export async function connectWithKey(pasted: string): Promise<ConnectResult> {
 
   await storage.setItem("local:token", key)
   return { ok: true, email: check.email }
+}
+
+export async function connectedAccount(): Promise<string | null> {
+  const token = await storage.getItem<string>("local:token")
+  if (!token) return null
+  const check = await checkKey(token)
+  if (check.state !== "valid") return null
+  return check.email
 }
 
 export async function disconnect(): Promise<void> {

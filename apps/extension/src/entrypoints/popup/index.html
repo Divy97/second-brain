@@ -8,7 +8,13 @@
   <body>
     <main class="popup">
       <header class="brand">
-        <img class="brand-mark" src="/icon/48.png" alt="" width="28" height="28" />
+        <img
+          class="brand-mark"
+          src="/icon/48.png"
+          alt=""
+          width="28"
+          height="28"
+        />
         <span class="brand-name">second brain</span>
       </header>
 
@@ -42,7 +48,13 @@
             Connect
           </button>
         </form>
-        <a class="link" id="settings-link" href="#" target="_blank" rel="noreferrer">
+        <a
+          class="link"
+          id="settings-link"
+          href="#"
+          target="_blank"
+          rel="noreferrer"
+        >
           Open Settings to create a key
         </a>
       </section>
@@ -51,10 +63,78 @@
         <button class="button button-primary" id="save-btn" type="button">
           Save this page
         </button>
-        <div class="result" id="save-result" role="status" aria-live="polite" hidden>
+        <div
+          class="result"
+          id="save-result"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
           <p class="result-title" id="save-result-title"></p>
           <p class="result-detail" id="save-result-detail"></p>
         </div>
+        <div class="result" id="queue-error" role="alert" hidden></div>
+        <section class="settings" aria-labelledby="passive-heading">
+          <div id="passive-disclosure" class="disclosure" hidden>
+            <strong>About passive capture</strong>
+            <p class="muted">
+              When enabled, Second Brain reads text from pages you browse after
+              15 seconds and sends it to your account. Private windows and
+              sensitive sites are excluded.
+            </p>
+            <button class="text-button" id="dismiss-disclosure" type="button">
+              Got it
+            </button>
+          </div>
+          <div class="settings-heading">
+            <div>
+              <h2 id="passive-heading">Passive capture</h2>
+              <p class="muted">
+                Record readable pages after you stay for 15 seconds.
+              </p>
+            </div>
+            <label class="switch">
+              <span class="sr-only">Record pages as you browse</span>
+              <input id="passive-enabled" type="checkbox" />
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div id="passive-options" class="passive-options" hidden>
+            <div id="permission-warning" class="notice" hidden>
+              <p>This browser still needs page access for passive capture.</p>
+              <button class="text-button" id="grant-permissions" type="button">
+                Allow page access
+              </button>
+            </div>
+            <label class="field" for="passive-mode">
+              <span>When a page is captured</span>
+              <select id="passive-mode">
+                <option value="store">Store for review</option>
+                <option value="index">Index immediately</option>
+              </select>
+            </label>
+            <label class="check-row">
+              <input id="passive-paused" type="checkbox" />
+              <span>Pause passive capture</span>
+            </label>
+          </div>
+          <div class="blocklist">
+            <span class="blocklist-label">Your blocked sites</span>
+            <div id="blocklist-items" class="blocklist-items"></div>
+            <span class="blocklist-label">Always blocked</span>
+            <div id="default-blocklist-items" class="blocklist-items"></div>
+            <form id="blocklist-form" class="blocklist-form">
+              <input
+                id="blocklist-input"
+                type="text"
+                placeholder="example.com"
+                aria-label="Site to block"
+              />
+              <button class="text-button" type="submit">Add</button>
+            </form>
+            <p class="muted">Sensitive sites are also blocked automatically.</p>
+          </div>
+        </section>
         <footer class="account">
           <span class="email" id="email-status"></span>
           <button class="text-button" id="disconnect-btn" type="button">

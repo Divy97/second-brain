@@ -84,4 +84,19 @@ describe("processQueue", () => {
     expect(stored.has("local:token")).toBe(false)
     expect(stored.get("local:queue")).toHaveLength(1)
   })
+
+  it("surfaces a failure after the final retry", async () => {
+    apiAnswers(503)
+    stored.set("local:queue", [
+      { ...capture, id: "c1", attempts: 4, nextRetry: 0 },
+    ])
+    const { processQueue } = await import("./queue")
+
+    await processQueue()
+
+    expect(stored.get("local:queue")).toEqual([])
+    expect(stored.get("local:queue-error")).toMatchObject({
+      title: capture.title,
+    })
+  })
 })

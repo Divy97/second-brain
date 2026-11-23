@@ -189,6 +189,159 @@ input:focus-visible,
   border-top: 1px solid var(--border);
 }
 
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings .muted {
+  font-size: 12px;
+}
+
+.passive-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.disclosure {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.disclosure strong,
+.blocklist-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.blocklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blocklist-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.blocklist-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  font-size: 12px;
+}
+
+.blocklist-item button {
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.blocklist-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blocklist-form input {
+  height: 36px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+select {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+}
+
+.switch-track {
+  display: block;
+  width: 40px;
+  height: 24px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--muted);
+  cursor: pointer;
+}
+
+.switch-track::after {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--card);
+  content: "";
+  transition: transform 150ms ease;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--primary);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(16px);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .email {
   min-width: 0;
   overflow: hidden;

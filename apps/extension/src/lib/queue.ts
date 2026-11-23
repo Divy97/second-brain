@@ -45,6 +45,11 @@ export async function processQueue(): Promise<void> {
           attempts: item.attempts + 1,
           nextRetry: now + backoffMs(item.attempts + 1),
         })
+      } else {
+        await storage.setItem("local:queue-error", {
+          title: item.title,
+          message: "A queued page could not be sent after several attempts.",
+        })
       }
     }
   }
@@ -58,6 +63,9 @@ function toPayload(item: QueuedCapture): CapturePayload {
     title: item.title,
     text: item.text,
     trigger: item.trigger,
+    capturedAt: item.capturedAt,
+    handling: item.handling,
+    linkOnly: item.linkOnly,
   }
 }
 

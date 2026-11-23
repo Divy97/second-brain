@@ -18,15 +18,17 @@ export async function capturePageItem(
     text: string
     contentHash: string
     indexNow: boolean
+    capturedAt?: Date
   }
 ): Promise<CapturedItem> {
   const status = input.indexNow ? "pending" : "stored"
+  const capturedAt = (input.capturedAt ?? new Date()).toISOString()
   const [row] = await db.execute<CaptureRow>(sql`
     with upserted as (
-      insert into ${items} (id, user_id, type, status, content_hash, raw_text, source_url, title, client_text, capture_quality)
-      values (${generateId()}, ${input.userId}, 'url', ${status}, ${input.contentHash}, ${input.text}, ${input.sourceUrl}, ${input.title}, true, 'full')
+      insert into ${items} (id, user_id, type, status, content_hash, raw_text, source_url, title, client_text, capture_quality, captured_at)
+      values (${generateId()}, ${input.userId}, 'url', ${status}, ${input.contentHash}, ${input.text}, ${input.sourceUrl}, ${input.title}, true, 'full', ${capturedAt})
       on conflict (user_id, content_hash) where deleted_at is null do update
-        set captured_at = now(), updated_at = now(),
+        set captured_at = ${capturedAt}, updated_at = now(),
           raw_text = case when ${items.status} in ('stored', 'failed') then ${input.text} else ${items.rawText} end,
           title = case when ${items.status} in ('stored', 'failed') then ${input.title} else ${items.title} end,
           client_text = ${items.clientText} or ${items.status} in ('stored', 'failed'),

@@ -139,15 +139,17 @@ export async function captureUrlItem(
     sourceUrl: string
     sourceNote: string | null
     contentHash: string
+    capturedAt?: Date
   }
 ): Promise<CapturedItem> {
   const rawText = input.sourceNote ?? input.sourceUrl
+  const capturedAt = (input.capturedAt ?? new Date()).toISOString()
   const [row] = await db.execute<CaptureRow>(sql`
     with upserted as (
-      insert into ${items} (id, user_id, type, status, content_hash, raw_text, source_url, source_note)
-      values (${generateId()}, ${input.userId}, 'url', 'pending', ${input.contentHash}, ${rawText}, ${input.sourceUrl}, ${input.sourceNote})
+      insert into ${items} (id, user_id, type, status, content_hash, raw_text, source_url, source_note, captured_at)
+      values (${generateId()}, ${input.userId}, 'url', 'pending', ${input.contentHash}, ${rawText}, ${input.sourceUrl}, ${input.sourceNote}, ${capturedAt})
       on conflict (user_id, content_hash) where deleted_at is null do update
-        set captured_at = now(), updated_at = now(), status = 'pending', raw_text = coalesce(${input.sourceNote}, ${items.sourceNote}, ${items.rawText}), source_note = coalesce(${input.sourceNote}, ${items.sourceNote}), capture_quality = null, pipeline_run = ${items.pipelineRun} + 1
+        set captured_at = ${capturedAt}, updated_at = now(), status = 'pending', raw_text = coalesce(${input.sourceNote}, ${items.sourceNote}, ${items.rawText}), source_note = coalesce(${input.sourceNote}, ${items.sourceNote}), capture_quality = null, pipeline_run = ${items.pipelineRun} + 1
       returning id, type, status, capture_quality, kind, title, raw_text, captured_at, pipeline_run as run, (xmax = 0) as created
     ), capture as (
       insert into ${itemCaptures} (id, item_id, captured_at)
