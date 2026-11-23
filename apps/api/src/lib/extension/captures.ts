@@ -30,6 +30,9 @@ const captureBody = z.object({
     .optional(),
   text: z.string().trim().max(MAX_TEXT_LENGTH).optional(),
   trigger: z.enum(["manual", "passive"]),
+  capturedAt: z.iso.datetime().optional(),
+  handling: z.enum(["index", "store"]).optional(),
+  linkOnly: z.boolean().optional(),
 })
 
 type Trigger = z.infer<typeof captureBody>["trigger"]
@@ -39,6 +42,9 @@ interface ParsedCapture {
   title: string | null
   text: string | undefined
   trigger: Trigger
+  linkOnly: boolean
+  capturedAt: Date | undefined
+  handling: "index" | "store" | undefined
 }
 
 type Handling = "index" | "store" | "refuse"
@@ -61,6 +67,11 @@ function parseCapture(
       title: parsed.data.title ?? null,
       text: parsed.data.text,
       trigger: parsed.data.trigger,
+      linkOnly: parsed.data.linkOnly ?? false,
+      capturedAt: parsed.data.capturedAt
+        ? new Date(parsed.data.capturedAt)
+        : undefined,
+      handling: parsed.data.handling,
     },
   }
 }
@@ -75,12 +86,13 @@ function isLinkOnly(url: string): boolean {
 async function handlingFor(
   db: Database,
   userId: string,
-  trigger: Trigger
+  trigger: Trigger,
+  requested: ParsedCapture["handling"]
 ): Promise<Handling> {
   if (trigger === "manual") return "index"
   const settings = await findCaptureSettings(db, userId)
   if (!settings.passiveEnabled || settings.paused) return "refuse"
-  return settings.passiveMode
+  return requested ?? settings.passiveMode
 }
 
 // Dedupes on the media itself, so every link form of one video is one item.
@@ -122,6 +134,7 @@ async function captureLink(
       sourceUrl: capture.url,
       sourceNote: null,
       contentHash: await urlContentHash(capture.url),
+      capturedAt: capture.capturedAt,
     })
   )
 }
@@ -138,7 +151,12 @@ async function capturePage(
       "This page had no readable text."
     )
   }
-  const handling = await handlingFor(c.var.db, c.var.userId, capture.trigger)
+  const handling = await handlingFor(
+    c.var.db,
+    c.var.userId,
+    capture.trigger,
+    capture.handling
+  )
   if (handling === "refuse") {
     return apiError(c, 409, "conflict", "Passive capture is off.")
   }
@@ -151,6 +169,7 @@ async function capturePage(
       text: capture.text,
       contentHash: await urlContentHash(capture.url),
       indexNow: handling === "index",
+      capturedAt: capture.capturedAt,
     })
   )
 }
@@ -158,7 +177,7 @@ async function capturePage(
 export async function createCapture(c: CaptureContext): Promise<Response> {
   const parsed = parseCapture(await c.req.json().catch(() => ({})))
   if (!parsed.ok) return apiError(c, 400, "invalid_request", parsed.message)
-  return isLinkOnly(parsed.capture.url)
+  return parsed.capture.linkOnly || isLinkOnly(parsed.capture.url)
     ? captureLink(c, parsed.capture)
     : capturePage(c, parsed.capture)
 }

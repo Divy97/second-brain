@@ -126,3 +126,9 @@ No end-to-end test of the extension in a real browser in this spec.
 - Unconfirmed items from the research that the implementation must verify early: the exact Origin and preflight behaviour of extension requests, Firefox's event-page idle timeout, and whether a Bun-only lockfile satisfies the Firefox source-build rule.
 - Passive capture can store a large volume of text per active user. Stored items count toward storage; the implementation should confirm the cost and add a per-user cap if it is material.
 - Cross-device settings sync means the blocklist is also server data and must be included in backups and account deletion.
+
+## Delivered implementation notes
+
+- Device-key paste authentication supersedes the older approval-page wording in this issue; ADR-0008 is authoritative.
+- Passive capture is implemented in the extension with a 15-second dwell threshold, SPA and normal navigation listeners, a 30-minute duplicate cooldown, default sensitive-site blocklist, incognito exclusion, optional permissions requested from the popup, and server-synced settings.
+- Chrome MV3 and Firefox builds are generated from the same WXT source. Firefox declares its data-collection permissions and a stable extension ID.

@@ -9,6 +9,7 @@ export interface SavableTab {
   id: number
   url?: string
   title?: string
+  incognito?: boolean
 }
 
 export type SaveResult =
@@ -18,7 +19,24 @@ export type SaveResult =
   | { status: "rejected"; message: string }
   | { status: "not-connected" }
 
-export async function savePage(tab: SavableTab): Promise<SaveResult> {
+export interface SaveOptions {
+  text?: string
+  linkOnly?: boolean
+  handling?: "index" | "store"
+}
+
+export async function savePage(
+  tab: SavableTab,
+  options: SaveOptions = {}
+): Promise<SaveResult> {
+  return capturePage(tab, "manual", options)
+}
+
+export async function capturePage(
+  tab: SavableTab,
+  trigger: "manual" | "passive",
+  options: SaveOptions = {}
+): Promise<SaveResult> {
   if (!tab.url || !/^https?:\/\//i.test(tab.url)) {
     return { status: "unsupported" }
   }
@@ -29,8 +47,13 @@ export async function savePage(tab: SavableTab): Promise<SaveResult> {
   const payload: CapturePayload = {
     url: tab.url,
     title: tab.title || tab.url,
-    text: await readPageText(tab.id),
-    trigger: "manual",
+    text:
+      options.text ??
+      (options.linkOnly ? undefined : await readPageText(tab.id)),
+    trigger,
+    capturedAt: new Date().toISOString(),
+    handling: options.handling ?? (trigger === "manual" ? "index" : "store"),
+    linkOnly: options.linkOnly,
   }
 
   const outcome = await postCapture(token, payload)
